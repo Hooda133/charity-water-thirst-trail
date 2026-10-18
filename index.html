@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#101f29">
+  <meta name="description" content="Thirst Trail is a playable student prototype about the search for safe drinking water.">
+  <title>Thirst Trail | Find the Safe Source</title>
+  <link rel="stylesheet" href="styles.css">
+  <script src="script.js" defer></script>
+</head>
+<body>
+  <div class="page-wrap">
+    <header class="site-header">
+      <div class="brand" aria-label="Thirst Trail student project">
+        <span class="brand-symbol" aria-hidden="true">💧</span>
+        <span>THIRST<span class="brand-accent">:</span>TRAIL</span>
+      </div>
+      <span class="project-label">CHARITY: WATER · STUDENT GAME PROTOTYPE</span>
+    </header>
+
+    <main id="mainContent">
+      <section id="introScreen" class="intro-screen" aria-labelledby="gameTitle">
+        <div class="intro-copy">
+          <span class="eyebrow"><span class="eyebrow-dot" aria-hidden="true"></span> A WATER MISSION</span>
+          <h1 id="gameTitle">Find the <em>safe</em><br>source.</h1>
+          <p class="intro-description">A village needs clean drinking water. Explore the trail, investigate different sources, and solve the puzzle before your thirst runs out.</p>
+          <button class="button button-yellow button-large" id="startButton" type="button">Start the mission <span aria-hidden="true">→</span></button>
+          <p class="short-note">A short, playable HTML + CSS + JavaScript prototype.</p>
+          <div class="how-to-play" aria-label="How to play">
+            <div><span class="step-number">01</span><span>Choose a place on the map.</span></div>
+            <div><span class="step-number">02</span><span>Collect tools, test water, and earn points.</span></div>
+            <div><span class="step-number">03</span><span>Reach safe water before thirst hits zero.</span></div>
+          </div>
+        </div>
+        <div class="intro-visual" aria-hidden="true">
+          <div class="sun"></div>
+          <div class="hills hill-far"></div>
+          <div class="hills hill-near"></div>
+          <div class="path path-one"></div>
+          <div class="path path-two"></div>
+          <div class="visual-orbit orbit-outer"></div>
+          <div class="visual-orbit orbit-inner"></div>
+          <div class="big-drop">💧</div>
+          <div class="intro-label label-top">EXPLORE THE TRAIL <span>↗</span></div>
+          <div class="intro-label label-bottom"><strong>100%</strong><small>YOUR STARTING THIRST</small></div>
+        </div>
+      </section>
+
+      <section id="gameScreen" class="game-screen" aria-label="Thirst Trail game" hidden>
+        <div class="game-heading">
+          <div>
+            <span class="eyebrow"><span class="eyebrow-dot" aria-hidden="true"></span> MISSION IN PROGRESS</span>
+            <h1>Find the safe source<span class="period">.</span></h1>
+            <p>Choose a location, take an action, and watch your resources.</p>
+          </div>
+          <button type="button" id="restartButton" class="button button-outline">↻ Restart game</button>
+        </div>
+
+        <div class="hud" aria-label="Game statistics">
+          <div class="hud-item hud-thirst">
+            <div class="hud-top"><span>💧 THIRST REMAINING</span><strong id="thirstValue">100%</strong></div>
+            <div class="meter-track" role="progressbar" aria-label="Thirst remaining" aria-valuemin="0" aria-valuemax="100" aria-valuenow="100" id="thirstMeter"><div class="meter-fill" id="thirstBar"></div></div>
+          </div>
+          <div class="hud-item"><span class="hud-label">★ IMPACT POINTS</span><strong class="score-value" id="scoreValue">0</strong></div>
+          <div class="hud-item"><span class="hud-label">◈ PLACES EXPLORED</span><strong class="visited-value" id="visitedValue">1 / 4</strong></div>
+        </div>
+
+        <div class="game-grid">
+          <section class="map-panel" aria-labelledby="mapHeading">
+            <div class="panel-heading">
+              <div><span class="panel-kicker">THE TRAIL</span><h2 id="mapHeading">Explore the map</h2></div>
+              <span class="travel-label">Moving costs 9% thirst</span>
+            </div>
+            <div class="trail-map" aria-label="Clickable game map">
+              <svg class="trail-lines" viewBox="0 0 600 430" preserveAspectRatio="none" aria-hidden="true">
+                <path d="M157 111 C225 35 365 36 458 110 S550 265 449 319 S245 389 150 315 S69 184 157 111" fill="none" stroke="#adc3a5" stroke-width="4" stroke-dasharray="7 11" stroke-linecap="round" />
+                <path d="M160 120 C196 220 225 260 159 323 M443 112 C392 213 376 270 451 319" fill="none" stroke="#c4cdbd" stroke-width="3" stroke-dasharray="6 12" stroke-linecap="round" />
+              </svg>
+              <div class="map-river" aria-hidden="true"></div>
+              <div class="tree tree-a" aria-hidden="true">✳</div><div class="tree tree-b" aria-hidden="true">✳</div><div class="tree tree-c" aria-hidden="true">✳</div>
+              <button class="map-location loc-village active" data-location="village" type="button" aria-pressed="true">
+                <span class="location-icon" aria-hidden="true">🏘️</span><span class="location-name">The Village</span><span class="location-sub">Start here</span>
+              </button>
+              <button class="map-location loc-river" data-location="river" type="button" aria-pressed="false">
+                <span class="location-icon" aria-hidden="true">🌊</span><span class="location-name">River Bend</span><span class="location-sub">Investigate</span>
+              </button>
+              <button class="map-location loc-pump" data-location="pump" type="button" aria-pressed="false">
+                <span class="location-icon" aria-hidden="true">🔧</span><span class="location-name">Old Water Pump</span><span class="location-sub">Repair?</span>
+              </button>
+              <button class="map-location loc-spring" data-location="spring" type="button" aria-pressed="false">
+                <span class="location-icon" aria-hidden="true">⛰️</span><span class="location-name">Hill Spring</span><span class="location-sub">Test & treat</span>
+              </button>
+            </div>
+            <div class="map-footer"><span><i class="legend-dot current-dot"></i> Selected location</span><span><i class="legend-dot visited-dot"></i> Explored location</span><span>Click a place to travel</span></div>
+          </section>
+
+          <aside class="action-panel" aria-labelledby="detailTitle">
+            <div class="panel-kicker">YOUR NEXT MOVE</div>
+            <div class="detail-top"><div class="detail-icon" id="detailIcon" aria-hidden="true">🏘️</div><span class="detail-type" id="detailType">STARTING POINT</span></div>
+            <h2 id="detailTitle">The Village</h2>
+            <p id="detailDescription">Villagers need a dependable safe-water source. Begin by gathering clues and useful supplies.</p>
+            <div class="actions-heading">CHOOSE AN ACTION</div>
+            <div id="actionList" class="action-list"></div>
+            <div class="message-box" id="messageBox" role="status" aria-live="polite"><span id="messageIcon" aria-hidden="true">💬</span><p id="messageText">Start with a clue or pick up a repair kit.</p></div>
+            <div class="inventory"><span class="actions-heading">IN YOUR BAG</span><div id="inventoryItems" class="inventory-items"><span class="empty-bag">Nothing yet</span></div></div>
+          </aside>
+        </div>
+        <section class="journal" aria-label="Trail journal"><strong>TRAIL JOURNAL</strong><p id="journalText">You arrive at the village with 100% thirst. Your mission is to find a safe drinking-water source.</p></section>
+        <p class="learning-note">Inspired by charity: water's mission. This is a fictional student learning game, not real-world water safety guidance.</p>
+      </section>
+    </main>
+
+    <footer class="site-footer"><span>THIRST:TRAIL · WEB DEVELOPMENT PROJECT</span><span>Prototype 01 / Built with HTML, CSS & JavaScript</span></footer>
+  </div>
+
+  <div id="endOverlay" class="end-overlay" hidden>
+    <div class="end-card" role="dialog" aria-modal="true" aria-labelledby="endTitle" aria-describedby="endDescription">
+      <div class="end-symbol" id="endSymbol">💧</div>
+      <span class="eyebrow" id="endEyebrow">MISSION COMPLETE</span>
+      <h2 id="endTitle">You found safe water!</h2>
+      <p id="endDescription">Your actions helped the community discover a safer path to water.</p>
+      <div class="end-stats"><span>FINAL SCORE <strong id="endScore">0</strong></span><span>THIRST LEFT <strong id="endThirst">0%</strong></span></div>
+      <button type="button" class="button button-yellow button-large" id="playAgainButton">Play again <span aria-hidden="true">↻</span></button>
+    </div>
+  </div>
+</body>
+</html>
