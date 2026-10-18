@@ -1,40 +1,55 @@
-# Thirst Trail: Find the Safe Source 💧
+# Thirst Trail: The Last Well 💧
 
-A playable, responsive **charity: water–inspired student game prototype** made with HTML, CSS, and vanilla JavaScript for the Global Career Accelerator web development project.
+**A playable 2D adventure game for a charity: water-inspired web development project.** Built in plain HTML, CSS, and JavaScript, without game engines, npm, server code, images to download, or third-party libraries.
 
 ## Play the game
 
-To play locally, download or clone this repository and open `index.html` in a modern browser. Click **Start the mission** to begin. No build tools, frameworks, accounts, or external libraries are needed.
+- Visit the GitHub Pages website (after Pages is enabled), or open `index.html` directly in a modern web browser.
+- Click **Start adventure**.
+- Move your character with **W A S D** or the **arrow keys**. Use **E** or **Space** to interact with nearby glowing locations. Hold **Shift** to sprint (at a higher energy cost).
+- You can also **click the map** to walk somewhere or **click a destination in the Expedition Log** to auto-walk there, including crossing the bridge.
+- On touch devices, use the on-screen movement pad and **ACT** button.
+- **P** pauses the game; the top toolbar includes Pause, Restart, help, and sound options.
 
-### Run in GitHub Codespaces
+## The main quest
 
-1. Open this repository on GitHub and choose **Code → Codespaces → Create codespace on main**.
-2. In the Codespaces terminal, run `python3 -m http.server 8000`.
-3. Open the **Ports** tab and click the forwarded **8000** port's browser link. If prompted, select **Open in Browser**.
-4. To stop the server, press `Ctrl+C` in the terminal.
+1. **Village Elder:** Learn how the broken pump has affected the village.
+2. **Workshop:** Collect a repair toolkit.
+3. **Supply Depot:** Cross the river bridge and pick up a replacement gasket.
+4. **Old Water Pump:** Solve a three-step repair and water-safety challenge to restore the pump.
 
-### Optional: publish on GitHub Pages
+## Optional discoveries
 
-Open the repository's **Settings → Pages**. Under **Build and deployment**, select **Deploy from a branch**, choose **main** and **/(root)**, then click **Save**. The game uses relative paths and works as a static website once Pages is enabled and deployment finishes.
+- **Rest Camp:** Restore 32 energy from sealed drinking-water supplies, up to twice per game.
+- **River Bank:** Answer water-safety questions to earn a test kit.
+- **Hill Spring:** Use the test kit to explore a second way to finish the expedition.
 
-## How to play
+Movement and wrong answers cost energy. Reaching zero energy ends the mission. Earn Impact points by helping the village, finishing challenges, and preserving energy. Your **highest score is saved in this browser's localStorage**; active gameplay isn't saved across refreshes.
 
-- Select any of four map locations. Each trip to a different location costs 9% thirst.
-- Choose actions to earn impact points and collect useful items.
-- **Pump route:** Collect the repair toolkit at the Village, travel to the Old Water Pump, inspect it, then repair it.
-- **Spring route:** Collect treatment supplies at River Bend, travel to Hill Spring, test the spring, then treat its water.
-- Win by finding a safe water source before your thirst reaches 0%. If you run out, you lose. Press **Play again** or **Restart game** to reset.
+## Play in GitHub Codespaces
 
-## Assignment requirements
+1. In this repo, choose **Code → Codespaces → Create codespace on main**.
+2. Open a terminal and run `python3 -m http.server 8000`.
+3. In the **Ports** tab, select the link for port `8000`.
+4. Play in the browser! Edit the HTML, CSS, or JavaScript and refresh to see changes.
 
-- **HTML:** Start screen, interactive location buttons, score and thirst displays, results dialog.
-- **CSS:** Responsive layout for desktop and mobile, progress bar, clear action buttons.
-- **JavaScript:** Click actions, location tracking, score updates, thirst costs, item requirements, win/lose logic, and restarting.
+## Publish it as a public game with GitHub Pages
+
+1. Open **Settings → Pages** in this repository.
+2. Under **Build and deployment → Source**, choose **Deploy from a branch**.
+3. Choose **main** and the **/(root)** folder, then click **Save**.
+4. After deployment finishes, open `https://hooda133.github.io/charity-water-thirst-trail/`.
+
+The Pages URL will only become live **after Pages is enabled and deployment succeeds**.
 
 ## Project files
 
-- `index.html` — screen structure and controls
-- `styles.css` — styles and mobile layout
-- `script.js` — interactive game logic
+| File | Purpose |
+| --- | --- |
+| `index.html` | Start screen, game HUD, canvas, mission UI, modal dialogs |
+| `styles.css` | Graphics, layout, responsiveness, keyboard focus, touch controls |
+| `script.js` | Animation loop, camera, map, player movement, mission logic, mini-quizzes, scoring, energy, sound, high scores |
 
-**Note:** The game is a fictional educational prototype, not official charity: water content or real-world water safety guidance. Water testing and treatment are simplified as game mechanics.
+## About the project
+
+This is **an independent fictional educational game** inspired by the mission of charity: water. It is **not an official charity: water product or affiliation**. In-game water testing, repair, and safety scenarios are simplified for learning and **are not drinking-water, health, or engineering instructions**. Always follow qualified local guidance for real-world water quality and drinking-water safety.
