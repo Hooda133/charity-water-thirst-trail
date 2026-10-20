@@ -947,6 +947,34 @@
       const dot=ball(g,new THREE.MeshBasicMaterial({color}),0,1.72,0,.23,.23,.23,false);
       markers[key]={group:g,ring,beacon,dot,mat};
     }
+    // World-space achievement bursts: small reusable gems, expanding rings and light.
+    // These effects are driven by real quest state and never block player controls.
+    const achievementGroup=new THREE.Group();scene.add(achievementGroup);
+    achievementGroup.visible=false;
+    const sparkleMaterials=[
+      new THREE.MeshBasicMaterial({color:0xffe29a,depthWrite:false}),
+      new THREE.MeshBasicMaterial({color:0xa0ffe1,depthWrite:false}),
+      new THREE.MeshBasicMaterial({color:0xffffff,depthWrite:false})
+    ];
+    const sparkleGeometry=new THREE.OctahedronGeometry(.12,0);
+    const sparkles=[];
+    for(let i=0;i<48;i++){
+      const gem=mesh(sparkleGeometry,sparkleMaterials[i%3],achievementGroup,false);
+      gem.visible=false;
+      sparkles.push(gem);
+    }
+    const achievementRings=[];
+    for(let i=0;i<3;i++){
+      const ringMat=new THREE.MeshBasicMaterial({
+        color:i===1?0xa1ffe5:0xffe39b,transparent:true,opacity:.55,
+        side:THREE.DoubleSide,depthWrite:false
+      });
+      const ring=mesh(new THREE.TorusGeometry(.92,.055,7,52),ringMat,achievementGroup,false);
+      ring.rotation.x=-Math.PI/2;ring.position.y=.14+i*.04;ring.visible=false;
+      achievementRings.push(ring);
+    }
+    const achievementLight=new THREE.PointLight(0xffdea0,0,12,2);
+    achievementLight.position.set(0,2.2,0);achievementGroup.add(achievementLight);
     // Residents give each objective a visible human presence rather than only
     // presenting a floating quest marker. They remain decorative: interaction
     // continues through the original quest logic and E key.
@@ -1001,6 +1029,16 @@
     for(const side of [-.27,.27])
       box(body,mats.wood,side,1.57,.29,.11,.74,.09);
     box(body,mats.gold,0,1.80,.28,.48,.14,.17);
+    // Small jacket pockets and a rolled sleeping mat give the explorer a richer silhouette.
+    for(const side of [-1,1]){
+      box(body,mats.dark,side*.25,1.31,.35,.24,.25,.10);
+      box(body,mats.trim,side*.25,1.19,.41,.15,.035,.04);
+    }
+    const bedroll=cyl(body,makeMat(0x679486),0,1.98,-.54,.29,.29,.97,9);
+    bedroll.rotation.z=Math.PI/2;
+    for(const x of [-.32,.32]){
+      box(body,mats.wood,x,1.96,-.81,.085,.13,.11);
+    }
     // Layered belt and a compass badge turn simple primitives into adventure gear.
     box(body,mats.wood,0,1.04,.245,.74,.16,.11);
     box(body,mats.gold,0,1.04,.305,.20,.17,.035);
@@ -1012,18 +1050,24 @@
     flask.rotation.z=.16;
     cyl(body,mats.lightWood,-.53,1.41,-.31,.1,.10,.10);
 
-    const arms=[],legs=[];
+    // Arm/leg joints add subtle bend to walking, waving and celebrating.
+    const arms=[],legs=[],elbows=[],knees=[];
     for(const side of [-1,1]){
       const arm=new THREE.Group();arm.position.set(side*.48,1.75,0);body.add(arm);
-      const sleeve=cyl(arm,shirt,0,-.17,0,.18,.15,.36);
-      cyl(arm,skin,0,-.54,0,.13,.11,.38);
-      ball(arm,skin,0,-.76,.035,.16,.13,.15);
-      arms.push(arm);
+      cyl(arm,shirt,0,-.18,0,.18,.17,.39);
+      const elbow=new THREE.Group();elbow.position.y=-.37;arm.add(elbow);
+      cyl(elbow,skin,0,-.20,0,.13,.12,.39);
+      ball(elbow,skin,0,-.41,.045,.15,.16,.15);
+      box(arm,mats.gold,0,-.32,0,.28,.08,.28);
+      arms.push(arm);elbows.push(elbow);
+
       const leg=new THREE.Group();leg.position.set(side*.22,.9,0);body.add(leg);
-      cyl(leg,pants,0,-.27,0,.19,.16,.59);
-      box(leg,boots,0,-.59,.10,.35,.25,.53);
-      box(leg,mats.gold,0,-.48,.29,.27,.055,.04);
-      legs.push(leg);
+      cyl(leg,pants,0,-.21,0,.19,.18,.43);
+      const knee=new THREE.Group();knee.position.y=-.40;leg.add(knee);
+      cyl(knee,pants,0,-.12,0,.17,.155,.30);
+      box(knee,boots,0,-.34,.10,.35,.25,.53);
+      box(knee,mats.gold,0,-.27,.29,.27,.055,.04);
+      legs.push(leg);knees.push(knee);
     }
     explorer.position.set(wx(310),0,wz(620));
     // Keep clouds distant and above the horizon. Placing volumetric clouds near
@@ -1100,12 +1144,27 @@
       const playerY=crossing?.58:0;
       explorer.position.set(playerX,playerY,playerZ);
       const isMoving=!!state.moving&&state.screen==="playing";
-      const pace=isMoving?Math.sin(time*11)*.58:0;
+      const effect=state.effect;
+      const effectAge=effect?Math.max(0,time-effect.at):99;
+      const celebrating=effect&&effectAge<1.5;
+      const pace=isMoving?Math.sin(time*(state.keys?.has("shift")?15:11))*.6:0;
       legs[0].rotation.x=pace;legs[1].rotation.x=-pace;
-      arms[0].rotation.x=-pace*.79;arms[1].rotation.x=pace*.79;
-      body.position.y=isMoving?Math.abs(Math.sin(time*11))*.07:Math.sin(time*1.9)*.027;
-      body.rotation.z=isMoving?Math.sin(time*5.5)*.025:Math.sin(time*.85)*.011;
-      body.rotation.x=isMoving?-.038:Math.sin(time*1.5)*.012;
+      knees[0].rotation.x=isMoving?Math.max(0,pace)*-.37:0;
+      knees[1].rotation.x=isMoving?Math.max(0,-pace)*-.37:0;
+      arms[0].rotation.x=-pace*.82;arms[1].rotation.x=pace*.82;
+      elbows[0].rotation.x=isMoving?Math.max(0,pace)*-.28:0;
+      elbows[1].rotation.x=isMoving?Math.max(0,-pace)*-.28:0;
+      arms[0].rotation.z=0;arms[1].rotation.z=0;
+      if(celebrating){
+        arms[0].rotation.z=-2.12;arms[1].rotation.z=2.12;
+        elbows[0].rotation.x=-.26;elbows[1].rotation.x=-.26;
+      }else if(!isMoving&&state.nearby&&state.screen==="playing"){
+        arms[1].rotation.z=reduceMotion?.85:1.04+Math.sin(time*4)*.13;
+      }
+      body.position.y=isMoving?Math.abs(Math.sin(time*11))*.08:
+        (!reduceMotion&&celebrating?Math.abs(Math.sin(time*9))*.13:Math.sin(time*1.9)*.027);
+      body.rotation.z=isMoving?Math.sin(time*5.5)*.028:Math.sin(time*.85)*.011;
+      body.rotation.x=isMoving?-.045:Math.sin(time*1.5)*.012;
       scarfTail.rotation.z=-.25+(isMoving?Math.sin(time*11)*.15:Math.sin(time*1.5)*.03);
       if(isMoving){
         const dx=playerX-explorer.userData.lastX, dz=playerZ-explorer.userData.lastZ;
@@ -1147,6 +1206,40 @@
         m.dot.position.y=1.73+Math.sin(time*2.2)*.17;
         m.beacon.visible=!done;
       }
+      // Trigger a burst only while an earned achievement is recent.
+      const effectLength=effect?.kind==="victory"?5.3:2.8;
+      const activeEffect=!!effect&&effectAge<effectLength;
+      achievementGroup.visible=activeEffect;
+      if(activeEffect){
+        const spot=spots.find(p=>p[0]===effect.key);
+        const centerX=spot?wx(spot[1]):playerX, centerZ=spot?wz(spot[2]):playerZ;
+        achievementGroup.position.set(centerX,.18,centerZ);
+        const progress=effectAge/effectLength;
+        const spread=effect.kind==="victory"?3.15:1.95;
+        for(let i=0;i<sparkles.length;i++){
+          const gem=sparkles[i];
+          const angle=i*2.39996323;
+          const tier=.42+(i%7)/8;
+          gem.visible=!reduceMotion||i<12;
+          const radius=tier*spread*(.32+progress*.85);
+          const rise=.45+Math.sin(progress*Math.PI)*(1.2+(i%5)*.24);
+          gem.position.set(Math.cos(angle)*radius,rise+Math.sin(angle*3+time)*.12,
+            Math.sin(angle)*radius);
+          const size=(.55+.5*Math.sin(progress*Math.PI))*(1-progress*.6);
+          gem.scale.setScalar(size);
+          if(!reduceMotion)gem.rotation.set(time*1.2+i*.2,time*1.9+i*.4,0);
+        }
+        for(let i=0;i<achievementRings.length;i++){
+          const ring=achievementRings[i];
+          const t=Math.max(0,Math.min(1,progress*1.65-i*.17));
+          ring.visible=t>0&&t<1;
+          ring.scale.setScalar(.48+t*(effect.kind==="victory"?3.3:2.2));
+          ring.material.opacity=(1-t)*.48;
+        }
+        achievementLight.intensity=reduceMotion?0:Math.sin(progress*Math.PI)*8;
+      }else{
+        achievementLight.intensity=0;
+      }
       for(let i=0;i<villagers.length;i++){
         const resident=villagers[i];
         const nearby=Math.hypot(state.x-(i?472:245),state.y-(i?825:515))<135;
@@ -1173,7 +1266,9 @@
       let aim;
       if(playing){
         aim=new THREE.Vector3(playerX,.8,playerZ);
-        camPos.copy(aim).add(new THREE.Vector3(10.2,16.3,20).multiplyScalar(cameraDistance));
+        // After victory, briefly reveal more of the restored valley.
+        const finaleZoom=effect?.kind==="victory"&&effectAge<4.5&&!reduceMotion?1.17:1;
+        camPos.copy(aim).add(new THREE.Vector3(10.2,16.3,20).multiplyScalar(cameraDistance*finaleZoom));
       } else {
         aim=new THREE.Vector3(-4,0,-1);
         camPos.copy(aim).add(new THREE.Vector3(16,22,27));
