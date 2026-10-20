@@ -13,7 +13,8 @@
     river:    {x:705,y:610, name:"River Bank",    icon:"🔬", kind:"bonus",color:"#6fe1f2", hint:"Investigate the water"},
     gasket:   {x:1190,y:825,name:"Supply Depot", icon:"📦", kind:"quest", color:"#ffd344", hint:"Find a replacement gasket"},
     pump:     {x:1540,y:690,name:"Old Water Pump",icon:"⚙️",kind:"quest", color:"#ffd344", hint:"Repair the village pump"},
-    spring:   {x:1460,y:265,name:"Hill Spring",   icon:"💧", kind:"bonus",color:"#6fe1f2", hint:"Explore an alternative source"}
+    spring:   {x:1460,y:265,name:"Hill Spring",   icon:"💧", kind:"bonus",color:"#6fe1f2", hint:"Explore an alternative source"},
+    ridge:    {x:1160,y:200,name:"Raincatch Ridge",icon:"🌦️",kind:"bonus",color:"#a4dbe7",hint:"Build a safe rainwater collection plan"}
   };
   const questDefs = [
     {key:"elder",title:"Meet the village elder", detail:"Learn what the village needs",icon:"💬"},
@@ -80,7 +81,7 @@
   const miniCtx=miniMap?.getContext("2d");
   const mapW=540,mapH=316;
   const mapX=x=>x/W*mapW, mapY=y=>y/H*mapH;
-  const mapNames={elder:"ELDER",toolkit:"TOOLS",camp:"CAMP",river:"RIVER",gasket:"DEPOT",pump:"PUMP",spring:"SPRING"};
+  const mapNames={elder:"ELDER",toolkit:"TOOLS",camp:"CAMP",river:"RIVER",gasket:"DEPOT",pump:"PUMP",spring:"SPRING",ridge:"RIDGE"};
   let lastMapDraw=-1;
 
   function recommendedDestination(){
@@ -103,7 +104,7 @@
     }
     const roadPaths=[
       [[285,490],[370,630],[455,765],[610,708],[730,580],[970,580],[1180,825],[1540,690]],
-      [[280,490],[420,435],[540,350]],[[970,580],[1170,415],[1460,265]]
+      [[280,490],[420,435],[540,350]],[[970,580],[1170,415],[1460,265]],[[1100,440],[1120,315],[1160,200]]
     ];
     for(const path of roadPaths){
       c.beginPath();path.forEach((p,i)=>i?c.lineTo(mapX(p[0]),mapY(p[1])):c.moveTo(mapX(p[0]),mapY(p[1])));
@@ -177,8 +178,8 @@
     state.toastTimeout=setTimeout(()=>t.hidden=true,3500);
   }
   function addItem(item){if(!state.inventory.has(item))state.inventory.add(item);}
-  const rewardNames={elder:"A promise made",toolkit:"Toolkit collected",gasket:"Gasket secured",pump:"The Last Well restored",river:"Water research complete",spring:"New water source discovered"};
-  const rewardIcons={elder:"🤝",toolkit:"🧰",gasket:"🔩",pump:"💧",river:"🔬",spring:"🏔️"};
+  const rewardNames={elder:"A promise made",toolkit:"Toolkit collected",gasket:"Gasket secured",pump:"The Last Well restored",river:"Water research complete",spring:"New water source discovered",ridge:"Rainwater plan completed"};
+  const rewardIcons={elder:"🤝",toolkit:"🧰",gasket:"🔩",pump:"💧",river:"🔬",spring:"🏔️",ridge:"🌦️"};
   function celebrate(key,points=0,victory=false){
     const time=performance.now()/1000;
     state.effect={key,kind:victory?"victory":"quest",at:time};
@@ -212,8 +213,8 @@
     $("inventoryCount").textContent=`${state.inventory.size} ITEM${state.inventory.size===1?"":"S"}`;
     $("inventoryList").replaceChildren();
     if(!state.inventory.size){const e=document.createElement("span");e.className="muted";e.textContent="Your bag is empty.";$("inventoryList").append(e);}
-    const emoji={toolkit:"🧰",gasket:"🔩",testKit:"🧪",fieldNotes:"📓"};
-    for(const item of state.inventory){const e=document.createElement("span");e.className="inventory-item";e.textContent=`${emoji[item]||"✦"} ${({toolkit:"Toolkit",gasket:"Gasket",testKit:"Test kit",fieldNotes:"Field notes"})[item]||item}`;$("inventoryList").append(e);}
+    const emoji={toolkit:"🧰",gasket:"🔩",testKit:"🧪",fieldNotes:"📓",rainNotes:"🌦️"};
+    for(const item of state.inventory){const e=document.createElement("span");e.className="inventory-item";e.textContent=`${emoji[item]||"✦"} ${({toolkit:"Toolkit",gasket:"Gasket",testKit:"Test kit",fieldNotes:"Field notes",rainNotes:"Raincatch notes"})[item]||item}`;$("inventoryList").append(e);}
     for(const el of $("questList").querySelectorAll("[data-quest]")){
       const completed=state.done.has(el.dataset.quest);el.classList.toggle("done",completed);
       el.querySelector(".quest-icon").textContent=completed?"✓":questDefs.find(q=>q.key===el.dataset.quest).icon;
@@ -326,6 +327,7 @@
     const key=nearest();if(!key){notify("Walk closer to a glowing location, then press E.");return;}
     state.path=[];state.goal=null;state.destination=null;
     switch(key){
+      case "ridge":rainChallenge();break;
       case "elder":
         openModal({tag:"THE VILLAGE",icon:"👵",title:"A promise to the village",description:"‘Our only pump stopped working,’ says Amina, the village elder. ‘The children deserve reliable water. Visit the workshop for tools, cross the bridge for a replacement gasket, and come back to restore the pump.’",choices:[{text:state.done.has("elder")?"Review my mission":"I promise to help! (+80 impact)",primary:true,action:()=>{doneOnce("elder","fieldNotes",80);closeModal();updateUI();notify("Quest updated · The village is counting on you.");}}]});break;
       case "toolkit":
@@ -711,7 +713,8 @@
       ["river",705,610,"River Bank",0x75edff],
       ["gasket",1190,825,"Supply Depot",0xffd45b],
       ["pump",1540,690,"Water Pump",0xffd45b],
-      ["spring",1460,265,"Hill Spring",0x75edff]
+      ["spring",1460,265,"Hill Spring",0x75edff],
+      ["ridge",1160,200,"Raincatch Ridge",0xa4dbe7]
     ];
     const scene = new THREE.Scene();
     scene.background = new THREE.Color(0xb9dfdf);
@@ -880,6 +883,7 @@
     road([[285,490],[370,630],[455,765],[610,708],[730,580],[970,580],[1180,825],[1540,690]]);
     road([[280,490],[420,435],[540,350]],.65);
     road([[970,580],[1170,415],[1460,265]],.65);
+    road([[1100,440],[1120,315],[1160,200]],.65);
     // Discreet trail lights provide readable depth cues after sunset without
     // adding expensive point lights to each marker.
     const lanternGlow=new THREE.MeshBasicMaterial({color:0xffe7a2,emissive:0xffcc75});
