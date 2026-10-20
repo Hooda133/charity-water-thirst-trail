@@ -236,3 +236,26 @@
 .rain-status.is-error{color:#ffdc9a}
 .rain-status.is-success{color:#b4ffb4}
 @media(prefers-reduced-motion:reduce){.rain-option{transition:none}}
+
+/* Wetland Sanctuary — select removable litter without disturbing habitat. */
+.marsh-panel{max-width:455px;margin:14px auto 18px;padding:13px;border-radius:16px;
+ background:linear-gradient(150deg,#154841,#0c353c);border:1px solid #83c6a8a6}
+.marsh-panel[hidden]{display:none!important}
+.marsh-heading{display:flex;justify-content:space-between;gap:12px;align-items:center;
+ font-size:10px;letter-spacing:.8px;color:#d3ffe6;margin-bottom:12px}
+.marsh-heading span{color:#ffe49a;white-space:nowrap}
+.marsh-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.marsh-item{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;
+ min-height:98px;padding:10px 5px;background:#1f5158;border:2px solid #609695;
+ color:#f5ffef;border-radius:12px;cursor:pointer;font:inherit;transition:transform .18s,background .18s}
+.marsh-item:hover{background:#2b6b67;transform:translateY(-2px)}
+.marsh-item:focus-visible{outline:3px solid #ffdf83;outline-offset:2px}
+.marsh-item[disabled]{opacity:.55;cursor:default;transform:none}
+.marsh-item.is-collected{border-color:#a3f0b4;background:#24634d}
+.marsh-item-icon{font-size:28px}
+.marsh-item-title{font-size:10px;font-weight:800;line-height:1.25;text-align:center}
+.marsh-status{font-size:12px;color:#d5f5e7;line-height:1.55;min-height:39px;margin:12px 1px 0}
+.marsh-status.is-error{color:#ffdc9e}
+.marsh-status.is-success{color:#b7f7ba}
+@media(max-width:430px){.marsh-panel{padding:10px}.marsh-grid{gap:5px}.marsh-item{min-height:81px;padding:8px 3px}.marsh-item-icon{font-size:24px}}
+@media(prefers-reduced-motion:reduce){.marsh-item{transition:none}}
