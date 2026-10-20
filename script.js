@@ -597,6 +597,17 @@
     road([[285,490],[370,630],[455,765],[610,708],[730,580],[970,580],[1180,825],[1540,690]]);
     road([[280,490],[420,435],[540,350]],.65);
     road([[970,580],[1170,415],[1460,265]],.65);
+    // Discreet trail lights provide readable depth cues after sunset without
+    // adding expensive point lights to each marker.
+    const lanternGlow=new THREE.MeshBasicMaterial({color:0xffe7a2,emissive:0xffcc75});
+    for(const [px,py] of [[390,620],[610,709],[1040,650],[1310,735]]){
+      const g=new THREE.Group();g.position.set(wx(px),0,wz(py));scene.add(g);
+      cyl(g,mats.wood,0,.48,0,.065,.09,.92);
+      const frame=box(g,mats.dark,0,1.01,0,.30,.42,.30);
+      frame.castShadow=false;
+      ball(g,lanternGlow,0,1.02,.02,.14,.17,.14,false);
+      box(g,mats.gold,0,1.29,0,.37,.08,.37);
+    }
     // The bridge is true geometry: elevated planks, support pillars, railings and posts.
     const bridge=new THREE.Group();bridge.position.set(wx(850),0,wz(580));scene.add(bridge);
     box(bridge,mats.wood,0,.24,0,6.35,.37,2.65);
@@ -614,6 +625,13 @@
       box(bridge,mats.lightWood,0,1.24,side*1.33,6.45,.12,.12);
     }
     for(const x of [-2.75,2.75])for(const z of [-.95,.95])cyl(bridge,mats.wood,x,-.26,z,.21,.27,1.3);
+    // Bridge ropes and extra braces add detail while preserving its safe crossing footprint.
+    for(const side of [-1,1]){
+      for(let i=0;i<6;i++){
+        const beam=box(bridge,mats.lightWood,-2.58+i*1.04,.79,side*1.35,.11,.95,.10);
+        beam.rotation.z=(i%2?-1:1)*.18;
+      }
+    }
   
     // Richly grouped trees: roots, tapered bark, several shaded foliage crowns.
     const treeMaterials=[mats.leaf1,mats.leaf2,mats.leaf3,mats.leaf4];
@@ -770,6 +788,17 @@
     ball(pump,mats.gold,1.4,3.45,0,.20);
     cyl(pump,mats.rock2,0,.23,1.45,.89,1.03,.45,12);
     cyl(pump,makeMat(0x2899a7,.18),0,.47,1.45,.68,.68,.035,14);
+    // Pressure gauge and water droplets visually distinguish the repair objective.
+    const gauge=new THREE.Group();gauge.position.set(.38,2.49,.32);pump.add(gauge);
+    const gaugeRim=cyl(gauge,mats.dark,0,0,0,.26,.26,.12,20);
+    gaugeRim.rotation.x=Math.PI/2;
+    const gaugeFace=cyl(gauge,mats.trim,0,0,.075,.20,.20,.025,20);
+    gaugeFace.rotation.x=Math.PI/2;
+    const needle=box(gauge,mats.roofDark,.055,.035,.098,.13,.025,.026);
+    needle.rotation.z=-.6;
+    for(const dx of [-.46,.46]){
+      box(pump,mats.lightWood,dx,.57,1.45,.16,.14,.18);
+    }
     // Alternative mountain spring.
     const spring=new THREE.Group();spring.position.set(wx(1460),0,wz(265));scene.add(spring);
     for(let i=0;i<7;i++){
@@ -802,8 +831,9 @@
       const dot=ball(g,new THREE.MeshBasicMaterial({color}),0,1.72,0,.23,.23,.23,false);
       markers[key]={group:g,ring,beacon,dot,mat};
     }
-    // Low-poly backpacker: independent articulated legs and arms for real walking.
+    // Slightly larger stylized explorer, visible even at the standard isometric zoom.
     const explorer=new THREE.Group();scene.add(explorer);
+    explorer.scale.setScalar(1.19);
     const skin=makeMat(0xce9169),shirt=makeMat(0x29a6a0),pants=makeMat(0x335772),
           boots=makeMat(0x3d3035),bag=makeMat(0xdc814e),hat=makeMat(0xf9c768),hair=makeMat(0x47342d);
     const shadow=mesh(new THREE.CircleGeometry(.56,22),new THREE.MeshBasicMaterial({color:0x203d34,transparent:true,opacity:.26,depthWrite:false}),explorer,false);
@@ -814,13 +844,27 @@
     ball(body,hair,0,2.37,-.05,.36,.19,.33);
     cyl(body,hat,0,2.49,0,.41,.40,.16);
     cyl(body,hat,0,2.43,.2,.51,.51,.06);
-    for(const x of [-.13,.13])ball(body,mats.dark,x,2.18,.335,.04,.05,.03);
+    // Hat band, ears, eyebrows, and nose add character at close camera distances.
+    cyl(body,mats.roofDark,0,2.445,0,.417,.417,.047,12);
+    for(const side of [-1,1])ball(body,skin,side*.335,2.12,0,.09,.13,.10);
+    for(const x of [-.13,.13]){
+      ball(body,mats.dark,x,2.18,.335,.041,.053,.035);
+      box(body,hair,x,2.285,.32,.10,.035,.045);
+    }
+    ball(body,skin,0,2.055,.37,.08,.09,.065);
     box(body,bag,0,1.45,-.47,.78,.94,.36);
     box(body,mats.lightWood,0,1.5,-.67,.46,.07,.05);
     // Backpack straps, neck scarf and a small water flask.
     for(const side of [-.27,.27])
       box(body,mats.wood,side,1.57,.29,.11,.74,.09);
     box(body,mats.gold,0,1.80,.28,.48,.14,.17);
+    // Layered belt and a compass badge turn simple primitives into adventure gear.
+    box(body,mats.wood,0,1.04,.245,.74,.16,.11);
+    box(body,mats.gold,0,1.04,.305,.20,.17,.035);
+    const compass=cyl(body,mats.gold,.25,1.62,.46,.14,.14,.075,14);
+    compass.rotation.x=Math.PI/2;
+    const scarfTail=box(body,mats.gold,-.27,1.61,-.11,.19,.38,.15);
+    scarfTail.rotation.z=-.25;
     const flask=cyl(body,makeMat(0x4ab9cb,.35,.35),-.53,1.12,-.31,.17,.17,.49,12);
     flask.rotation.z=.16;
     cyl(body,mats.lightWood,-.53,1.41,-.31,.1,.10,.10);
@@ -830,10 +874,12 @@
       const arm=new THREE.Group();arm.position.set(side*.48,1.75,0);body.add(arm);
       const sleeve=cyl(arm,shirt,0,-.17,0,.18,.15,.36);
       cyl(arm,skin,0,-.54,0,.13,.11,.38);
+      ball(arm,skin,0,-.76,.035,.16,.13,.15);
       arms.push(arm);
       const leg=new THREE.Group();leg.position.set(side*.22,.9,0);body.add(leg);
       cyl(leg,pants,0,-.27,0,.19,.16,.59);
       box(leg,boots,0,-.59,.10,.35,.25,.53);
+      box(leg,mats.gold,0,-.48,.29,.27,.055,.04);
       legs.push(leg);
     }
     explorer.position.set(wx(310),0,wz(620));
@@ -909,10 +955,13 @@
       const playerY=crossing?.58:0;
       explorer.position.set(playerX,playerY,playerZ);
       const isMoving=!!state.moving&&state.screen==="playing";
-      const pace=isMoving?Math.sin(time*11)*.57:0;
+      const pace=isMoving?Math.sin(time*11)*.58:0;
       legs[0].rotation.x=pace;legs[1].rotation.x=-pace;
-      arms[0].rotation.x=-pace*.75;arms[1].rotation.x=pace*.75;
-      body.position.y=isMoving?Math.abs(Math.sin(time*11))*.065:Math.sin(time*1.9)*.025;
+      arms[0].rotation.x=-pace*.79;arms[1].rotation.x=pace*.79;
+      body.position.y=isMoving?Math.abs(Math.sin(time*11))*.07:Math.sin(time*1.9)*.027;
+      body.rotation.z=isMoving?Math.sin(time*5.5)*.025:Math.sin(time*.85)*.011;
+      body.rotation.x=isMoving?-.038:Math.sin(time*1.5)*.012;
+      scarfTail.rotation.z=-.25+(isMoving?Math.sin(time*11)*.15:Math.sin(time*1.5)*.03);
       if(isMoving){
         const dx=playerX-explorer.userData.lastX, dz=playerZ-explorer.userData.lastZ;
         if(Number.isFinite(dx)&&Number.isFinite(dz)&&Math.hypot(dx,dz)>.003){
