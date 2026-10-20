@@ -73,6 +73,20 @@
           <aside class="sidebar">
             <div class="sidebar-header"><div><span class="overline">EXPEDITION LOG</span><h2>Your mission<span class="yellow">.</span></h2></div><div id="questsCompleted" class="quest-count">0 / 4</div></div>
             <p class="side-intro">Help the village restore access to a reliable source of water. Choose where to go next.</p>
+            <section class="navigator-panel" aria-labelledby="navigatorTitle">
+              <div class="navigator-heading">
+                <span id="navigatorTitle" class="overline">LIVE VALLEY MAP</span>
+                <button id="mapToggle" class="navigator-toggle" type="button" aria-controls="mapBody" aria-expanded="true">Hide map −</button>
+              </div>
+              <div id="mapBody" class="navigator-body">
+                <canvas id="miniMap" width="540" height="316" role="img" aria-label="Overview map of the valley with your live location, river, route and clickable destination markers. Destination buttons below are also available.">Map unavailable.</canvas>
+                <div class="navigator-status">
+                  <span class="navigator-player"><i aria-hidden="true"></i> YOU ARE HERE</span>
+                  <strong id="mapGoalLabel" aria-live="off">Next: Village Elder</strong>
+                </div>
+                <p class="navigator-help">Select a marker on the map to travel there, or use the destination buttons below.</p>
+              </div>
+            </section>
             <div class="quest-list" id="questList"></div>
             <div class="sidebar-divider"></div>
             <div class="overline">EXPLORE THE VALLEY</div>
