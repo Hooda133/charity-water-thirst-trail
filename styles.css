@@ -73,3 +73,71 @@
   #world3dCanvas,.destination-btn,.quest-card,.button-primary{transition:none!important}
   .hero-scene.is-3d .hero-caption{backdrop-filter:none}
 }
+
+
+/* Cinematic but accessible in-world quest completion toast. */
+.impact-burst{
+  position:absolute;top:15%;left:50%;transform:translateX(-50%);
+  z-index:8;pointer-events:none;
+  display:flex;align-items:center;gap:13px;
+  min-width:min(355px,86%);max-width:90%;padding:13px 18px;
+  color:#fffbea;background:linear-gradient(135deg,#143b45f5,#0a2838f2);
+  border:1px solid #ffe5a6a6;border-radius:19px;
+  box-shadow:0 15px 35px #06161cbb,0 0 35px #ffdc6426;
+  backdrop-filter:blur(10px);
+}
+.impact-burst.replay{animation:questReveal .55s cubic-bezier(.18,.78,.31,1.2) both}
+.impact-burst-medal{
+  display:grid;place-items:center;flex-shrink:0;
+  width:51px;height:51px;border-radius:15px;
+  color:#163b3e;font-size:27px;
+  background:radial-gradient(circle at 35% 25%,#fff4bd,#f7c949);
+  box-shadow:0 5px 18px #ffc74b55,inset 0 1px 1px #fff8;
+}
+.impact-burst-copy{display:flex;flex-direction:column;gap:4px;min-width:0}
+.impact-burst-eyebrow{
+  color:#f5d06e;font-weight:900;letter-spacing:1.45px;font-size:9px
+}
+.impact-burst-copy strong{
+  font-family:'Outfit',system-ui,sans-serif;
+  font-size:clamp(15px,2vw,21px);line-height:1.2
+}
+.impact-burst-copy small{
+  color:#a8eacb;font-size:11px;letter-spacing:1px;font-weight:900
+}
+@keyframes questReveal{
+  from{opacity:0;transform:translate(-50%,-20px) scale(.88)}
+  65%{opacity:1;transform:translate(-50%,3px) scale(1.03)}
+  to{opacity:1;transform:translate(-50%,0) scale(1)}
+}
+/* Winning deserves a distinct and celebratory modal, not the pause-menu look. */
+.modal-card.is-victory{
+  position:relative;overflow:hidden;
+  border:1px solid #ffe39ab0;
+  background:radial-gradient(ellipse at 50% -15%,#547b68 0%,#204c50 33%,#0a2835 80%);
+  box-shadow:0 32px 95px #000b,0 0 45px #fcd24d37,inset 0 1px #fff3;
+}
+.modal-card.is-victory::before{
+  content:"";position:absolute;inset:0 0 auto;height:4px;
+  background:linear-gradient(90deg,transparent,#ffe58a,#8ef2d0,#ffe58a,transparent);
+}
+.modal-card.is-victory .modal-illustration{
+  filter:drop-shadow(0 8px 20px #ffde7299);
+  animation:victoryMedal 3.1s ease-in-out infinite
+}
+.modal-card.is-victory #modalTitle{
+  color:#ffe19a;text-shadow:0 2px 15px #ffc94b2b;
+}
+.modal-card.is-victory .modal-tag{color:#d3f9e7}
+@keyframes victoryMedal{
+  0%,100%{transform:translateY(0) rotate(-3deg)}
+  50%{transform:translateY(-7px) rotate(4deg)}
+}
+@media(max-width:600px){
+  .impact-burst{top:17%;padding:11px 12px;gap:10px}
+  .impact-burst-medal{width:43px;height:43px;font-size:23px}
+}
+@media(prefers-reduced-motion:reduce){
+  .impact-burst.replay,.modal-card.is-victory .modal-illustration{animation:none!important}
+  .impact-burst{backdrop-filter:none}
+}
