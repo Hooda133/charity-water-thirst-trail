@@ -38,3 +38,19 @@ This project is a static HTML/CSS/JavaScript game. Run it from a local HTTP serv
 Source syntax, mocked startup, game-state, pipeline, navigation, and 3D scene-construction checks were run during development. **A real browser/WebGL, touch-device, frame-rate, and end-to-end visual test remains required.**
 
 The gameplay simulates water-access challenges for education and entertainment. It is not drinking-water safety guidance.
+
+
+## Second upgrade cycle — graphics, pickups and sanctuary
+- [ ] During an expedition, the daypart badge changes from morning through golden hour, starlight and dawn (one full cycle takes eight minutes).
+- [ ] Stars and fireflies appear after sunset; village lanterns illuminate nearby areas; movement and quests remain playable at night.
+- [ ] Four sealed-water pickups are visible in the 3D world and as small cyan markers on the mini-map.
+- [ ] Approaching a pickup awards 25 impact points and restores up to 12 energy, once per cache.
+- [ ] Replay resets all pickups; they can be collected in the next expedition.
+- [ ] Wetland Sanctuary appears in destination buttons, on the mini-map and in the 3D valley.
+- [ ] Its boardwalk, lily pads, reeds and wading bird render without covering the player or blocking controls.
+- [ ] Selecting the bird nest or seedlings in the cleanup activity costs three energy and doesn't count as litter collected.
+- [ ] Selecting the four litter items, then finishing the activity, earns 180 impact points and a habitat badge.
+- [ ] Re-visiting the sanctuary shows the completed-study dialog, with no duplicate reward.
+- [ ] The original pipe puzzle, Raincatch Ridge plan and pump finale still work.
+
+Automated-integration simulation checks run in the development connection cover logic, navigation and mock 3D scene rendering. The visual effects still require a real browser/WebGL test, especially performance and touch layouts.
