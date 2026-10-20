@@ -788,10 +788,14 @@
   }
   function draw(){
     const time=performance.now()/1000;
+    const scenic2d=state.scenic&&!world3d;
     const goalX=Math.min(W-VW,Math.max(0,state.x-VW*.45)),goalY=Math.min(H-VH,Math.max(0,state.y-VH*.51));
-    state.cameraX+=(goalX-state.cameraX)*.12;state.cameraY+=(goalY-state.cameraY)*.12;
+    if(scenic2d){state.cameraX=0;state.cameraY=0;}
+    else{state.cameraX+=(goalX-state.cameraX)*.12;state.cameraY+=(goalY-state.cameraY)*.12;}
     ctx.clearRect(0,0,VW,VH);
-    ctx.save();ctx.translate(-state.cameraX,-state.cameraY);
+    ctx.save();
+    if(scenic2d)ctx.scale(VW/W,VH/H);
+    else ctx.translate(-state.cameraX,-state.cameraY);
     drawWorld(time);
     for(const cache of supplyCaches){
       if(state.supplies.has(cache.id))continue;
@@ -832,8 +836,10 @@
   }
   function moveFromCanvas(event){
     if(state.screen!=="playing"||state.modalOpen)return;
-    const rect=canvas.getBoundingClientRect();const x=(event.clientX-rect.left)*VW/rect.width+state.cameraX;
-    const y=(event.clientY-rect.top)*VH/rect.height+state.cameraY;
+    const rect=canvas.getBoundingClientRect();
+    const scenic2d=state.scenic&&!world3d;
+    const x=(event.clientX-rect.left)*(scenic2d?W:VW)/rect.width+(scenic2d?0:state.cameraX);
+    const y=(event.clientY-rect.top)*(scenic2d?H:VH)/rect.height+(scenic2d?0:state.cameraY);
     let key=null,d=75;for(const [k,sp] of Object.entries(spots)){const n=dist({x,y},sp);if(n<d){d=n;key=k;}}
     if(key){if(dist(state,spots[key])<90)interact();else navigateTo(key);}else navToPosition({x:Math.min(W-50,Math.max(50,x)),y:Math.min(H-50,Math.max(50,y))});
   }
