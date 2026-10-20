@@ -5,6 +5,8 @@
 ## Features
 
 - Genuine Three.js/WebGL 3D exploration with terrain, 3D buildings, a modeled explorer, lighting, shadows, camera follow, and click-to-walk
+- Live interactive valley map with player location, quest destinations and walking routes; click a map marker to navigate or press M to collapse the map
+- In-world golden waypoint beacons, gentle wind in the forest and birds flying above the valley
 - Stylized 3D environment with a river, bridge, detailed cottages, cedar trees, mission markers, riverside reeds, village market, garden and campsite
 - Living scenery: shimmering river highlights, butterflies, villagers who greet nearby travelers, animated spring water and a pump that visibly flows after repair
 - Animated articulated explorer (walking, greeting, and celebratory poses), cinematic quest rewards with 3D sparkles, and a distinctive victory presentation
@@ -18,7 +20,7 @@
 
 ## How to play
 
-Open `index.html` in a modern browser, or serve the folder with any static file server. Use **WASD** or **arrow keys** to move, **E** or **Space** to interact, **Shift** to sprint, **P** to pause, and the **mouse wheel** to zoom the 3D camera. On mobile, use the directional controls. Meet the elder, gather the toolkit and gasket, then complete the pump repair challenge before your energy runs out.
+Open `index.html` in a modern browser, or serve the folder with any static file server. Use **WASD** or **arrow keys** to move, **E** or **Space** to interact, **Shift** to sprint, **P** to pause, and the **mouse wheel** to zoom the 3D camera, and **M** to hide or show the mini-map. The mini-map also lets you click destination markers to plan a route. On mobile, use the directional controls. Meet the elder, gather the toolkit and gasket, then complete the pump repair challenge before your energy runs out.
 
 ## Run locally
 
