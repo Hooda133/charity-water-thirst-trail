@@ -33,12 +33,13 @@
           <div class="start-highscore">🏆 <span>BEST EXPEDITION</span> <strong id="highScoreStart">—</strong></div>
         </div>
         <div class="hero-scene" aria-hidden="true">
+          <div class="hero-top-label"><span class="hero-beacon" aria-hidden="true"></span><span>GREENWATER VALLEY <b>·</b> A LIVING 3D WORLD</span></div>
           <div class="hero-sun"></div><div class="hero-cloud cloud-one"></div><div class="hero-cloud cloud-two"></div>
           <div class="hero-mountain mountain-far"></div><div class="hero-mountain mountain-near"></div>
           <div class="hero-river"></div><div class="hero-hill"></div>
           <div class="hero-house"><span>⌂</span></div><div class="hero-house small-house"><span>⌂</span></div>
           <div class="hero-pump">⚙️</div><div class="hero-drop">💧</div>
-          <div class="hero-caption"><span>✦ YOUR MISSION</span><strong>Bring the water home.</strong><small>Explore • Discover • Restore</small></div>
+          <div class="hero-caption"><span>✦ AN ADVENTURE WITH PURPOSE</span><strong>Bring the water home.</strong><small>Explore a living valley. Solve real puzzles. Make an impact.</small><div class="hero-stats"><span>✦ 3D EXPLORATION</span><span>◎ LIVING WORLD</span><span>◈ HANDS-ON MISSIONS</span></div></div>
         </div>
         <div class="start-bottom"><span>01 · EXPLORE THE VALLEY</span><span>02 · SOLVE THE CHALLENGES</span><span>03 · RESTORE SAFE WATER</span></div>
       </section>
@@ -55,7 +56,7 @@
         <div class="game-layout">
           <div class="canvas-column">
             <div class="world-frame">
-              <div class="frame-label"><span>🌿 GREENWATER VALLEY</span><span id="locationHint">Follow the golden markers</span></div>
+              <div class="frame-label"><span>🌿 GREENWATER VALLEY</span><div class="frame-tools"><span id="locationHint">Follow the golden markers</span><button id="scenicViewButton" type="button" class="scenic-button" aria-pressed="false" title="Toggle a scenic overview of the valley (V)">◈ SCENIC VIEW</button></div></div>
               <canvas id="gameCanvas" width="1000" height="610" tabindex="0" role="img" aria-label="Stylized 2.5D adventure map of Greenwater Valley. Use WASD or arrow keys to move, E to interact, or use the destination buttons in the mission panel.">Your browser does not support canvas.</canvas>
               <div id="impactBurst" class="impact-burst" role="status" aria-live="polite" aria-atomic="true" hidden>
                 <span class="impact-burst-medal" id="impactBurstIcon" aria-hidden="true">✦</span>
