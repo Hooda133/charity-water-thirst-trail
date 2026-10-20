@@ -1273,6 +1273,39 @@
           .11,.11,.11,false);
       }
     }
+    // Raincatch Ridge: raised catchment roof, covered tank, pipes and wind vane.
+    // The activity's physical landmark remains visible even before the quest begins.
+    const rainStation=new THREE.Group();rainStation.position.set(wx(1160),0,wz(200));scene.add(rainStation);
+    const roofTin=makeMat(0x6eaba7,.48,.18),roofBorder=makeMat(0xeccb8d);
+    for(const x of [-1.25,1.25])for(const z of [-.75,.75])
+      box(rainStation,mats.wood,x,1.25,z,.16,2.5,.17);
+    for(const x of [-.66,.66]){
+      const roofPanel=box(rainStation,roofTin,x,2.54,0,1.62,.13,2.5);
+      roofPanel.rotation.z=x<0?-.31:.31;
+    }
+    box(rainStation,roofBorder,0,2.92,0,.15,.12,2.67);
+    box(rainStation,roofBorder,-1.30,2.33,0,.14,.12,2.55);
+    box(rainStation,roofBorder,1.30,2.33,0,.14,.12,2.55);
+    const catchTank=cyl(rainStation,metal,2.18,.80,.55,.8,.82,1.48,18);
+    cyl(rainStation,lightMetal,2.18,1.59,.55,.87,.87,.14,18);
+    const tankCap=cyl(rainStation,mats.dark,2.18,1.7,.55,.95,.95,.10,18);
+    box(rainStation,mats.lightWood,2.18,.57,1.36,.25,.54,.17);
+    const roofDrain=box(rainStation,lightMetal,1.35,1.91,.55,.12,.78,.12);
+    const roofOutlet=box(rainStation,lightMetal,1.76,1.50,.55,.84,.12,.12);
+    // Tall weather vane draws attention to the new optional area from a distance.
+    cyl(rainStation,mats.wood,-1.98,2.15,-.45,.055,.073,4.25,9);
+    const rainVane=new THREE.Group();rainVane.position.set(-1.98,4.27,-.45);rainStation.add(rainVane);
+    box(rainVane,mats.gold,0,0,0,1.25,.09,.10);
+    const vanePointer=mesh(new THREE.ConeGeometry(.19,.48,3),mats.gold,rainVane);
+    vanePointer.position.x=.76;vanePointer.rotation.z=-Math.PI/2;
+    ball(rainVane,mats.gold,0,.01,0,.11,.11,.11);
+    // A few translucent droplets circulate through the rainwater barrel.
+    const rainDropMat=new THREE.MeshBasicMaterial({color:0xa9f4f5,transparent:true,opacity:.6,depthWrite:false});
+    const stationDroplets=[];
+    for(let i=0;i<10;i++){
+      const droplet=ball(rainStation,rainDropMat,1.65,2.1,.62,.06,.14,.06,false);
+      stationDroplets.push(droplet);
+    }
     // Alternative mountain spring.
     const spring=new THREE.Group();spring.position.set(wx(1460),0,wz(265));scene.add(spring);
     for(let i=0;i<7;i++){
@@ -1688,8 +1721,16 @@
           ?Math.abs(Math.sin(time*4.5+i))*.14
           :Math.sin(time*1.3+i)*.027);
       }
-      // Waterwheel speed changes after successful repair and pauses for reduced motion.
-      if(!reduceMotion)waterwheel.rotation.z=-time*(state.done?.has("pump")?.63:.28);
+      // Waterwheel and raincatch station respond to the valley wind.
+      if(!reduceMotion){
+        rainVane.rotation.y=Math.sin(time*.35)*1.1;
+        for(let i=0;i<stationDroplets.length;i++){
+          const drop=stationDroplets[i],p=(i/10+time*.27)%1;
+          drop.position.set(1.45+p*.65,2.07-p*.66,.61);
+          drop.scale.y=.75+(1-p)*.55;
+        }
+      }
+      if(!reduceMotion)waterwheel.rotation.z=-time*(state.done?.has("pump")?0.63:0.28);
       if(!reduceMotion)chuteWater.material.opacity=.92;
       const restored=!!state.done?.has("pump");
       pumpFlow.visible=restored;
