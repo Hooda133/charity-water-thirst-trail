@@ -560,6 +560,7 @@
       const z=-15+(i/42)*30,x=wx(riverCenter(z*SCALE+550))+(rng()-.5)*2.8;
       const wave=mesh(new THREE.TorusGeometry(.12+rng()*.21,.015,5,18,Math.PI),rippleMat,scene,false);
       wave.rotation.x=-Math.PI/2;wave.position.set(x,.064,z);wave.rotation.z=rng()*6;
+      wave.userData.startZ=z;
       ripples.push(wave);
     }
     // Floating water glints bring the stream to life without external textures.
@@ -1089,10 +1090,12 @@
       }
       explorer.userData.lastX=playerX;explorer.userData.lastZ=playerZ;
       if(!reduceMotion){
-        // Time-based displacement avoids faster water on high-refresh-rate screens.
+        // Time-based displacement stays consistent across refresh rates.
         for(let i=0;i<ripples.length;i++){
-          ripples[i].position.z+=.10;
-          if(ripples[i].position.z>15.2)ripples[i].position.z=-15.2;
+          const wave=ripples[i];
+          const z=((wave.userData.startZ+15.2+time*1.6)%30.4)-15.2;
+          wave.position.z=z;
+          wave.position.x=wx(riverCenter(z*SCALE+550))+Math.sin(i*32)*.21;
         }
         for(const shine of glints){
           const z=shine.baseZ+Math.sin(time*.85+shine.phase)*.75;
