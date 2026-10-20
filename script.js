@@ -450,14 +450,15 @@
       ["spring",1460,265,"Hill Spring",0x75edff]
     ];
     const scene = new THREE.Scene();
-    scene.background = new THREE.Color(0xb5dcd6);
-    scene.fog = new THREE.FogExp2(0xb5dcd6, .018);
+    scene.background = new THREE.Color(0xb9dfdf);
+    // Moderate distance fog provides atmosphere without washing out nearby terrain.
+    scene.fog = new THREE.FogExp2(0xb9dfdf, .013);
     const camera = new THREE.PerspectiveCamera(46, 1, .1, 180);
     const renderer = new THREE.WebGLRenderer({antialias:true, alpha:false, powerPreference:"high-performance"});
     renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.7));
     renderer.outputColorSpace = THREE.SRGBColorSpace;
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    renderer.toneMappingExposure = 1.45;
+    renderer.toneMappingExposure = 1.22;
     renderer.shadowMap.enabled = true;
     renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     const view = renderer.domElement;
@@ -469,8 +470,8 @@
     const host = originalCanvas.parentElement;
     const hero = document.querySelector(".hero-scene");
   
-    scene.add(new THREE.HemisphereLight(0xe6faff, 0x557d51, 2.2));
-    const sun = new THREE.DirectionalLight(0xffe7b1, 3.3);
+    scene.add(new THREE.HemisphereLight(0xe6faff, 0x557d51, 1.75));
+    const sun = new THREE.DirectionalLight(0xffe7b1, 2.8);
     sun.position.set(-19, 32, -18);
     sun.castShadow = true;
     sun.shadow.mapSize.set(2048,2048);
@@ -482,7 +483,7 @@
     sun.shadow.camera.far = 90;
     sun.shadow.bias = -.00015;
     scene.add(sun, sun.target);
-    const fill = new THREE.DirectionalLight(0x8ae5eb, .8);
+    const fill = new THREE.DirectionalLight(0x8ae5eb, .58);
     fill.position.set(18,12,8); scene.add(fill);
     const makeMat = (color, roughness=1, metalness=0) => new THREE.MeshStandardMaterial({color,roughness,metalness,flatShading:true});
     const mats = {
@@ -782,7 +783,7 @@
     function labelTexture(title){
       const cn=document.createElement("canvas");cn.width=512;cn.height=128;
       const c=cn.getContext("2d");
-      c.fillStyle="#123c46";c.beginPath();c.roundRect(10,8,492,109,28);c.fill();
+      c.fillStyle="#0e323d";c.beginPath();c.roundRect(10,8,492,109,28);c.fill();
       c.strokeStyle="rgba(255,229,148,.8)";c.lineWidth=4;c.stroke();
       c.fillStyle="#fff5d6";c.font="bold 40px system-ui";c.textAlign="center";
       c.fillText(title,256,80,450);
@@ -797,7 +798,7 @@
       const beacon=mesh(new THREE.CylinderGeometry(.07,.45,1.5,12),new THREE.MeshBasicMaterial({color,transparent:true,opacity:.15,depthWrite:false}),g,false);
       beacon.position.y=.90;
       const badge=new THREE.Sprite(new THREE.SpriteMaterial({map:labelTexture(name),transparent:true,depthTest:false}));
-      badge.position.set(0,3.25,0);badge.scale.set(3.15,.79,1);g.add(badge);
+      badge.position.set(0,3.28,0);badge.scale.set(3.45,.86,1);g.add(badge);
       const dot=ball(g,new THREE.MeshBasicMaterial({color}),0,1.72,0,.23,.23,.23,false);
       markers[key]={group:g,ring,beacon,dot,mat};
     }
@@ -836,17 +837,24 @@
       legs.push(leg);
     }
     explorer.position.set(wx(310),0,wz(620));
-    // Soft clouds have volume instead of a CSS illustration.
-    const cloudMat=new THREE.MeshStandardMaterial({color:0xf5f5e6,transparent:true,opacity:.66,roughness:1,depthWrite:false});
+    // Keep clouds distant and above the horizon. Placing volumetric clouds near
+    // the follow camera used to obscure half of the playable valley.
+    const cloudMat=new THREE.MeshBasicMaterial({
+      color:0xfaf8ef,transparent:true,opacity:.39,depthWrite:false,fog:true
+    });
     const clouds=[];
-    for(let i=0;i<10;i++){
-      const g=new THREE.Group();g.position.set((rng()-.5)*50,10+rng()*6,(rng()-.5)*31);
-      for(let j=0;j<4;j++)ball(g,cloudMat,(j-1.5)*1.35,Math.sin(j)*.27,0,1.1+rng()*.5,.55+rng()*.25,.8,false);
+    for(let i=0;i<7;i++){
+      const g=new THREE.Group();
+      g.position.set((rng()-.5)*46,12+rng()*3,-19-rng()*7);
+      for(let j=0;j<4;j++){
+        ball(g,cloudMat,(j-1.5)*1.08,Math.sin(j)*.13,0,
+          .75+rng()*.24,.26+rng()*.12,.53,false);
+      }
       scene.add(g);clouds.push(g);
     }
     const camTarget=new THREE.Vector3(),camPos=new THREE.Vector3();
     // Gentle camera zoom without changing the existing keyboard movement controls.
-    let cameraDistance=1;
+    let cameraDistance=.93;
     view.addEventListener("wheel",event=>{
       if(!view.isConnected || view.parentElement===hero)return;
       event.preventDefault();
@@ -928,7 +936,7 @@
       let aim;
       if(playing){
         aim=new THREE.Vector3(playerX,.8,playerZ);
-        camPos.copy(aim).add(new THREE.Vector3(10.4,16.8,21).multiplyScalar(cameraDistance));
+        camPos.copy(aim).add(new THREE.Vector3(10.2,16.3,20).multiplyScalar(cameraDistance));
       } else {
         aim=new THREE.Vector3(-4,0,-1);
         camPos.copy(aim).add(new THREE.Vector3(16,22,27));
