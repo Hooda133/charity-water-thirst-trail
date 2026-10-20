@@ -806,12 +806,14 @@
   
     // Richly grouped trees: roots, tapered bark, several shaded foliage crowns.
     const treeMaterials=[mats.leaf1,mats.leaf2,mats.leaf3,mats.leaf4];
+    const windTrees=[];
     function tree(x,z,s=1){
       const g=new THREE.Group();g.position.set(x,0,z);g.scale.setScalar(s);scene.add(g);
       cyl(g,mats.trunks,0,.76,0,.22,.33,1.57);
       ball(g,mats.trunks,-.22,.14,.12,.36,.17,.34);
       const offsets=[[0,2.2,0,.95],[-.65,1.86,.15,.73],[.58,2.08,.25,.79],[.16,2.58,-.41,.83],[-.25,2.47,.43,.65]];
       for(let j=0;j<offsets.length;j++){const v=offsets[j];ball(g,treeMaterials[j%4],v[0],v[1],v[2],v[3],v[3]*.89,v[3]);}
+      if(windTrees.length<23 && rng()<.27)windTrees.push({group:g,phase:rng()*Math.PI*2});
       return g;
     }
     const objectivePositions=spots.map(p=>[wx(p[1]),wz(p[2])]);
@@ -1072,6 +1074,33 @@
       const dot=ball(g,new THREE.MeshBasicMaterial({color}),0,1.72,0,.23,.23,.23,false);
       markers[key]={group:g,ring,beacon,dot,mat};
     }
+    // Waypoint beacons create a readable 3D trail to the selected mission.
+    // Positions follow the existing collision-aware path, including the bridge.
+    const trailBeacons=[];
+    const trailMaterial=new THREE.MeshBasicMaterial({
+      color:0xffe29a,transparent:true,opacity:.85,depthWrite:false
+    });
+    const beaconShape=new THREE.OctahedronGeometry(.18,0);
+    for(let i=0;i<16;i++){
+      const point=mesh(beaconShape,trailMaterial,scene,false);
+      point.visible=false;trailBeacons.push(point);
+    }
+    // A few birds high above the fields make the horizon feel inhabited.
+    // They are background silhouettes and are never obstacles.
+    const birds=[];
+    const birdMaterial=new THREE.MeshStandardMaterial({color:0x436b69,roughness:1,side:THREE.DoubleSide});
+    for(let i=0;i<6;i++){
+      const g=new THREE.Group();scene.add(g);
+      const wings=[];
+      for(const side of [-1,1]){
+        const pivot=new THREE.Group();pivot.position.x=side*.06;g.add(pivot);
+        const wing=mesh(new THREE.ConeGeometry(.17,.72,3),birdMaterial,pivot,false);
+        wing.rotation.z=side*Math.PI/2;
+        wing.position.x=side*.34;
+        wings.push({pivot,side});
+      }
+      birds.push({group:g,wings,phase:i*1.37,originX:-9+i*3.6,originZ:-5+(i%3)*4});
+    }
     // World-space achievement bursts: small reusable gems, expanding rings and light.
     // These effects are driven by real quest state and never block player controls.
     const achievementGroup=new THREE.Group();scene.add(achievementGroup);
@@ -1327,6 +1356,45 @@
         clouds[i].position.x+=.0014;
         if(clouds[i].position.x>28)clouds[i].position.x=-28;
       }
+      // Lay out trail lights along the actual auto-walk route, never through
+      // the blocked riverbank. A route with no waypoints displays no lights.
+      const route=state.screen==="playing"?state.path||[]:[];
+      const routeSegments=[];
+      let last={x:state.x,y:state.y},routeDistance=0;
+      for(const waypoint of route){
+        const length=Math.hypot(waypoint.x-last.x,waypoint.y-last.y);
+        if(length>0.01){routeSegments.push({from:last,to:waypoint,start:routeDistance,length});routeDistance+=length;}
+        last=waypoint;
+      }
+      for(let i=0;i<trailBeacons.length;i++){
+        const light=trailBeacons[i],at=75+i*57;
+        light.visible=routeDistance>at;
+        if(!light.visible)continue;
+        const segment=routeSegments.find(segment=>segment.start+segment.length>=at);
+        if(!segment){light.visible=false;continue;}
+        const t=(at-segment.start)/segment.length;
+        light.position.set(
+          wx(segment.from.x+(segment.to.x-segment.from.x)*t),
+          .30+(reduceMotion?0:Math.sin(time*3+i*.75)*.07),
+          wz(segment.from.y+(segment.to.y-segment.from.y)*t)
+        );
+        if(!reduceMotion)light.rotation.y=time*.8+i*.35;
+      }
+      if(!reduceMotion){
+        for(const tree of windTrees){
+          tree.group.rotation.z=Math.sin(time*.9+tree.phase)*.011;
+          tree.group.rotation.x=Math.cos(time*.67+tree.phase)*.009;
+        }
+        for(const bird of birds){
+          const t=time*.23+bird.phase;
+          bird.group.position.set(bird.originX+Math.sin(t)*4.2,5.2+Math.cos(t*1.9)*.48,
+            bird.originZ+Math.cos(t*.8)*3.3);
+          bird.group.rotation.y=-t+.7;
+          for(const wing of bird.wings){
+            wing.pivot.rotation.z=wing.side*(Math.sin(time*6+bird.phase)*.36);
+          }
+        }
+      }else for(const bird of birds)bird.group.visible=false;
       for(const [key,m] of Object.entries(markers)){
         const done=(state.done&&state.done.has(key))||(key==="river"&&state.inventory&&state.inventory.has("testKit"));
         m.mat.color.setHex(done?0x69edaa:(key==="camp"?0x8af9bf:(key==="river"||key==="spring"?0x75edff:0xffd45b)));
