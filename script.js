@@ -73,6 +73,95 @@
   function fmtTime(t){const sec=Math.floor(t);return `${String(Math.floor(sec/60)).padStart(2,"0")}:${String(sec%60).padStart(2,"0")}`;}
   function dist(a,b){return Math.hypot(a.x-b.x,a.y-b.y);}
   function riverCenter(y){return 850+44*Math.sin(y/195+.35);}
+
+  // Live expedition navigator. Reuses world coordinates and route waypoints
+  // from the real game, works even if 3D rendering is unavailable.
+  const miniMap=$("miniMap");
+  const miniCtx=miniMap?.getContext("2d");
+  const mapW=540,mapH=316;
+  const mapX=x=>x/W*mapW, mapY=y=>y/H*mapH;
+  const mapNames={elder:"ELDER",toolkit:"TOOLS",camp:"CAMP",river:"RIVER",gasket:"DEPOT",pump:"PUMP",spring:"SPRING"};
+  let lastMapDraw=-1;
+
+  function recommendedDestination(){
+    if(state.destination&&spots[state.destination])return state.destination;
+    const next=questDefs.find(q=>!state.done.has(q.key));
+    return next?.key||"pump";
+  }
+  function drawMiniMap(timestamp){
+    if(!miniCtx || $("mapBody").hidden || state.screen==="start")return;
+    const c=miniCtx;const dest=recommendedDestination();
+    const bg=c.createLinearGradient(0,0,0,mapH);
+    bg.addColorStop(0,"#b7d79a");bg.addColorStop(1,"#5c9b73");
+    c.clearRect(0,0,mapW,mapH);
+    c.fillStyle=bg;c.fillRect(0,0,mapW,mapH);
+    // Meadow patches, woodland and recognizable village geography.
+    for(let i=0;i<48;i++){
+      const x=(i*137+39)%mapW,y=(i*79+41)%mapH;
+      c.fillStyle=i%3===0?"#52966b65":"#d6e7ac5d";
+      c.beginPath();c.ellipse(x,y,14+i%5*4,7+i%4*3,i*.7,0,Math.PI*2);c.fill();
+    }
+    const roadPaths=[
+      [[285,490],[370,630],[455,765],[610,708],[730,580],[970,580],[1180,825],[1540,690]],
+      [[280,490],[420,435],[540,350]],[[970,580],[1170,415],[1460,265]]
+    ];
+    for(const path of roadPaths){
+      c.beginPath();path.forEach((p,i)=>i?c.lineTo(mapX(p[0]),mapY(p[1])):c.moveTo(mapX(p[0]),mapY(p[1])));
+      c.lineCap="round";c.lineJoin="round";c.strokeStyle="#ab8058";c.lineWidth=9;c.stroke();
+      c.strokeStyle="#efdcad";c.lineWidth=5;c.stroke();
+    }
+    c.beginPath();
+    for(let y=-12;y<=H+12;y+=12){
+      const x=mapX(riverCenter(y)),py=mapY(y);
+      if(y===-12)c.moveTo(x,py);else c.lineTo(x,py);
+    }
+    c.lineWidth=43;c.strokeStyle="#d2dfac";c.stroke();
+    c.lineWidth=35;c.strokeStyle="#319cae";c.stroke();
+    c.lineWidth=29;c.strokeStyle="#75d7d8";c.stroke();
+    // Bridge directly matches the crossing required by the movement logic.
+    c.fillStyle="#704a34";c.fillRect(mapX(735),mapY(543),mapX(965)-mapX(735),mapY(615)-mapY(543));
+    for(let x=741;x<958;x+=21){c.fillStyle="#d6a66e";c.fillRect(mapX(x),mapY(550),4,mapY(609)-mapY(550));}
+    // A selected walking route remains visible through the bridge.
+    if(state.path.length && state.screen==="playing"){
+      c.beginPath();c.moveTo(mapX(state.x),mapY(state.y));
+      for(const waypoint of state.path)c.lineTo(mapX(waypoint.x),mapY(waypoint.y));
+      c.strokeStyle="#163b47bf";c.lineWidth=5;c.stroke();
+      c.strokeStyle="#fff0a0";c.lineWidth=2.5;c.setLineDash([7,5]);c.stroke();c.setLineDash([]);
+    }
+    const pinFont="800 12px system-ui";
+    c.textBaseline="middle";c.font=pinFont;
+    for(const [key,sp] of Object.entries(spots)){
+      const x=mapX(sp.x),y=mapY(sp.y),isTarget=key===dest;
+      const done=state.done.has(key);
+      if(isTarget){
+        c.beginPath();c.arc(x,y,16,0,Math.PI*2);c.fillStyle="#ffda6e55";c.fill();
+        c.lineWidth=2;c.strokeStyle="#fff1b2";c.stroke();
+      }
+      c.beginPath();c.arc(x,y,isTarget?8:6,0,Math.PI*2);
+      c.fillStyle=done?"#7ee9b1":sp.color;c.fill();
+      c.lineWidth=2;c.strokeStyle="#123c44";c.stroke();
+      c.fillStyle="#173d40";c.fillText(mapNames[key],x+10,y-(isTarget?11:9));
+    }
+    // Player arrow and pulse are drawn last to keep them visible.
+    const px=mapX(state.x),py=mapY(state.y);
+    c.beginPath();c.arc(px,py,11,0,Math.PI*2);
+    c.fillStyle="#08252c88";c.fill();
+    const pulse=(Math.sin(timestamp*.004)+1)*.5;
+    c.beginPath();c.arc(px,py,4.4+pulse*1.5,0,Math.PI*2);
+    c.fillStyle="#fff9e7";c.fill();c.lineWidth=2.5;c.strokeStyle="#0c4752";c.stroke();
+    c.fillStyle="#e7f9ed";c.font="900 12px system-ui";c.fillText("N",14,16);
+    c.fillStyle="#567c76";c.fillRect(11,25,2,13);
+    const goal=spots[dest];
+    $("mapGoalLabel").textContent=goal?
+      (state.destination?"Traveling: ":"Next: ")+goal.name:"Explore the valley";
+  }
+  function toggleNavigator(){
+    const body=$("mapBody"),button=$("mapToggle");
+    const hidden=body.hidden=!body.hidden;
+    button.textContent=hidden?"Show map +":"Hide map −";
+    button.setAttribute("aria-expanded",String(!hidden));
+    if(!hidden)lastMapDraw=-1;
+  }
   function blocked(x,y){
     if(x<39||y<42||x>W-40||y>H-42)return true;
     return y<532||y>635 ? Math.abs(x-riverCenter(y))<94 : false;
@@ -407,6 +496,13 @@
   let lastTime=0,uiTimer=0;
   function loop(t){
     const dt=lastTime?Math.min(.05,(t-lastTime)/1000):0;lastTime=t;
+    if(t-lastMapDraw>140 || lastMapDraw<0){
+      try{drawMiniMap(t);}catch(error){
+        // The navigator is optional and must not interrupt the actual game loop.
+        if(lastMapDraw<0)console.warn("Mini-map unavailable",error);
+      }
+      lastMapDraw=t;
+    }
     if(state.screen==="playing"&&!state.modalOpen){state.elapsed+=dt;handleMovement(dt);updateNearby();uiTimer+=dt;if(uiTimer>.18){updateUI();uiTimer=0;}}
     if(world3d){
       try { world3d.render(state,t/1000); }
@@ -434,6 +530,7 @@
     if(["arrowup","arrowdown","arrowleft","arrowright","w","a","s","d","shift"].includes(k))state.keys.add(k);
     if((k==="e"||k===" ")&&!e.repeat&&state.screen==="playing")interact();
     if(k==="p"&&state.screen==="playing")pause();
+    if(k==="m"&&state.screen==="playing"&&!e.repeat)toggleNavigator();
   });
   window.addEventListener("keyup",e=>state.keys.delete(e.key.toLowerCase()));
   window.addEventListener("blur",()=>{state.keys.clear();state.touch.clear();});
@@ -442,6 +539,23 @@
     if(document.hidden&&state.screen==="playing"&&!state.modalOpen)pause();
   });
   canvas.addEventListener("click",moveFromCanvas);
+  $("mapToggle").addEventListener("click",toggleNavigator);
+  miniMap.addEventListener("click",event=>{
+    if(state.screen!=="playing"||state.modalOpen)return;
+    const rect=miniMap.getBoundingClientRect();
+    if(!rect.width||!rect.height)return;
+    const x=(event.clientX-rect.left)*mapW/rect.width;
+    const y=(event.clientY-rect.top)*mapH/rect.height;
+    let nearestKey=null,nearestDistance=30;
+    for(const [key,sp] of Object.entries(spots)){
+      const d=Math.hypot(x-mapX(sp.x),y-mapY(sp.y));
+      if(d<nearestDistance){nearestKey=key;nearestDistance=d;}
+    }
+    if(nearestKey){
+      navigateTo(nearestKey);
+      $("mapGoalLabel").textContent="Traveling: "+spots[nearestKey].name;
+    }
+  });
   for(const b of document.querySelectorAll("[data-dir]")){
     const d=b.dataset.dir;
     b.addEventListener("pointerdown",e=>{e.preventDefault();b.setPointerCapture?.(e.pointerId);state.touch.add(d);state.path=[];state.goal=null;});
