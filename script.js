@@ -289,7 +289,7 @@
   function openModal({tag="FIELD NOTES",icon="💧",title,description,choices=[],progress=0,total=0,tip="",kind="dialog",allowClose=true,celebrateWin=false}){
     state.modalOpen=true;state.modalKind=kind;
     $("dialog").classList.toggle("is-victory",celebrateWin);
-    $("pipePuzzle").hidden=true;
+    $("pipePuzzle").hidden=true;$("rainPanel").hidden=true;
     $("modalTag").textContent=tag;$("modalIllustration").textContent=icon;
     $("modalTitle").textContent=title;$("modalDescription").textContent=description;
     $("modalClose").hidden=!allowClose;
@@ -309,7 +309,7 @@
   }
   function closeModal(silent=false){
     if(state.modalKind==="end"&&!silent)return;
-    $("modalBackdrop").hidden=true;$("pipePuzzle").hidden=true;
+    $("modalBackdrop").hidden=true;$("pipePuzzle").hidden=true;$("rainPanel").hidden=true;
     state.modalOpen=false;state.modalKind="";
     if(!silent&&state.screen==="playing"){
       if(world3d)world3d.focus();else canvas.focus({preventScroll:true});
@@ -377,6 +377,75 @@
     quiz({tag:"BONUS CHALLENGE",icon:"🏔️",title:"Spring Survey",questions:springQuestions,onWin:()=>{addScore(350);end(true,"You helped the village identify and responsibly evaluate a possible alternative water source! Your careful decisions earned a community impact bonus.","SPRING DISCOVERY");}});
   }
 
+
+  // Optional Raincatch Ridge activity. These are collection precautions,
+  // not a guarantee that collected water is safe to drink.
+  const rainOptions=[
+    {icon:"↪",title:"Divert first roof runoff",detail:"Keep the dirtiest initial flow out of the tank."},
+    {icon:"▧",title:"Add a debris filter",detail:"Remove leaves and larger particles before storage."},
+    {icon:"▣",title:"Cover the storage tank",detail:"Reduce contamination and mosquito access."}
+  ];
+  let rainSelected=[false,false,false];
+  function renderRainControls(){
+    const wrap=$("rainControls");wrap.replaceChildren();
+    const count=rainSelected.filter(Boolean).length;
+    $("rainGauge").textContent=count+"/3 precautions";
+    for(let i=0;i<rainOptions.length;i++){
+      const option=rainOptions[i],button=document.createElement("button");
+      button.type="button";button.className="rain-option";
+      button.setAttribute("aria-pressed",String(rainSelected[i]));
+      const symbol=document.createElement("span");symbol.className="rain-symbol";
+      symbol.setAttribute("aria-hidden","true");symbol.textContent=option.icon;
+      const copy=document.createElement("span");copy.className="rain-copy";
+      const name=document.createElement("strong");name.textContent=option.title;
+      const detail=document.createElement("small");detail.textContent=option.detail;
+      copy.append(name);copy.append(detail);
+      const tick=document.createElement("span");tick.className="rain-check";
+      tick.setAttribute("aria-hidden","true");tick.textContent=rainSelected[i]?"✓":"○";
+      button.append(symbol);button.append(copy);button.append(tick);
+      button.addEventListener("click",()=>{
+        if(state.modalKind!=="rain")return;
+        rainSelected[i]=!rainSelected[i];tone(490,.07);
+        renderRainControls();
+      });
+      wrap.append(button);
+    }
+    const status=$("rainStatus");status.className="rain-status";
+    status.textContent=count===3?
+      "Your collection plan is ready for inspection. Remember: collected water still needs testing and appropriate treatment before drinking.":
+      "Select the precautions that reduce contamination before and during storage.";
+  }
+  function verifyRainPlan(){
+    if(state.modalKind!=="rain")return;
+    if(rainSelected.every(Boolean)){
+      closeModal();
+      doneOnce("ridge","rainNotes",220);
+      updateUI();
+      notify("🌦️ Raincatch plan completed! Testing and treatment are still needed before drinking.");
+      return;
+    }
+    drain(2);
+    if(state.ended)return;
+    const status=$("rainStatus");status.className="rain-status is-error";
+    status.textContent="This plan needs improvement. Consider roof runoff, filtration and protected storage (−2 energy).";
+    updateUI();tone(220,.12);
+  }
+  function rainChallenge(){
+    if(state.done.has("ridge")){
+      openModal({tag:"RIDGE FIELD NOTES",icon:"🌦️",title:"Your raincatch study",
+        description:"You designed a better rainwater collection plan. It reduces contamination but does not make collected water automatically safe to drink. Testing and treatment are essential.",
+        choices:[{text:"Back to the valley",primary:true,action:()=>closeModal()}]});
+      return;
+    }
+    rainSelected=[false,false,false];
+    openModal({tag:"OPTIONAL EXPLORATION",icon:"🌦️",title:"Raincatch Ridge · Collection lab",
+      description:"An unused collection tank sits below the ridge roof. Choose three precautions to reduce contamination, then inspect your plan.",
+      kind:"rain",
+      tip:"Rainwater is not automatically potable. This educational game covers basic collection precautions, not a drinking-water safety determination.",
+      choices:[{text:"Inspect collection plan",primary:true,action:verifyRainPlan},
+        {text:"Back to the valley",action:()=>closeModal()}]});
+    $("rainPanel").hidden=false;renderRainControls();
+  }
   // Physical pipeline repair: players rotate actual pipe sections before
   // applying the knowledge they gained through the original safety quiz.
   // Each piece is a two-way junction; flow only passes through reciprocal ports.
