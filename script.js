@@ -1449,6 +1449,57 @@
       springRings.push(ring);
     }
 
+    // Wetland Sanctuary: low water, raised boardwalk, reeds, floating leaves
+    // and a resident wading bird. Decorative geometry doesn't change collisions.
+    const marshWorld=new THREE.Group();marshWorld.position.set(wx(560),0,wz(970));scene.add(marshWorld);
+    const wetMud=makeMat(0x75977a),marshLeaves=makeMat(0x4d9c74),bloom=makeMat(0xe9b0c5);
+    const pondBed=mesh(new THREE.CylinderGeometry(3.05,3.11,.10,32),wetMud,marshWorld);
+    pondBed.position.set(1.55,.03,-.22);
+    const marshWater=mesh(new THREE.CylinderGeometry(2.77,2.8,.07,32),waterMat,marshWorld,false);
+    marshWater.position.set(1.55,.11,-.22);
+    for(let i=0;i<14;i++){
+      const z=-2.4+i*.34;
+      box(marshWorld,i%3===0?mats.lightWood:mats.wood,-.35,.37,z,1.45,.17,.30);
+      if(i%3===0)for(const side of [-1,1])
+        box(marshWorld,mats.wood,-.35+side*.81,.72,z,.10,.73,.11);
+    }
+    for(const x of [-1.17,.47])box(marshWorld,mats.lightWood,x,1.12,-.1,.09,.10,4.92);
+    const marshReeds=new THREE.InstancedMesh(new THREE.ConeGeometry(.055,.85,5),marshLeaves,80);
+    const reedDummy2=new THREE.Object3D();
+    for(let i=0;i<80;i++){
+      const a=i*2.399963+Math.PI*.4,r=2.85+(i%4)*.16;
+      reedDummy2.position.set(1.55+Math.cos(a)*r,.35,-.22+Math.sin(a)*r*.75);
+      reedDummy2.rotation.y=i*.72;reedDummy2.scale.setScalar(.6+(i%6)*.11);
+      reedDummy2.updateMatrix();marshReeds.setMatrixAt(i,reedDummy2.matrix);
+    }
+    marshReeds.instanceMatrix.needsUpdate=true;marshWorld.add(marshReeds);
+    for(let i=0;i<9;i++){
+      const a=i*2.1,r=.8+(i%3)*.48;
+      const x=1.55+Math.cos(a)*r,z=-.22+Math.sin(a)*r*.7;
+      const leaf=mesh(new THREE.CylinderGeometry(.26,.26,.025,9),marshLeaves,marshWorld,false);
+      leaf.position.set(x,.16,z);
+      if(i%3===0){
+        ball(marshWorld,bloom,x,.32,z,.17,.11,.17,false);
+        ball(marshWorld,mats.gold,x,.42,z,.055,.045,.055,false);
+      }
+    }
+    // A wading heron provides a recognizable wildlife landmark.
+    const heron=new THREE.Group();heron.position.set(3.05,0,-1.30);marshWorld.add(heron);
+    const birdWhite=makeMat(0xe1e9d4),birdBeak=makeMat(0xe5a95c);
+    for(const x of [-.13,.13])cyl(heron,mats.wood,x,.52,0,.035,.04,1.02,7);
+    ball(heron,birdWhite,0,1.29,0,.42,.32,.29);
+    const heronNeck=cyl(heron,birdWhite,.24,1.74,.02,.092,.09,.78,8);
+    heronNeck.rotation.z=-.13;
+    ball(heron,birdWhite,.23,2.19,.02,.19,.17,.17);
+    const bill=mesh(new THREE.ConeGeometry(.09,.50,5),birdBeak,heron,false);
+    bill.position.set(.24,2.14,.30);bill.rotation.x=Math.PI/2;
+    ball(heron,mats.dark,.35,2.23,.14,.03,.034,.035,false);
+    // Sign and litter baskets make the stewardship area readable at game scale.
+    const bin=mesh(new THREE.CylinderGeometry(.41,.35,.82,9),makeMat(0x5f9890),marshWorld);
+    bin.position.set(-1.84,.42,1.08);
+    box(marshWorld,mats.gold,-1.84,.91,1.08,.95,.11,.85);
+    box(marshWorld,mats.wood,-2.10,.97,-1.20,.13,1.94,.13);
+    box(marshWorld,mats.trim,-2.1,1.71,-1.10,1.6,.64,.12);
     // Mission markers and billboard labels that stay legible as the camera moves.
     function labelTexture(title){
       const cn=document.createElement("canvas");cn.width=512;cn.height=128;
@@ -1928,6 +1979,7 @@
           droplet.scale.set(.69+(1-p)*.23,.78+(1-p)*.55,.72);
         }
       }
+      if(!reduceMotion)heron.rotation.y=Math.sin(time*.55)*.18;
       if(!reduceMotion)for(let i=0;i<springRings.length;i++){
         const f=(time*.22+i/3)%1;
         springRings[i].scale.setScalar(.6+f*.8);
