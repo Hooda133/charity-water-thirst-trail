@@ -373,7 +373,7 @@ export async function createWorld(originalCanvas, options = {}) {
       }
       lastParent=parent;lastWidth=0;lastHeight=0;
     }
-    const rect=parent===hero?hero.getBoundingClientRect():originalCanvas.getBoundingClientRect();
+    const rect=parent===hero?hero.getBoundingClientRect():host.getBoundingClientRect();
     const width=Math.max(200,Math.floor(rect.width||1000));
     const height=parent===hero?Math.max(240,Math.floor(rect.height||550)):Math.max(100,Math.floor(width*.61));
     if(lastWidth!==width||lastHeight!==height){
