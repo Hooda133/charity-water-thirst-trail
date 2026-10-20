@@ -5,7 +5,7 @@
 ## Features
 
 - Genuine Three.js/WebGL 3D exploration with terrain, 3D buildings, a modeled explorer, lighting, shadows, camera follow, and click-to-walk
-- Stylized low-poly environment with a river, elevated bridge, cottages, glowing mission markers, forests, mountains, campsite, workshop, and working pump
+- Stylized low-poly environment with a river, elevated bridge, detailed cottages, cedar trees, glowing mission markers, riverside reeds, campsite, workshop, and working pump
 - Energy management, sprinting, obstacles, rest stops, impact scoring, and a timed expedition
 - Story quests, water-safety quizzes, a bonus spring route, and progressive mission feedback
 - Start, pause, resume, restart, replay, win, and out-of-energy flows
@@ -15,7 +15,7 @@
 
 ## How to play
 
-Open `index.html` in a modern browser, or serve the folder with any static file server. Use **WASD** or **arrow keys** to move, **E** or **Space** to interact, **Shift** to sprint, and **P** to pause. On mobile, use the directional controls. Meet the elder, gather the toolkit and gasket, then complete the pump repair challenge before your energy runs out.
+Open `index.html` in a modern browser, or serve the folder with any static file server. Use **WASD** or **arrow keys** to move, **E** or **Space** to interact, **Shift** to sprint, **P** to pause, and the **mouse wheel** to zoom the 3D camera. On mobile, use the directional controls. Meet the elder, gather the toolkit and gasket, then complete the pump repair challenge before your energy runs out.
 
 ## Run locally
 
@@ -27,6 +27,10 @@ Visit `http://localhost:8000` in your browser. No build step, backend, API key, 
 
 ## Technologies
 
-HTML5, CSS3, JavaScript, Three.js/WebGL (loaded from a CDN), a fallback Canvas 2D renderer, Web Audio API, and localStorage. The 3D environment is constructed from procedural geometry and materials, with no separate model downloads.
+HTML5, CSS3, JavaScript, Three.js/WebGL (loaded from a CDN), a fallback Canvas 2D renderer, Web Audio API, and localStorage. The 3D environment is constructed from procedural geometry and materials, with no separate model downloads. For compatibility with GitHub Codespaces Live Preview, the 3D renderer is embedded in `script.js` rather than loaded from a separate local JavaScript module.
 
 This is an independent educational game inspired by charity: water, not an official charity: water product. Water-safety scenarios are simplified for gameplay and are not real-world drinking-water guidance.
+
+## Troubleshooting 3D preview
+
+The Three.js engine needs access to a public CDN. If the original 2D artwork appears, open the browser Console (F12) and look for a 3D loading warning. Serve the project over HTTP using `python3 -m http.server 8000` and open port 8000 from the Codespaces **Ports** tab rather than relying on Live Preview when it returns 401. The 2D game is an intentional fallback.
