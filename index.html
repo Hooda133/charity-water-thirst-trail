@@ -108,6 +108,11 @@
       <div class="modal-illustration" id="modalIllustration" aria-hidden="true">💧</div>
       <h2 id="modalTitle">Welcome to the valley</h2>
       <p id="modalDescription">Your mission begins here.</p>
+      <section id="pipePuzzle" class="pipe-puzzle" aria-label="Interactive pipeline repair" hidden>
+        <div class="pipe-endpoints"><span>💧 WATER IN</span><span>VILLAGE OUTLET →</span></div>
+        <div id="pipeGrid" class="pipe-grid" role="group" aria-label="Rotate the nine pipe tiles to connect the water supply"></div>
+        <p id="pipeStatus" class="pipe-status" role="status" aria-live="polite">Rotate the pieces to make one connected water route.</p>
+      </section>
       <div id="modalProgress" class="modal-progress" hidden></div>
       <div id="modalChoices" class="modal-choices"></div>
       <p id="modalTip" class="modal-tip" hidden></p>
