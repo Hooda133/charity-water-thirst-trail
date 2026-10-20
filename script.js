@@ -36,6 +36,26 @@
     sound:safeStore.getSound(), cameraX:0, cameraY:0, nearby:null, ended:false, lastStatus:"",
     toastTimeout:null
   };
+  // The 3D world is loaded without blocking startup. If Three.js cannot be reached,
+  // the original Canvas 2D renderer remains available as a playable fallback.
+  let world3d = null;
+  import("./world3d.js")
+    .then(({createWorld}) => createWorld(canvas, {
+      onSelect(x,y) {
+        if(state.screen!=="playing" || state.modalOpen)return;
+        let nearestKey=null, best=80;
+        for(const [key,sp] of Object.entries(spots)) {
+          const distance=Math.hypot(x-sp.x,y-sp.y);
+          if(distance<best){nearestKey=key;best=distance;}
+        }
+        if(nearestKey){
+          if(dist(state,spots[nearestKey])<88)interact();
+          else navigateTo(nearestKey);
+        } else navToPosition({x,y});
+      }
+    }))
+    .then(engine => {world3d=engine;world3d.render(state,performance.now()/1000);})
+    .catch(error => console.warn("3D graphics unavailable; using the original 2D game.", error));
   let audioContext = null;
   function tone(freq=620,duration=.09){
     if (!state.sound) return;
@@ -109,7 +129,8 @@
       path:[],goal:null,destination:null,nearby:null,campUses:0,ended:false,lastStatus:"",cameraX:0,cameraY:0});
     state.keys.clear();state.touch.clear();state.done.clear();state.inventory.clear();
     $("startScreen").hidden=true;$("gameScreen").hidden=false;$("toast").hidden=true;
-    closeModal(true);updateUI();canvas.focus({preventScroll:true});
+    closeModal(true);updateUI();
+    if(world3d)world3d.focus();else canvas.focus({preventScroll:true});
     notify("MISSION STARTED · Visit the Village Elder to begin.");tone(480,.18);
     if(!safeStore.tutorialSeen())help();
   }
@@ -179,7 +200,9 @@
   function closeModal(silent=false){
     if(state.modalKind==="end"&&!silent)return;
     $("modalBackdrop").hidden=true;state.modalOpen=false;state.modalKind="";
-    if(!silent&&state.screen==="playing")canvas.focus({preventScroll:true});
+    if(!silent&&state.screen==="playing"){
+      if(world3d)world3d.focus();else canvas.focus({preventScroll:true});
+    }
   }
   function doneOnce(key,item=null,points=100){if(state.done.has(key))return false;state.done.add(key);if(item)addItem(item);addScore(points);return true;}
   function interact(){
@@ -348,7 +371,8 @@
   function loop(t){
     const dt=lastTime?Math.min(.05,(t-lastTime)/1000):0;lastTime=t;
     if(state.screen==="playing"&&!state.modalOpen){state.elapsed+=dt;handleMovement(dt);updateNearby();uiTimer+=dt;if(uiTimer>.18){updateUI();uiTimer=0;}}
-    if(state.screen!=="start")draw();
+    if(world3d)world3d.render(state,t/1000);
+    else if(state.screen!=="start")draw();
     requestAnimationFrame(loop);
   }
   function moveFromCanvas(event){
