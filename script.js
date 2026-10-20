@@ -370,8 +370,16 @@
   function loop(t){
     const dt=lastTime?Math.min(.05,(t-lastTime)/1000):0;lastTime=t;
     if(state.screen==="playing"&&!state.modalOpen){state.elapsed+=dt;handleMovement(dt);updateNearby();uiTimer+=dt;if(uiTimer>.18){updateUI();uiTimer=0;}}
-    if(world3d)world3d.render(state,t/1000);
-    else if(state.screen!=="start")draw();
+    if(world3d){
+      try { world3d.render(state,t/1000); }
+      catch(error){
+        console.error("3D renderer stopped; falling back to the playable 2D game.",error);
+        try{world3d.dispose();}catch(disposeError){console.warn("3D cleanup:",disposeError);}
+        world3d=null;
+        canvas.style.display="";
+      }
+    }
+    if(!world3d && state.screen!=="start")draw();
     requestAnimationFrame(loop);
   }
   function moveFromCanvas(event){
@@ -483,7 +491,9 @@
       leaf3:makeMat(0x237b60), leaf4:makeMat(0x9dcb76), wood:makeMat(0x95603b),
       lightWood:makeMat(0xc79056), rock:makeMat(0x8c9c86), rock2:makeMat(0xbac0a1),
       sand:makeMat(0xe9bf7d), dark:makeMat(0x2a4650), gold:makeMat(0xffd76f),
-      roof:makeMat(0xb9634e), wall:makeMat(0xf0d5a3), door:makeMat(0x94623e)
+      roof:makeMat(0xb9634e), wall:makeMat(0xf0d5a3), door:makeMat(0x94623e),
+      trim:makeMat(0xffeed0), roofDark:makeMat(0x884537), flower:makeMat(0xf9b4b6),
+      pine:makeMat(0x26775d), pineLight:makeMat(0x469570)
     };
     const unitBox = new THREE.BoxGeometry(1,1,1);
     const unitSphere = new THREE.IcosahedronGeometry(1,1);
@@ -551,6 +561,31 @@
       wave.rotation.x=-Math.PI/2;wave.position.set(x,.064,z);wave.rotation.z=rng()*6;
       ripples.push(wave);
     }
+    // Riverbank reeds and stones make the water part of a lived-in landscape.
+    // Shared instanced geometry keeps the extra detail inexpensive to render.
+    const reedStem=new THREE.ConeGeometry(.045,.66,5);
+    const reedField=new THREE.InstancedMesh(reedStem,makeMat(0x4e8c56),150);
+    reedField.castShadow=false;
+    const reedDummy=new THREE.Object3D();
+    for(let i=0;i<150;i++){
+      const z=-13.4+rng()*26.8;
+      const side=i%2===0?-1:1;
+      const x=wx(riverCenter(z*SCALE+550))+side*(2.25+rng()*1.15);
+      reedDummy.position.set(x,.22,z);
+      reedDummy.rotation.set((rng()-.5)*.28,rng()*6,(rng()-.5)*.24);
+      reedDummy.scale.setScalar(.65+rng()*.85);reedDummy.updateMatrix();
+      reedField.setMatrixAt(i,reedDummy.matrix);
+    }
+    reedField.instanceMatrix.needsUpdate=true;scene.add(reedField);
+    const foamMat=new THREE.MeshBasicMaterial({color:0xdbfff1,transparent:true,opacity:.52,depthWrite:false});
+    const foam=new THREE.InstancedMesh(new THREE.SphereGeometry(1,6,4),foamMat,90);
+    foam.castShadow=false;const foamDummy=new THREE.Object3D();
+    for(let i=0;i<90;i++){
+      const z=-13.7+i*.31,x=wx(riverCenter(z*SCALE+550))+(i%2?2.15:-2.15);
+      foamDummy.position.set(x,.07,z);foamDummy.scale.set(.06,.012,.23+rng()*.20);
+      foamDummy.updateMatrix();foam.setMatrixAt(i,foamDummy.matrix);
+    }
+    foam.instanceMatrix.needsUpdate=true;scene.add(foam);
     // Paths are curves integrated into the meadow rather than straight flat UI lines.
     function road(raw,width=.95){
       const curve=new THREE.CatmullRomCurve3(raw.map(p=>new THREE.Vector3(wx(p[0]),.075,wz(p[1]))));
@@ -598,6 +633,22 @@
       if(Math.abs(x+13)<3.2 && z> -5 && z<8)continue;
       tree(x,z,.52+rng()*.66);
     }
+    // Tall cedar and pine trees break up the repeated round canopies.
+    function pine(x,z,s=1){
+      const g=new THREE.Group();g.position.set(x,0,z);g.scale.setScalar(s);scene.add(g);
+      cyl(g,mats.trunks,0,.72,0,.15,.2,1.38);
+      for(let i=0;i<3;i++){
+        const cone=mesh(new THREE.ConeGeometry(1.00-i*.17,1.75,7),i===1?mats.pineLight:mats.pine,g);
+        cone.position.y=1.5+i*.79;
+      }
+      ball(g,mats.pineLight,-.34,.72,.29,.24,.18,.27);
+    }
+    for(let i=0;i<31;i++){
+      const x=(rng()-.5)*44,z=(rng()-.5)*26;
+      const riverX=wx(riverCenter(z*SCALE+550));
+      if(Math.abs(x-riverX)<3.5 || objectivePositions.some(p=>Math.hypot(x-p[0],z-p[1])<2.4))continue;
+      pine(x,z,.78+rng()*.7);
+    }
     // Pastel mountains, boulders and distant vegetation.
     const mtMat=[makeMat(0x779f8e),makeMat(0x91b39c),makeMat(0x719791)];
     for(let i=0;i<24;i++){
@@ -641,17 +692,47 @@
       for(const x of [-1.1,1.1]){
         box(g,mats.dark,x,1.67,1.38,.61,.72,.07);
         box(g,makeMat(0xa5e8e7),x,1.67,1.43,.44,.55,.05);
-        box(g,mats.wall,x,1.66,1.49,.065,.65,.055);
-        box(g,mats.wall,x,1.66,1.49,.50,.065,.055);
+        box(g,mats.trim,x,1.66,1.49,.065,.65,.055);
+        box(g,mats.trim,x,1.66,1.49,.50,.065,.055);
       }
       const roof=mesh(new THREE.ConeGeometry(2.48,1.8,4),mats.roof,g);
       roof.position.set(0,3.16,0);roof.rotation.y=Math.PI/4;roof.scale.z=.83;
       box(g,mats.rock2,-.9,3.25,-.35,.38,1.1,.38);
-      for(const x of [-1.47,1.47])box(g,mats.wood,x,.3,0,.17,.6,2.8);
+      for(const x of [-1.47,1.47]){
+        box(g,mats.wood,x,.3,0,.17,.6,2.8);
+        box(g,mats.wood,x,1.95,1.44,.13,.95,.13);
+        box(g,mats.lightWood,x,1.22,1.51,.16,.11,.16);
+      }
+      // Roof ridge, shutter panels, planters and entry step.
+      box(g,mats.roofDark,0,3.85,0,.13,.14,3.48);
+      box(g,mats.rock2,0,.13,1.88,1.25,.25,.75);
+      for(const x of [-1.04,1.04]){
+        box(g,mats.wood,x,1.05,1.54,.95,.17,.43);
+        box(g,mats.grass2,x,1.17,1.55,.85,.16,.33);
+        for(const offset of [-.25,0,.25])
+          ball(g,mats.flower,x+offset,1.35,1.59,.11,.12,.11,false);
+      }
       return g;
     }
     cottage(150,400,1.15);cottage(345,270,.86,0xeac7a3);cottage(270,830,.75,0xf8d2b4);
     cottage(460,760,.87,0xe0bc8c);
+    // Fence and field props create a sense of place around the homes.
+    function fence(x,z,length=5){
+      for(let i=0;i<=length;i++){
+        const postX=x+i*.68;
+        box(scene,mats.lightWood,postX,.47,z,.15,.95,.17);
+        ball(scene,mats.gold,postX,.98,z,.10,.13,.10);
+      }
+      for(const y of [.36,.66])box(scene,mats.wood,x+length*.34,y,z,length*.68,.11,.13);
+    }
+    fence(wx(150)-2.8,wz(400)+2.8,6);
+    fence(wx(345)-2.4,wz(270)+2.6,5);
+    // A painted information sign beside the village trail.
+    const sign=new THREE.Group();sign.position.set(wx(300)+1.2,0,wz(510)-1.1);scene.add(sign);
+    box(sign,mats.wood,0,.8,0,.19,1.7,.18);
+    box(sign,mats.dark,0,1.73,0,2.45,.75,.19);
+    box(sign,mats.gold,0,1.73,.12,2.13,.52,.04);
+    box(sign,mats.dark,0,1.73,.153,1.84,.3,.043);
     // Supply station with recognizable crates and banner.
     const supply=new THREE.Group();supply.position.set(wx(1190),0,wz(825));scene.add(supply);
     for(let i=0;i<4;i++){
@@ -735,6 +816,14 @@
     for(const x of [-.13,.13])ball(body,mats.dark,x,2.18,.335,.04,.05,.03);
     box(body,bag,0,1.45,-.47,.78,.94,.36);
     box(body,mats.lightWood,0,1.5,-.67,.46,.07,.05);
+    // Backpack straps, neck scarf and a small water flask.
+    for(const side of [-.27,.27])
+      box(body,mats.wood,side,1.57,.29,.11,.74,.09);
+    box(body,mats.gold,0,1.80,.28,.48,.14,.17);
+    const flask=cyl(body,makeMat(0x4ab9cb,.35,.35),-.53,1.12,-.31,.17,.17,.49,12);
+    flask.rotation.z=.16;
+    cyl(body,mats.lightWood,-.53,1.41,-.31,.1,.10,.10);
+
     const arms=[],legs=[];
     for(const side of [-1,1]){
       const arm=new THREE.Group();arm.position.set(side*.48,1.75,0);body.add(arm);
@@ -755,7 +844,14 @@
       for(let j=0;j<4;j++)ball(g,cloudMat,(j-1.5)*1.35,Math.sin(j)*.27,0,1.1+rng()*.5,.55+rng()*.25,.8,false);
       scene.add(g);clouds.push(g);
     }
-    const camTarget=new THREE.Vector3(),camPos=new THREE.Vector3(),look=new THREE.Vector3();
+    const camTarget=new THREE.Vector3(),camPos=new THREE.Vector3();
+    // Gentle camera zoom without changing the existing keyboard movement controls.
+    let cameraDistance=1;
+    view.addEventListener("wheel",event=>{
+      if(!view.isConnected || view.parentElement===hero)return;
+      event.preventDefault();
+      cameraDistance=Math.max(.72,Math.min(1.5,cameraDistance+(event.deltaY>0?.08:-.08)));
+    },{passive:false});
     const raycaster=new THREE.Raycaster();
     const groundPlane=new THREE.Plane(new THREE.Vector3(0,1,0),0);
     const pointer=new THREE.Vector2(),hit=new THREE.Vector3();
@@ -832,7 +928,7 @@
       let aim;
       if(playing){
         aim=new THREE.Vector3(playerX,.8,playerZ);
-        camPos.copy(aim).add(new THREE.Vector3(10.4,16.8,21));
+        camPos.copy(aim).add(new THREE.Vector3(10.4,16.8,21).multiplyScalar(cameraDistance));
       } else {
         aim=new THREE.Vector3(-4,0,-1);
         camPos.copy(aim).add(new THREE.Vector3(16,22,27));
