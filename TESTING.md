@@ -54,3 +54,18 @@ The gameplay simulates water-access challenges for education and entertainment. 
 - [ ] The original pipe puzzle, Raincatch Ridge plan and pump finale still work.
 
 Automated-integration simulation checks run in the development connection cover logic, navigation and mock 3D scene rendering. The visual effects still require a real browser/WebGL test, especially performance and touch layouts.
+
+
+## Showcase visual pass (October 20)
+- [ ] Initial page: the cinematic 3D scene gently drifts, the mountain skyline frames the background, the mission plaque is readable, and the upper-left world label remains visible
+- [ ] In-game terrain displays natural meadow variation and clusters of wildflowers (not a completely uniform grass slab)
+- [ ] The hillside waterworks has an animated translucent waterfall and mist; the flow does not cover the controls or player
+- [ ] The sky shows a visible sun with warm rings in daylight and a visible moon under starlight
+- [ ] **SCENIC VIEW** button and **V** key switch between a whole-valley overview and following the player
+- [ ] In the 2D fallback, Scenic View shows the whole 2D map and click-to-walk coordinates remain correct
+- [ ] Restart resets Scenic View to player follow mode, with the button label and aria-pressed state updated
+- [ ] On mobile: world header controls do not overflow, hero overlays fit, and both camera modes work without layout shifts
+- [ ] Reduced-motion preferences stop the flyover and other decorative camera movements
+- [ ] Framerate stays acceptable on an integrated-graphics laptop and there are no WebGL or console errors
+
+Testing caveat: Source, mocked 3D construction and gameplay checks are useful but do not replace a real browser GPU/WebGL rendering test.
