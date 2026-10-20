@@ -16,6 +16,12 @@
     spring:   {x:1460,y:265,name:"Hill Spring",   icon:"💧", kind:"bonus",color:"#6fe1f2", hint:"Explore an alternative source"},
     ridge:    {x:1160,y:200,name:"Raincatch Ridge",icon:"🌦️",kind:"bonus",color:"#a4dbe7",hint:"Build a safe rainwater collection plan"}
   };
+  // Sealed expedition drinking-water caches are placed on safe walkable banks.
+  // Unlike river or rainwater, these are pre-packed supplies for the explorer.
+  const supplyCaches=[
+    {id:"village",x:405,y:690},{id:"camptrail",x:610,y:455},
+    {id:"easttrail",x:1115,y:695},{id:"hillside",x:1350,y:430}
+  ];
   const questDefs = [
     {key:"elder",title:"Meet the village elder", detail:"Learn what the village needs",icon:"💬"},
     {key:"toolkit",title:"Collect a repair toolkit",detail:"Visit the old workshop",icon:"🧰"},
@@ -35,7 +41,7 @@
     walkT:0, facing:1, keys:new Set(), touch:new Set(), path:[], goal:null, destination:null,
     done:new Set(), inventory:new Set(), campUses:0, quizStep:0, modalOpen:false, modalKind:"",
     sound:safeStore.getSound(), cameraX:0, cameraY:0, nearby:null, ended:false, lastStatus:"",
-    toastTimeout:null, effect:null, impactTimer:null
+    toastTimeout:null, effect:null, impactTimer:null, supplies:new Set()
   };
   // The 3D world is loaded without blocking startup. If Three.js cannot be reached,
   // the original Canvas 2D renderer remains available as a playable fallback.
@@ -154,6 +160,12 @@
       c.lineWidth=2;c.strokeStyle="#123c44";c.stroke();
       c.fillStyle="#173d40";c.fillText(mapNames[key],x+10,y-(isTarget?11:9));
     }
+    // Reusable sealed supplies appear in both the overview map and 3D valley.
+    for(const cache of supplyCaches){
+      if(state.supplies.has(cache.id))continue;
+      c.beginPath();c.arc(mapX(cache.x),mapY(cache.y),4.5,0,Math.PI*2);
+      c.fillStyle="#b8f7ff";c.fill();c.strokeStyle="#1c6980";c.lineWidth=1.6;c.stroke();
+    }
     // Player arrow and pulse are drawn last to keep them visible.
     const px=mapX(state.x),py=mapY(state.y);
     c.beginPath();c.arc(px,py,11,0,Math.PI*2);
@@ -179,6 +191,20 @@
     return y<532||y>635 ? Math.abs(x-riverCenter(y))<94 : false;
   }
   function addScore(points){state.score+=points;tone(750,.13);}
+  function collectNearbySupplies(){
+    if(state.screen!=="playing"||state.modalOpen)return;
+    for(const cache of supplyCaches){
+      if(state.supplies.has(cache.id))continue;
+      if(Math.hypot(state.x-cache.x,state.y-cache.y)>42)continue;
+      state.supplies.add(cache.id);
+      const gained=Math.min(12,100-state.energy);
+      state.energy=Math.min(100,state.energy+12);
+      state.score+=25;
+      tone(920,.14);
+      notify("🧴 Sealed drinking-water supply found! +"+Math.ceil(gained)+" energy · +25 impact");
+      updateUI();
+    }
+  }
   function drain(n){
     state.energy=Math.max(0,state.energy-n);
     if(state.energy<=0 && state.screen==="playing")end(false,"Your energy ran out before the expedition was complete. Rest at the camp, choose a shorter route, and try again.");
@@ -212,6 +238,7 @@
     $("energyBar").classList.toggle("low",state.energy<=28);
     $("scoreValue").textContent=String(state.score).padStart(4,"0");
     $("timeValue").textContent=fmtTime(state.elapsed);
+    $("supplyCount").textContent="🧴 SEALED SUPPLIES "+state.supplies.size+" / "+supplyCaches.length;
     $("daypartLabel").textContent=timeOfDay(state.elapsed).label;
     const completed=questDefs.filter(q=>state.done.has(q.key)).length;
     $("questsCompleted").textContent=`${completed} / 4`;
@@ -245,7 +272,7 @@
   function start(){
     Object.assign(state,{screen:"playing",energy:100,score:0,elapsed:0,x:310,y:620,walkT:0,
       path:[],goal:null,destination:null,nearby:null,campUses:0,ended:false,lastStatus:"",cameraX:0,cameraY:0,effect:null});
-    state.keys.clear();state.touch.clear();state.done.clear();state.inventory.clear();
+    state.keys.clear();state.touch.clear();state.done.clear();state.inventory.clear();state.supplies.clear();
     if(state.impactTimer)clearTimeout(state.impactTimer);
     state.impactTimer=null;$("impactBurst").hidden=true;
     $("startScreen").hidden=true;$("gameScreen").hidden=false;$("toast").hidden=true;
@@ -681,6 +708,13 @@
     ctx.clearRect(0,0,VW,VH);
     ctx.save();ctx.translate(-state.cameraX,-state.cameraY);
     drawWorld(time);
+    for(const cache of supplyCaches){
+      if(state.supplies.has(cache.id))continue;
+      ctx.fillStyle="#2c9bb1";ctx.strokeStyle="#fff9d5";ctx.lineWidth=4;
+      ctx.beginPath();ctx.arc(cache.x,cache.y,18+Math.sin(time*2)*2,0,Math.PI*2);ctx.fill();ctx.stroke();
+      ctx.fillStyle="#ffffff";ctx.font="24px sans-serif";ctx.textAlign="center";
+      ctx.fillText("✦",cache.x,cache.y+8);
+    }
     if(state.goal){
       const p=state.goal;ctx.save();ctx.setLineDash([7,7]);ctx.strokeStyle="#fff6ca";ctx.lineWidth=4;ctx.beginPath();ctx.arc(p.x,p.y,48,0,Math.PI*2);ctx.stroke();ctx.restore();
     }
@@ -698,7 +732,7 @@
       }
       lastMapDraw=t;
     }
-    if(state.screen==="playing"&&!state.modalOpen){state.elapsed+=dt;handleMovement(dt);updateNearby();uiTimer+=dt;if(uiTimer>.18){updateUI();uiTimer=0;}}
+    if(state.screen==="playing"&&!state.modalOpen){state.elapsed+=dt;handleMovement(dt);collectNearbySupplies();updateNearby();uiTimer+=dt;if(uiTimer>.18){updateUI();uiTimer=0;}}
     if(world3d){
       try { world3d.render(state,t/1000); }
       catch(error){
@@ -1365,6 +1399,21 @@
       const dot=ball(g,new THREE.MeshBasicMaterial({color}),0,1.72,0,.23,.23,.23,false);
       markers[key]={group:g,ring,beacon,dot,mat};
     }
+    // Four sealed-water supply caches: collecting them restores some energy.
+    const supplyModels=[];
+    const bottleMat=new THREE.MeshStandardMaterial({color:0x91e1e5,roughness:.29,metalness:.08});
+    for(const cache of supplyCaches){
+      const g=new THREE.Group();g.position.set(wx(cache.x),0,wz(cache.y));scene.add(g);
+      cyl(g,mats.wood,0,.18,0,.58,.65,.38,8);
+      const bottle=cyl(g,bottleMat,0,.84,0,.22,.24,.93,10);
+      cyl(g,mats.gold,0,1.35,0,.14,.14,.17,10);
+      box(g,mats.trim,0,.84,.24,.32,.24,.05,false);
+      const halo=mesh(new THREE.TorusGeometry(.48,.05,6,26),new THREE.MeshBasicMaterial({
+        color:0x9feaff,transparent:true,opacity:.72,depthWrite:false
+      }),g,false);
+      halo.rotation.x=-Math.PI/2;halo.position.y=.10;
+      supplyModels.push({g,halo,id:cache.id,bottle});
+    }
     // Waypoint beacons create a readable 3D trail to the selected mission.
     // Positions follow the existing collision-aware path, including the bridge.
     const trailBeacons=[];
@@ -1726,6 +1775,14 @@
           }
         }
       }else for(const bird of birds)bird.group.visible=false;
+      for(let i=0;i<supplyModels.length;i++){
+        const entry=supplyModels[i];
+        entry.g.visible=!state.supplies?.has(entry.id);
+        if(entry.g.visible&&!reduceMotion){
+          entry.bottle.position.y=.84+Math.sin(time*2.4+i)*.055;
+          entry.halo.rotation.z=time*.32+i;
+        }
+      }
       for(const [key,m] of Object.entries(markers)){
         const done=(state.done&&state.done.has(key))||(key==="river"&&state.inventory&&state.inventory.has("testKit"));
         m.mat.color.setHex(done?0x69edaa:(key==="camp"?0x8af9bf:(key==="river"||key==="spring"?0x75edff:0xffd45b)));
