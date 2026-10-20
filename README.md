@@ -1,11 +1,11 @@
 # Thirst Trail: The Last Well
 
-**Thirst Trail** is a polished, dependency-free 2D adventure game inspired by charity: water. Explore Greenwater Valley, listen to the village, collect repair supplies, and restore a broken pump while learning why water sources need testing and maintenance.
+**Thirst Trail** is a polished, browser-based 3D adventure game inspired by charity: water. Explore Greenwater Valley, listen to the village, collect repair supplies, and restore a broken pump while learning why water sources need testing and maintenance.
 
 ## Features
 
-- Canvas-based 2.5D exploration with layered hills, procedural terrain, click-to-walk navigation, and a smooth camera
-- Procedural adventure artwork: dimensional trees, houses, bridge, pump, campsite, animated river highlights, particles, shadows, and an explorer character
+- Genuine Three.js/WebGL 3D exploration with terrain, 3D buildings, a modeled explorer, lighting, shadows, camera follow, and click-to-walk
+- Stylized low-poly environment with a river, elevated bridge, cottages, glowing mission markers, forests, mountains, campsite, workshop, and working pump
 - Energy management, sprinting, obstacles, rest stops, impact scoring, and a timed expedition
 - Story quests, water-safety quizzes, a bonus spring route, and progressive mission feedback
 - Start, pause, resume, restart, replay, win, and out-of-energy flows
@@ -23,10 +23,10 @@ Open `index.html` in a modern browser, or serve the folder with any static file 
 python3 -m http.server 8000
 ```
 
-Visit `http://localhost:8000` in your browser. No build step, backend, API key, or package installation is required.
+Visit `http://localhost:8000` in your browser. No build step, backend, API key, or package installation is required. Internet access is required to load Three.js from a CDN. If the 3D library is unavailable, the original 2D Canvas game remains playable.
 
 ## Technologies
 
-HTML5, CSS3, JavaScript, Canvas 2D, Web Audio API, and localStorage. The visual style is intentionally rendered procedurally in the existing Canvas engine, avoiding large libraries and external image dependencies while keeping ordinary laptops and mobile browsers responsive.
+HTML5, CSS3, JavaScript, Three.js/WebGL (loaded from a CDN), a fallback Canvas 2D renderer, Web Audio API, and localStorage. The 3D environment is constructed from procedural geometry and materials, with no separate model downloads.
 
 This is an independent educational game inspired by charity: water, not an official charity: water product. Water-safety scenarios are simplified for gameplay and are not real-world drinking-water guidance.
