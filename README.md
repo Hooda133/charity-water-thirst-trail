@@ -7,6 +7,8 @@
 - Genuine Three.js/WebGL 3D exploration with terrain, 3D buildings, a modeled explorer, lighting, shadows, camera follow, and click-to-walk
 - Stylized 3D environment with a river, bridge, detailed cottages, cedar trees, mission markers, riverside reeds, village market, garden and campsite
 - Living scenery: shimmering river highlights, butterflies, villagers who greet nearby travelers, animated spring water and a pump that visibly flows after repair
+- Animated articulated explorer (walking, greeting, and celebratory poses), cinematic quest rewards with 3D sparkles, and a distinctive victory presentation
+- Reduced-motion support for the newer environment and achievement animations
 - Energy management, sprinting, obstacles, rest stops, impact scoring, and a timed expedition
 - Story quests, water-safety quizzes, a bonus spring route, and progressive mission feedback
 - Start, pause, resume, restart, replay, win, and out-of-energy flows
