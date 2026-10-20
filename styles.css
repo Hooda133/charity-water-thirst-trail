@@ -141,3 +141,42 @@
   .impact-burst.replay,.modal-card.is-victory .modal-illustration{animation:none!important}
   .impact-burst{backdrop-filter:none}
 }
+
+
+/* Interactive live cartography: a compact, usable navigator beside the quests. */
+.navigator-panel{
+  margin:2px 0 17px;
+  padding:13px;
+  border:1px solid #527778;
+  border-radius:14px;
+  background:linear-gradient(155deg,#1d4850,#12343d);
+  box-shadow:inset 0 1px #ffffff12,0 9px 20px #04141b50;
+}
+.navigator-heading{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:10px}
+.navigator-heading .overline{font-size:10px;color:#b2e0d9;letter-spacing:1.4px}
+.navigator-toggle{
+  color:#ffe08d;background:#133640;border:1px solid #507275;
+  font-size:10px;font-weight:800;border-radius:7px;min-height:29px;
+  padding:3px 9px;white-space:nowrap
+}
+.navigator-toggle:hover{background:#26515a}
+.navigator-toggle:focus-visible{outline:2px solid var(--yellow);outline-offset:2px}
+.navigator-body[hidden]{display:none!important}
+#miniMap{
+  display:block;width:100%;height:auto;
+  aspect-ratio:540/316;
+  border:1px solid #8abbab66;border-radius:10px;
+  background:#86b978;cursor:crosshair;
+  touch-action:manipulation;
+}
+#miniMap:focus-visible{outline:3px solid var(--yellow);outline-offset:2px}
+.navigator-status{display:flex;align-items:center;gap:8px;justify-content:space-between;margin-top:9px}
+.navigator-player{
+  display:inline-flex;align-items:center;gap:6px;font-size:8px;
+  font-weight:900;color:#b6dcd2;letter-spacing:.9px;white-space:nowrap
+}
+.navigator-player i{width:9px;height:9px;background:#fff8ec;border:2px solid #173c4a;box-shadow:0 0 0 2px #ffcf57;border-radius:50%}
+.navigator-status strong{font-size:10px;color:#ffe187;text-align:right}
+.navigator-help{font-size:10px;line-height:1.5;color:#9ebfc0;margin:9px 0 0}
+@media(max-width:650px){.navigator-panel{padding:10px}.navigator-status{flex-wrap:wrap}}
+@media(prefers-reduced-motion:reduce){.navigator-toggle{transition:none}}
