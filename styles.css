@@ -180,3 +180,34 @@
 .navigator-help{font-size:10px;line-height:1.5;color:#9ebfc0;margin:9px 0 0}
 @media(max-width:650px){.navigator-panel{padding:10px}.navigator-status{flex-wrap:wrap}}
 @media(prefers-reduced-motion:reduce){.navigator-toggle{transition:none}}
+
+/* Pump workshop: tactile 3x3 pipe fitting board with touch and keyboard access. */
+.pipe-puzzle{margin:14px auto 17px;max-width:375px;padding:14px 15px 12px;
+  border-radius:17px;border:1px solid #77a69d99;background:linear-gradient(155deg,#0e333f,#174950);
+  box-shadow:inset 0 1px #ffffff18,0 12px 26px #03121988}
+.pipe-puzzle[hidden]{display:none!important}
+.pipe-endpoints{display:flex;justify-content:space-between;gap:8px;
+  font-size:10px;font-weight:900;letter-spacing:1.2px;color:#b9ebdd;margin-bottom:11px}
+.pipe-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px}
+.pipe-tile{position:relative;min-width:0;aspect-ratio:1/1;display:block;padding:0;overflow:hidden;
+  border:2px solid #72989e;border-radius:12px;
+  background:radial-gradient(circle at 34% 24%,#497c85,#204b5b 77%);
+  box-shadow:0 4px 0 #071e2a,0 6px 10px #06151f88;cursor:pointer;
+  transition:transform .16s,border-color .16s,background .16s}
+.pipe-tile:hover{transform:translateY(-2px);border-color:#f4d88c}
+.pipe-tile:active{transform:translateY(2px);box-shadow:0 2px 0 #071e2a}
+.pipe-tile:focus-visible{outline:3px solid #ffdc72;outline-offset:2px}
+.pipe-tile.is-connected{background:radial-gradient(circle at 38% 25%,#427f78,#235960 80%);border-color:#a6eab7}
+.pipe-hub{position:absolute;left:35%;top:35%;width:30%;height:30%;z-index:2;border-radius:50%;
+  border:2px solid #c5f9ed;background:#67cad2;box-shadow:inset 0 2px 4px #fff7}
+.pipe-arm{position:absolute;display:block;border:2px solid #b7eefa;background:linear-gradient(90deg,#258fa7,#7ee2e9,#268a9b);z-index:1}
+.pipe-arm.n,.pipe-arm.s{width:24%;height:37%;left:38%;border-radius:7px}
+.pipe-arm.n{top:-1%;border-bottom:0}.pipe-arm.s{bottom:-1%;border-top:0}
+.pipe-arm.e,.pipe-arm.w{width:37%;height:24%;top:38%;border-radius:7px}
+.pipe-arm.e{right:-1%;border-left:0}.pipe-arm.w{left:-1%;border-right:0}
+.pipe-tile-number{position:absolute;left:5px;top:4px;font-size:10px;font-weight:900;color:#d7eeeeaa}
+.pipe-status{color:#def6e9;font-size:12px;line-height:1.5;margin:12px 1px 2px;min-height:34px}
+.pipe-status.is-success{color:#caffb3}
+.pipe-status.is-error{color:#ffdf9b}
+@media(max-width:500px){.pipe-puzzle{padding:10px}.pipe-grid{gap:5px}.pipe-tile{border-radius:9px}}
+@media(prefers-reduced-motion:reduce){.pipe-tile{transition:none}}
