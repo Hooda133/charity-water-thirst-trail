@@ -562,6 +562,24 @@
       wave.rotation.x=-Math.PI/2;wave.position.set(x,.064,z);wave.rotation.z=rng()*6;
       ripples.push(wave);
     }
+    // Floating water glints bring the stream to life without external textures.
+    // Small additive highlights are intentionally kept to a low mesh count.
+    const glintMat=new THREE.MeshBasicMaterial({
+      color:0xd5fff8,transparent:true,opacity:.56,depthWrite:false,
+      blending:THREE.AdditiveBlending,side:THREE.DoubleSide
+    });
+    const glints=[];
+    const glintGeo=new THREE.PlaneGeometry(.28,.035);
+    for(let i=0;i<28;i++){
+      const z=-13.5+rng()*27;
+      const drift=(rng()-.5)*3.65;
+      const shine=mesh(glintGeo,glintMat,scene,false);
+      shine.rotation.x=-Math.PI/2;
+      shine.position.set(wx(riverCenter(z*SCALE+550))+drift,.091,z);
+      shine.rotation.z=(rng()-.5)*.36;
+      const size=.7+rng()*1.3;shine.scale.set(size,size,1);
+      glints.push({mesh:shine,baseZ:z,phase:rng()*6.283,offset:drift});
+    }
     // Riverbank reeds and stones make the water part of a lived-in landscape.
     // Shared instanced geometry keeps the extra detail inexpensive to render.
     const reedStem=new THREE.ConeGeometry(.045,.66,5);
@@ -701,6 +719,29 @@
       ball(scene,i%2?flowerMat:makeMat(0xffffff),x,.16,z,.085,.09,.085,false);
     }
   
+    // Delicate butterflies add motion close to the paths and garden.
+    // The two wings use the same simple geometry and material on every butterfly.
+    const butterflyWing=new THREE.PlaneGeometry(.26,.19);
+    const butterflyColors=[
+      new THREE.MeshBasicMaterial({color:0xffd977,side:THREE.DoubleSide}),
+      new THREE.MeshBasicMaterial({color:0x86d9f1,side:THREE.DoubleSide}),
+      new THREE.MeshBasicMaterial({color:0xffaac6,side:THREE.DoubleSide})
+    ];
+    const butterflies=[];
+    for(let i=0;i<8;i++){
+      const group=new THREE.Group();
+      const bx=wx(280+(i%4)*86),bz=wz(550+Math.floor(i/4)*240);
+      group.position.set(bx,.82,bz);
+      for(const side of [-1,1]){
+        const pivot=new THREE.Group();pivot.position.x=side*.11;group.add(pivot);
+        const wing=mesh(butterflyWing,butterflyColors[i%3],pivot,false);
+        wing.position.x=side*.10;wing.rotation.y=side*.14;
+        pivot.userData.side=side;
+      }
+      ball(group,mats.dark,0,0,0,.055,.17,.055,false);
+      scene.add(group);
+      butterflies.push({group,x:bx,z:bz,phase:rng()*6.283});
+    }
     // Village cottages use wall volumes, roof geometry, windows, chimney and door.
     function cottage(px,py,size=1,tint=0xf0d5a3){
       const g=new THREE.Group();g.position.set(wx(px),0,wz(py));g.scale.setScalar(size);scene.add(g);
@@ -752,6 +793,31 @@
     box(sign,mats.dark,0,1.73,0,2.45,.75,.19);
     box(sign,mats.gold,0,1.73,.12,2.13,.52,.04);
     box(sign,mats.dark,0,1.73,.153,1.84,.3,.043);
+    // Village square: shaded market stall, storage jars, crop boxes and cloth banners.
+    const square=new THREE.Group();square.position.set(wx(245),0,wz(475));scene.add(square);
+    for(const x of [-1.35,1.35])for(const z of [-.75,.75])
+      box(square,mats.wood,x,1.15,z,.13,2.3,.13);
+    const canopy=mesh(new THREE.ConeGeometry(2.1,.68,4),makeMat(0xd8ac5e),square);
+    canopy.position.set(0,2.44,0);canopy.rotation.y=Math.PI/4;canopy.scale.z=.60;
+    box(square,mats.wood,0,.86,0,2.7,.14,1.20);
+    for(const x of [-.85,-.35,.35,.85]){
+      const pot=cyl(square,mats.roof,x,1.08,0,.19,.13,.31,8);
+      ball(square,x>0?mats.grass2:mats.leaf2,x,1.35,0,.24,.21,.24);
+    }
+    // Fabric garlands use a small number of paper-thin triangular pennants.
+    const buntingMat=[makeMat(0xf8cf5d),makeMat(0x8ac7c2),makeMat(0xf09b81)];
+    const garland=new THREE.Group();garland.position.set(wx(310),0,wz(420));scene.add(garland);
+    box(garland,mats.lightWood,0,2.9,0,8.3,.025,.025,false);
+    for(let i=0;i<16;i++){
+      const flag=mesh(new THREE.ConeGeometry(.23,.48,3),buntingMat[i%3],garland,false);
+      flag.position.set(-3.85+i*.52,2.63,0);flag.rotation.y=Math.PI/3;
+    }
+    // Raised garden patches border the trail without blocking movement.
+    for(const [gx,gz] of [[wx(380),wz(340)],[wx(405),wz(355)]]){
+      box(scene,mats.wood,gx,.13,gz,1.5,.24,.72);
+      box(scene,mats.trunks,gx,.28,gz,1.32,.11,.56);
+      for(let i=0;i<5;i++)ball(scene,mats.leaf2,gx-.52+i*.26,.44,gz,.16,.2,.13);
+    }
     // Supply station with recognizable crates and banner.
     const supply=new THREE.Group();supply.position.set(wx(1190),0,wz(825));scene.add(supply);
     for(let i=0;i<4;i++){
@@ -799,6 +865,18 @@
     for(const dx of [-.46,.46]){
       box(pump,mats.lightWood,dx,.57,1.45,.16,.14,.18);
     }
+    // Water flowing from a repaired pump provides a visible, story-driven reward.
+    const pumpFlow=new THREE.Group();pump.add(pumpFlow);
+    const flowMat=new THREE.MeshBasicMaterial({
+      color:0x82e9ff,transparent:true,opacity:.83,depthWrite:false
+    });
+    const flowGeo=new THREE.SphereGeometry(.10,8,6);
+    const flowDroplets=[];
+    for(let i=0;i<13;i++){
+      const drop=mesh(flowGeo,flowMat,pumpFlow,false);
+      drop.scale.set(.75,1.1,.75);flowDroplets.push(drop);
+    }
+    pumpFlow.visible=false;
     // Alternative mountain spring.
     const spring=new THREE.Group();spring.position.set(wx(1460),0,wz(265));scene.add(spring);
     for(let i=0;i<7;i++){
@@ -807,7 +885,17 @@
     }
     const pond=mesh(new THREE.CylinderGeometry(1.18,1.18,.09,32),waterMat,spring,false);
     pond.position.y=.20;
-  
+    // Soft turquoise rings give the alternative spring its own landmark character.
+    const springRings=[];
+    for(let i=0;i<3;i++){
+      const ring=mesh(new THREE.TorusGeometry(.55+i*.26,.024,5,36),
+        new THREE.MeshBasicMaterial({
+          color:0xd6fff9,transparent:true,opacity:.42,depthWrite:false
+        }),spring,false);
+      ring.rotation.x=-Math.PI/2;ring.position.y=.278;
+      springRings.push(ring);
+    }
+
     // Mission markers and billboard labels that stay legible as the camera moves.
     function labelTexture(title){
       const cn=document.createElement("canvas");cn.width=512;cn.height=128;
@@ -831,6 +919,33 @@
       const dot=ball(g,new THREE.MeshBasicMaterial({color}),0,1.72,0,.23,.23,.23,false);
       markers[key]={group:g,ring,beacon,dot,mat};
     }
+    // Residents give each objective a visible human presence rather than only
+    // presenting a floating quest marker. They remain decorative: interaction
+    // continues through the original quest logic and E key.
+    function resident(px,py,coatColor,headCover=false){
+      const g=new THREE.Group();g.position.set(wx(px),0,wz(py));scene.add(g);
+      const coat=makeMat(coatColor),skin=makeMat(0xc58b67);
+      cyl(g,coat,0,1.03,0,.33,.51,1.20,9);
+      ball(g,skin,0,1.92,.045,.29,.33,.30);
+      if(headCover){
+        ball(g,mats.trim,0,2.08,-.08,.34,.23,.32);
+        for(const side of [-1,1])box(g,mats.trim,side*.27,1.62,-.10,.14,.43,.20);
+      }else{
+        ball(g,mats.roofDark,0,2.13,-.06,.32,.17,.30);
+      }
+      for(const side of [-1,1]){
+        box(g,coat,side*.39,1.22,0,.21,.73,.26);
+        box(g,mats.wood,side*.17,.38,0,.25,.74,.29);
+      }
+      const waveArm=new THREE.Group();waveArm.position.set(.39,1.55,0);g.add(waveArm);
+      cyl(waveArm,coat,0,-.22,0,.13,.12,.51,8);
+      ball(waveArm,skin,0,-.49,.02,.14,.16,.12);
+      return {g,waveArm,baseX:g.position.x,baseZ:g.position.z};
+    }
+    const villagers=[
+      resident(245,515,0x8c6699,true),
+      resident(472,825,0x4f8c9b,false)
+    ];
     // Slightly larger stylized explorer, visible even at the standard isometric zoom.
     const explorer=new THREE.Group();scene.add(explorer);
     explorer.scale.setScalar(1.19);
@@ -921,6 +1036,8 @@
       options.onSelect(x,y);
       view.focus({preventScroll:true});
     });
+    const reduceMotion=typeof window.matchMedia==="function"
+      &&window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     let lastParent=null,lastWidth=0,lastHeight=0,firstFrame=true;
     function render(state,time){
       const playing=state.screen!=="start";
@@ -971,7 +1088,27 @@
         }
       }
       explorer.userData.lastX=playerX;explorer.userData.lastZ=playerZ;
-      for(let i=0;i<ripples.length;i++){ripples[i].position.z+=.012;if(ripples[i].position.z>15.2)ripples[i].position.z=-15.2;}
+      if(!reduceMotion){
+        // Time-based displacement avoids faster water on high-refresh-rate screens.
+        for(let i=0;i<ripples.length;i++){
+          ripples[i].position.z+=.10;
+          if(ripples[i].position.z>15.2)ripples[i].position.z=-15.2;
+        }
+        for(const shine of glints){
+          const z=shine.baseZ+Math.sin(time*.85+shine.phase)*.75;
+          shine.mesh.position.z=z;
+          shine.mesh.position.x=wx(riverCenter(z*SCALE+550))+shine.offset;
+          shine.mesh.scale.y=.65+Math.abs(Math.sin(time*1.6+shine.phase))*.9;
+        }
+        for(const item of butterflies){
+          const t=time*1.25+item.phase;
+          item.group.position.set(item.x+Math.sin(t)*.75,.76+Math.sin(t*2.3)*.28,item.z+Math.cos(t)*.62);
+          item.group.rotation.y=t+.4;
+          for(const pivot of item.group.children){
+            if(pivot.userData.side)pivot.rotation.y=pivot.userData.side*Math.sin(time*15+item.phase)*.95;
+          }
+        }
+      }
       for(let i=0;i<clouds.length;i++){clouds[i].position.x+=.0014;if(clouds[i].position.x>28)clouds[i].position.x=-28;}
       for(const [key,m] of Object.entries(markers)){
         const done=(state.done&&state.done.has(key))||(key==="river"&&state.inventory&&state.inventory.has("testKit"));
@@ -980,8 +1117,29 @@
         m.dot.position.y=1.73+Math.sin(time*2.2)*.17;
         m.beacon.visible=!done;
       }
-      fire.scale.y=.84+Math.sin(time*13)*.15;
-      fireLight.intensity=11+Math.sin(time*9)*3;
+      for(let i=0;i<villagers.length;i++){
+        const resident=villagers[i];
+        const nearby=Math.hypot(state.x-(i?472:245),state.y-(i?825:515))<135;
+        resident.waveArm.rotation.z=nearby?(reduceMotion?-.45:-.6+Math.sin(time*5)*.3):.05;
+        resident.g.position.y=reduceMotion?0:Math.sin(time*1.3+i)*.027;
+      }
+      const restored=!!state.done?.has("pump");
+      pumpFlow.visible=restored;
+      if(restored){
+        for(let i=0;i<flowDroplets.length;i++){
+          const p=(i/flowDroplets.length+(reduceMotion?0:time*.43))%1;
+          const droplet=flowDroplets[i];
+          droplet.position.set(.02,2.2-p*1.65,1.14+p*.28);
+          droplet.scale.set(.69+(1-p)*.23,.78+(1-p)*.55,.72);
+        }
+      }
+      if(!reduceMotion)for(let i=0;i<springRings.length;i++){
+        const f=(time*.22+i/3)%1;
+        springRings[i].scale.setScalar(.6+f*.8);
+        springRings[i].material.opacity=.34*(1-f);
+      }
+      fire.scale.y=reduceMotion?1:.84+Math.sin(time*13)*.15;
+      fireLight.intensity=reduceMotion?12:11+Math.sin(time*9)*3;
       let aim;
       if(playing){
         aim=new THREE.Vector3(playerX,.8,playerZ);
