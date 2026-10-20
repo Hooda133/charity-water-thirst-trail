@@ -288,6 +288,7 @@
   function openModal({tag="FIELD NOTES",icon="💧",title,description,choices=[],progress=0,total=0,tip="",kind="dialog",allowClose=true,celebrateWin=false}){
     state.modalOpen=true;state.modalKind=kind;
     $("dialog").classList.toggle("is-victory",celebrateWin);
+    $("pipePuzzle").hidden=true;
     $("modalTag").textContent=tag;$("modalIllustration").textContent=icon;
     $("modalTitle").textContent=title;$("modalDescription").textContent=description;
     $("modalClose").hidden=!allowClose;
@@ -307,7 +308,8 @@
   }
   function closeModal(silent=false){
     if(state.modalKind==="end"&&!silent)return;
-    $("modalBackdrop").hidden=true;state.modalOpen=false;state.modalKind="";
+    $("modalBackdrop").hidden=true;$("pipePuzzle").hidden=true;
+    state.modalOpen=false;state.modalKind="";
     if(!silent&&state.screen==="playing"){
       if(world3d)world3d.focus();else canvas.focus({preventScroll:true});
     }
@@ -372,11 +374,121 @@
     if(!state.inventory.has("testKit")){openModal({tag:"HILL SPRING",icon:"💧",title:"A promising discovery",description:"The mountain spring looks beautiful, but appearance doesn't guarantee safety. Visit the River Bank to learn about testing and collect a test kit.",choices:[{text:"Go to the River Bank",primary:true,action:()=>{closeModal();navigateTo("river");}},{text:"Keep exploring",action:()=>closeModal()}]});return;}
     quiz({tag:"BONUS CHALLENGE",icon:"🏔️",title:"Spring Survey",questions:springQuestions,onWin:()=>{addScore(350);end(true,"You helped the village identify and responsibly evaluate a possible alternative water source! Your careful decisions earned a community impact bonus.","SPRING DISCOVERY");}});
   }
+
+  // Physical pipeline repair: players rotate actual pipe sections before
+  // applying the knowledge they gained through the original safety quiz.
+  // Each piece is a two-way junction; flow only passes through reciprocal ports.
+  const PIPE_DIRS=["n","e","s","w"];
+  const PIPE_BASE=[
+    ["s","e"],["s","e"],["w","s"],
+    ["w","e"],["w","n"],["n","e"],
+    ["n","e"],["n","s"],["n","w"]
+  ];
+  const PIPE_START=[1,2,3,1,2,1,3,1,2];
+  let pipeTurns=[...PIPE_START],pipeTests=0;
+  const rotatedPipe=(index,turns=pipeTurns)=>{
+    const r=turns[index]%4;
+    return PIPE_BASE[index].map(dir=>PIPE_DIRS[(PIPE_DIRS.indexOf(dir)+r)%4]);
+  };
+  function pipeFlow(turns=pipeTurns){
+    const start=3, goal=5, seen=new Set(), queue=[];
+    if(rotatedPipe(start,turns).includes("w")){seen.add(start);queue.push(start);}
+    const offset={n:-3,e:1,s:3,w:-1};
+    const inverse={n:"s",e:"w",s:"n",w:"e"};
+    for(let i=0;i<queue.length;i++){
+      const current=queue[i], row=Math.floor(current/3),col=current%3;
+      for(const dir of rotatedPipe(current,turns)){
+        const nr=row+(dir==="s"?1:dir==="n"?-1:0);
+        const nc=col+(dir==="e"?1:dir==="w"?-1:0);
+        if(nr<0||nr>2||nc<0||nc>2)continue;
+        const target=current+offset[dir];
+        if(!seen.has(target)&&rotatedPipe(target,turns).includes(inverse[dir])){
+          seen.add(target);queue.push(target);
+        }
+      }
+    }
+    return {solved:seen.has(goal)&&rotatedPipe(goal,turns).includes("e"),
+      connected:seen};
+  }
+  function renderPipePuzzle(){
+    const board=$("pipeGrid");board.replaceChildren();
+    const flow=pipeFlow(),status=$("pipeStatus");
+    for(let i=0;i<9;i++){
+      const button=document.createElement("button");
+      button.type="button";
+      button.className="pipe-tile"+(flow.connected.has(i)?" is-connected":"");
+      const ports=rotatedPipe(i);
+      button.setAttribute("aria-label",
+        "Pipe row "+(Math.floor(i/3)+1)+", column "+(i%3+1)+
+        ". Open "+ports.join(" and ")+". Click to rotate clockwise.");
+      const number=document.createElement("span");
+      number.className="pipe-tile-number";number.textContent=String(i+1);
+      button.append(number);
+      for(const dir of ports){
+        const arm=document.createElement("span");
+        arm.className="pipe-arm "+dir;
+        arm.setAttribute("aria-hidden","true");
+        button.append(arm);
+      }
+      const hub=document.createElement("span");hub.className="pipe-hub";
+      hub.setAttribute("aria-hidden","true");button.append(hub);
+      button.addEventListener("click",()=>rotatePipe(i));
+      board.append(button);
+    }
+    status.className="pipe-status"+(flow.solved?" is-success":"");
+    status.textContent=flow.solved?
+      "A complete pipeline is connected! Select Test the flow to inspect it.":
+      (flow.connected.size?flow.connected.size+" of 9 pipe sections connected. ":"Connect WATER IN at middle left. ")+
+      "Rotate sections to reach the village outlet on the right.";
+  }
+  function rotatePipe(index){
+    if(state.modalKind!=="pipe")return;
+    pipeTurns[index]=(pipeTurns[index]+1)%4;
+    tone(440+index*24,.045);
+    renderPipePuzzle();
+  }
+  function finalPumpSafetyQuiz(){
+    quiz({tag:"THE FINAL CHALLENGE",icon:"🔧",title:"Repair the Pump",
+      questions:pumpQuestions,onWin:()=>{
+        doneOnce("pump",null,520);
+        end(true,"Water is flowing again! By listening to the village, gathering the right supplies, and checking your work, you restored the village's path toward reliable safe water.","THE LAST WELL RESTORED");
+      }});
+  }
+  function verifyPipe(){
+    if(state.modalKind!=="pipe")return;
+    pipeTests++;
+    if(pipeFlow().solved){
+      tone(960,.17);
+      closeModal();
+      finalPumpSafetyQuiz();
+      return;
+    }
+    drain(2);
+    if(state.ended)return;
+    const status=$("pipeStatus");
+    status.className="pipe-status is-error";
+    status.textContent="No water reached the outlet. Find the disconnected bend and try again (−2 energy).";
+    updateUI();
+    tone(210,.15);
+  }
+  function beginPipePuzzle(){
+    pipeTurns=[...PIPE_START];pipeTests=0;
+    openModal({tag:"PUMP REPAIR • STEP 1 OF 2",icon:"🔧",
+      title:"Reconnect the water pipeline",
+      description:"Rotate the 9 pipe sections. Water enters from the LEFT of the middle row and must reach the RIGHT side. Then test the flow.",
+      kind:"pipe",tip:"Rotate a square by clicking it, or tab to it and press Enter. Testing a broken line costs 2 energy.",
+      choices:[
+        {text:"💧 Test the flow",primary:true,action:verifyPipe},
+        {text:"↩ Back to the valley",action:()=>closeModal()}
+      ]});
+    $("pipePuzzle").hidden=false;
+    renderPipePuzzle();
+  }
   function pumpChallenge(){
     if(state.done.has("pump"))return;
     const need=[!state.done.has("elder")&&"Talk to the elder",!state.inventory.has("toolkit")&&"Collect the toolkit",!state.inventory.has("gasket")&&"Find the gasket"].filter(Boolean);
     if(need.length){openModal({tag:"REPAIR STATION",icon:"⚙️",title:"The pump needs your help",description:`You can't start repairs yet. You still need: ${need.join(" · ")}.`,choices:[{text:"Show me the next stop",primary:true,action:()=>{closeModal();navigateTo(!state.done.has("elder")?"elder":!state.inventory.has("toolkit")?"toolkit":"gasket");}},{text:"Back to map",action:()=>closeModal()}]});return;}
-    quiz({tag:"THE FINAL CHALLENGE",icon:"🔧",title:"Repair the Pump",questions:pumpQuestions,onWin:()=>{doneOnce("pump",null,520);end(true,"Water is flowing again! By listening to the village, gathering the right supplies, and checking your work, you restored the village's path toward reliable safe water.","THE LAST WELL RESTORED");}});
+    beginPipePuzzle();
   }
   function end(won,description,headline="EXPEDITION ENDED"){
     if(state.ended)return;
