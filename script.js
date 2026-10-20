@@ -42,7 +42,7 @@
     walkT:0, facing:1, keys:new Set(), touch:new Set(), path:[], goal:null, destination:null,
     done:new Set(), inventory:new Set(), campUses:0, quizStep:0, modalOpen:false, modalKind:"",
     sound:safeStore.getSound(), cameraX:0, cameraY:0, nearby:null, ended:false, lastStatus:"",
-    toastTimeout:null, effect:null, impactTimer:null, supplies:new Set()
+    toastTimeout:null, effect:null, impactTimer:null, supplies:new Set(), scenic:false
   };
   // The 3D world is loaded without blocking startup. If Three.js cannot be reached,
   // the original Canvas 2D renderer remains available as a playable fallback.
@@ -272,7 +272,9 @@
   }
   function start(){
     Object.assign(state,{screen:"playing",energy:100,score:0,elapsed:0,x:310,y:620,walkT:0,
-      path:[],goal:null,destination:null,nearby:null,campUses:0,ended:false,lastStatus:"",cameraX:0,cameraY:0,effect:null});
+      path:[],goal:null,destination:null,nearby:null,campUses:0,ended:false,lastStatus:"",cameraX:0,cameraY:0,effect:null,scenic:false});
+    $("scenicViewButton").setAttribute("aria-pressed","false");
+    $("scenicViewButton").textContent="◈ SCENIC VIEW";
     state.keys.clear();state.touch.clear();state.done.clear();state.inventory.clear();state.supplies.clear();
     if(state.impactTimer)clearTimeout(state.impactTimer);
     state.impactTimer=null;$("impactBurst").hidden=true;
@@ -305,6 +307,18 @@
     tone(500,.06);
   }
   function navigateTo(key){const sp=spots[key];if(sp)navToPosition(sp,key);}
+  function toggleScenicView(){
+    if(state.screen!=="playing"||state.modalOpen)return;
+    state.scenic=!state.scenic;
+    const control=$("scenicViewButton");
+    control.setAttribute("aria-pressed",String(state.scenic));
+    control.textContent=state.scenic?"◈ FOLLOW PLAYER":"◈ SCENIC VIEW";
+    notify(state.scenic?
+      "Scenic camera enabled · Explore the whole valley with the mini-map. Press V to follow again.":
+      "Following your explorer again.");
+    tone(state.scenic?720:510,.08);
+    if(world3d)world3d.focus();
+  }
   function handleMovement(dt){
     if(state.screen!=="playing"||state.modalOpen)return;
     const key=(...names)=>names.some(name=>state.keys.has(name)||state.touch.has(name));
@@ -831,6 +845,7 @@
     if((k==="e"||k===" ")&&!e.repeat&&state.screen==="playing")interact();
     if(k==="p"&&state.screen==="playing")pause();
     if(k==="m"&&state.screen==="playing"&&!e.repeat)toggleNavigator();
+    if(k==="v"&&state.screen==="playing"&&!e.repeat)toggleScenicView();
   });
   window.addEventListener("keyup",e=>state.keys.delete(e.key.toLowerCase()));
   window.addEventListener("blur",()=>{state.keys.clear();state.touch.clear();});
@@ -840,6 +855,7 @@
   });
   canvas.addEventListener("click",moveFromCanvas);
   $("mapToggle").addEventListener("click",toggleNavigator);
+  $("scenicViewButton").addEventListener("click",toggleScenicView);
   miniMap.addEventListener("click",event=>{
     if(state.screen!=="playing"||state.modalOpen)return;
     const rect=miniMap.getBoundingClientRect();
@@ -2112,10 +2128,17 @@
       fireLight.intensity=reduceMotion?12:11+Math.sin(time*9)*3;
       let aim;
       if(playing){
-        aim=new THREE.Vector3(playerX,.8,playerZ);
-        // After victory, briefly reveal more of the restored valley.
-        const finaleZoom=effect?.kind==="victory"&&effectAge<4.5&&!reduceMotion?1.17:1;
-        camPos.copy(aim).add(new THREE.Vector3(10.2,16.3,20).multiplyScalar(cameraDistance*finaleZoom));
+        // Scenic overview deliberately frames the whole explorable island;
+        // the normal mode still follows the player for precise movement.
+        if(state.scenic){
+          aim=new THREE.Vector3(-.8,.5,-.1);
+          camPos.copy(aim).add(new THREE.Vector3(13,30,37));
+        }else{
+          aim=new THREE.Vector3(playerX,.8,playerZ);
+          // After victory, briefly reveal more of the restored valley.
+          const finaleZoom=effect?.kind==="victory"&&effectAge<4.5&&!reduceMotion?1.17:1;
+          camPos.copy(aim).add(new THREE.Vector3(10.2,16.3,20).multiplyScalar(cameraDistance*finaleZoom));
+        }
       } else {
         aim=new THREE.Vector3(-4,0,-1);
         camPos.copy(aim).add(new THREE.Vector3(16,22,27));
