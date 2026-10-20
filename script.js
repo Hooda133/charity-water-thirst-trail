@@ -1833,6 +1833,33 @@
       }
       scene.add(g);clouds.push(g);
     }
+    // Visible celestial discs and broad halo rings lend the world a strong,
+    // illustrated sky identity without a bloom/post-processing dependency.
+    const solarGlow=new THREE.MeshBasicMaterial({
+      color:0xffe4a0,transparent:true,opacity:.17,
+      depthWrite:false,side:THREE.DoubleSide,fog:false
+    });
+    const sunDisc=new THREE.Mesh(new THREE.SphereGeometry(2.1,20,12),
+      new THREE.MeshBasicMaterial({color:0xffedb0,fog:false}));
+    sunDisc.position.set(-21,30,-42);scene.add(sunDisc);
+    const haloOuter=mesh(new THREE.RingGeometry(2.6,4.7,44),
+      solarGlow,scene,false);
+    haloOuter.position.copy(sunDisc.position);
+    const haloInner=mesh(new THREE.RingGeometry(2.2,2.46,44),
+      new THREE.MeshBasicMaterial({
+        color:0xfff3b4,transparent:true,opacity:.23,
+        depthWrite:false,side:THREE.DoubleSide,fog:false
+      }),scene,false);
+    haloInner.position.copy(sunDisc.position);
+    const moonDisc=mesh(new THREE.SphereGeometry(1.25,14,10),
+      new THREE.MeshBasicMaterial({color:0xd8f4ef,fog:false}),scene,false);
+    moonDisc.position.set(19,33,-43);moonDisc.visible=false;
+    const moonHalo=mesh(new THREE.RingGeometry(1.7,3.5,40),
+      new THREE.MeshBasicMaterial({
+        color:0xb3eaf2,transparent:true,opacity:.19,
+        depthWrite:false,side:THREE.DoubleSide,fog:false
+      }),scene,false);
+    moonHalo.position.copy(moonDisc.position);moonHalo.visible=false;
     // A few dusk fireflies and distant stars use inexpensive unlit geometry.
     const fireflyMat=new THREE.MeshBasicMaterial({color:0xffeaa0,transparent:true,opacity:.75,depthWrite:false});
     const fireflyGeo=new THREE.SphereGeometry(.065,6,5);
@@ -1917,6 +1944,18 @@
       renderer.toneMappingExposure=1.22+.10*night;
       for(const light of lanternLights)light.intensity=night*2.6;
       const darkSky=night>.55;
+      const solarVisible=night<.80;
+      sunDisc.visible=solarVisible;
+      haloOuter.visible=solarVisible;haloInner.visible=solarVisible;
+      sunDisc.position.y=30-night*9;
+      haloOuter.position.y=sunDisc.position.y;
+      haloInner.position.y=sunDisc.position.y;
+      solarGlow.opacity=.19*(1-night*.75);
+      moonDisc.visible=darkSky;moonHalo.visible=darkSky;
+      // Halos face the follow camera as sky art rather than flat world signage.
+      haloOuter.quaternion.copy(camera.quaternion);
+      haloInner.quaternion.copy(camera.quaternion);
+      moonHalo.quaternion.copy(camera.quaternion);
       for(let i=0;i<stars.length;i++)stars[i].visible=darkSky;
       for(const firefly of fireflies){
         firefly.glow.visible=night>.4;
@@ -2146,8 +2185,11 @@
           camPos.copy(aim).add(new THREE.Vector3(10.2,16.3,20).multiplyScalar(cameraDistance*finaleZoom));
         }
       } else {
-        aim=new THREE.Vector3(-4,0,-1);
-        camPos.copy(aim).add(new THREE.Vector3(16,22,27));
+        // A nearly imperceptible flyover keeps the 3D title screen alive.
+        const drift=reduceMotion?0:Math.sin(time*.115);
+        aim=new THREE.Vector3(-4+drift*2.0,0,-1+Math.cos(time*.09)*.6);
+        camPos.copy(aim).add(new THREE.Vector3(
+          16+drift*2.4,22+Math.sin(time*.08)*.8,27+Math.cos(time*.105)*2.0));
       }
       if(firstFrame){
         camera.position.copy(camPos);camTarget.copy(aim);firstFrame=false;
