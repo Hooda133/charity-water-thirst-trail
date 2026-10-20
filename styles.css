@@ -211,3 +211,28 @@
 .pipe-status.is-error{color:#ffdf9b}
 @media(max-width:500px){.pipe-puzzle{padding:10px}.pipe-grid{gap:5px}.pipe-tile{border-radius:9px}}
 @media(prefers-reduced-motion:reduce){.pipe-tile{transition:none}}
+
+/* Raincatch Ridge planning station: tactile checkable safety measures. */
+.rain-panel{margin:15px auto;padding:15px;max-width:415px;border:1px solid #9cdbd077;
+  border-radius:16px;background:linear-gradient(160deg,#184753,#0b313e)}
+.rain-panel[hidden]{display:none!important}
+.rain-gauge{display:flex;gap:8px;justify-content:space-between;margin-bottom:12px;
+  color:#c8eced;font-size:11px;font-weight:900;letter-spacing:.7px}
+.rain-gauge strong{color:#ffdf80}
+.rain-controls{display:grid;gap:8px}
+.rain-option{display:flex;align-items:center;gap:11px;text-align:left;min-height:56px;padding:10px 13px;
+  border-radius:11px;border:1px solid #61918f;background:#123a47;color:#e8f6ef;cursor:pointer;
+  font:inherit}
+.rain-option:hover{background:#1f5660}
+.rain-option[aria-pressed="true"]{background:linear-gradient(110deg,#245e56,#1d4d51);
+  border-color:#a0efc9;box-shadow:inset 3px 0 #9ff2c6}
+.rain-option:focus-visible{outline:3px solid #ffd968;outline-offset:2px}
+.rain-symbol{font-size:23px;flex-shrink:0}
+.rain-copy{display:flex;flex-direction:column;gap:4px}
+.rain-copy strong{font-size:12px}
+.rain-copy small{font-size:10px;color:#b2ced0}
+.rain-check{margin-left:auto;font-size:18px;color:#a5ffbf}
+.rain-status{margin:12px 0 0;min-height:26px;line-height:1.55;font-size:12px;color:#ceeced}
+.rain-status.is-error{color:#ffdc9a}
+.rain-status.is-success{color:#b4ffb4}
+@media(prefers-reduced-motion:reduce){.rain-option{transition:none}}
