@@ -14,7 +14,8 @@
     gasket:   {x:1190,y:825,name:"Supply Depot", icon:"📦", kind:"quest", color:"#ffd344", hint:"Find a replacement gasket"},
     pump:     {x:1540,y:690,name:"Old Water Pump",icon:"⚙️",kind:"quest", color:"#ffd344", hint:"Repair the village pump"},
     spring:   {x:1460,y:265,name:"Hill Spring",   icon:"💧", kind:"bonus",color:"#6fe1f2", hint:"Explore an alternative source"},
-    ridge:    {x:1160,y:200,name:"Raincatch Ridge",icon:"🌦️",kind:"bonus",color:"#a4dbe7",hint:"Build a safe rainwater collection plan"}
+    ridge:    {x:1160,y:200,name:"Raincatch Ridge",icon:"🌦️",kind:"bonus",color:"#a4dbe7",hint:"Build a safe rainwater collection plan"},
+    marsh:    {x:560,y:970,name:"Wetland Sanctuary",icon:"🪷",kind:"bonus",color:"#9fe8ba",hint:"Remove litter without disturbing wildlife"}
   };
   // Sealed expedition drinking-water caches are placed on safe walkable banks.
   // Unlike river or rainwater, these are pre-packed supplies for the explorer.
@@ -98,7 +99,7 @@
   const miniCtx=miniMap?.getContext("2d");
   const mapW=540,mapH=316;
   const mapX=x=>x/W*mapW, mapY=y=>y/H*mapH;
-  const mapNames={elder:"ELDER",toolkit:"TOOLS",camp:"CAMP",river:"RIVER",gasket:"DEPOT",pump:"PUMP",spring:"SPRING",ridge:"RIDGE"};
+  const mapNames={elder:"ELDER",toolkit:"TOOLS",camp:"CAMP",river:"RIVER",gasket:"DEPOT",pump:"PUMP",spring:"SPRING",ridge:"RIDGE",marsh:"MARSH"};
   let lastMapDraw=-1;
 
   function recommendedDestination(){
@@ -121,7 +122,7 @@
     }
     const roadPaths=[
       [[285,490],[370,630],[455,765],[610,708],[730,580],[970,580],[1180,825],[1540,690]],
-      [[280,490],[420,435],[540,350]],[[970,580],[1170,415],[1460,265]],[[1100,440],[1120,315],[1160,200]]
+      [[280,490],[420,435],[540,350]],[[970,580],[1170,415],[1460,265]],[[1100,440],[1120,315],[1160,200]],[[455,765],[510,870],[560,970]]
     ];
     for(const path of roadPaths){
       c.beginPath();path.forEach((p,i)=>i?c.lineTo(mapX(p[0]),mapY(p[1])):c.moveTo(mapX(p[0]),mapY(p[1])));
@@ -215,8 +216,8 @@
     state.toastTimeout=setTimeout(()=>t.hidden=true,3500);
   }
   function addItem(item){if(!state.inventory.has(item))state.inventory.add(item);}
-  const rewardNames={elder:"A promise made",toolkit:"Toolkit collected",gasket:"Gasket secured",pump:"The Last Well restored",river:"Water research complete",spring:"New water source discovered",ridge:"Rainwater plan completed"};
-  const rewardIcons={elder:"🤝",toolkit:"🧰",gasket:"🔩",pump:"💧",river:"🔬",spring:"🏔️",ridge:"🌦️"};
+  const rewardNames={elder:"A promise made",toolkit:"Toolkit collected",gasket:"Gasket secured",pump:"The Last Well restored",river:"Water research complete",spring:"New water source discovered",ridge:"Rainwater plan completed",marsh:"Wetland habitat protected"};
+  const rewardIcons={elder:"🤝",toolkit:"🧰",gasket:"🔩",pump:"💧",river:"🔬",spring:"🏔️",ridge:"🌦️",marsh:"🪷"};
   function celebrate(key,points=0,victory=false){
     const time=performance.now()/1000;
     state.effect={key,kind:victory?"victory":"quest",at:time};
@@ -252,8 +253,8 @@
     $("inventoryCount").textContent=`${state.inventory.size} ITEM${state.inventory.size===1?"":"S"}`;
     $("inventoryList").replaceChildren();
     if(!state.inventory.size){const e=document.createElement("span");e.className="muted";e.textContent="Your bag is empty.";$("inventoryList").append(e);}
-    const emoji={toolkit:"🧰",gasket:"🔩",testKit:"🧪",fieldNotes:"📓",rainNotes:"🌦️"};
-    for(const item of state.inventory){const e=document.createElement("span");e.className="inventory-item";e.textContent=`${emoji[item]||"✦"} ${({toolkit:"Toolkit",gasket:"Gasket",testKit:"Test kit",fieldNotes:"Field notes",rainNotes:"Raincatch notes"})[item]||item}`;$("inventoryList").append(e);}
+    const emoji={toolkit:"🧰",gasket:"🔩",testKit:"🧪",fieldNotes:"📓",rainNotes:"🌦️",habitatBadge:"🪷"};
+    for(const item of state.inventory){const e=document.createElement("span");e.className="inventory-item";e.textContent=`${emoji[item]||"✦"} ${({toolkit:"Toolkit",gasket:"Gasket",testKit:"Test kit",fieldNotes:"Field notes",rainNotes:"Raincatch notes",habitatBadge:"Habitat badge"})[item]||item}`;$("inventoryList").append(e);}
     for(const el of $("questList").querySelectorAll("[data-quest]")){
       const completed=state.done.has(el.dataset.quest);el.classList.toggle("done",completed);
       el.querySelector(".quest-icon").textContent=completed?"✓":questDefs.find(q=>q.key===el.dataset.quest).icon;
@@ -328,7 +329,7 @@
   function openModal({tag="FIELD NOTES",icon="💧",title,description,choices=[],progress=0,total=0,tip="",kind="dialog",allowClose=true,celebrateWin=false}){
     state.modalOpen=true;state.modalKind=kind;
     $("dialog").classList.toggle("is-victory",celebrateWin);
-    $("pipePuzzle").hidden=true;$("rainPanel").hidden=true;
+    $("pipePuzzle").hidden=true;$("rainPanel").hidden=true;$("marshPanel").hidden=true;
     $("modalTag").textContent=tag;$("modalIllustration").textContent=icon;
     $("modalTitle").textContent=title;$("modalDescription").textContent=description;
     $("modalClose").hidden=!allowClose;
@@ -348,7 +349,7 @@
   }
   function closeModal(silent=false){
     if(state.modalKind==="end"&&!silent)return;
-    $("modalBackdrop").hidden=true;$("pipePuzzle").hidden=true;$("rainPanel").hidden=true;
+    $("modalBackdrop").hidden=true;$("pipePuzzle").hidden=true;$("rainPanel").hidden=true;$("marshPanel").hidden=true;
     state.modalOpen=false;state.modalKind="";
     if(!silent&&state.screen==="playing"){
       if(world3d)world3d.focus();else canvas.focus({preventScroll:true});
@@ -367,6 +368,7 @@
     state.path=[];state.goal=null;state.destination=null;
     switch(key){
       case "ridge":rainChallenge();break;
+      case "marsh":marshChallenge();break;
       case "elder":
         openModal({tag:"THE VILLAGE",icon:"👵",title:"A promise to the village",description:"‘Our only pump stopped working,’ says Amina, the village elder. ‘The children deserve reliable water. Visit the workshop for tools, cross the bridge for a replacement gasket, and come back to restore the pump.’",choices:[{text:state.done.has("elder")?"Review my mission":"I promise to help! (+80 impact)",primary:true,action:()=>{doneOnce("elder","fieldNotes",80);closeModal();updateUI();notify("Quest updated · The village is counting on you.");}}]});break;
       case "toolkit":
@@ -417,6 +419,75 @@
   }
 
 
+
+  // Leave wild plants, animals and nests untouched. Collect only obvious litter.
+  const marshItems=[
+    {icon:"🧴",name:"Plastic bottle",litter:true},
+    {icon:"🛍️",name:"Plastic bag",litter:true},
+    {icon:"🪺",name:"Bird nest",litter:false},
+    {icon:"🥫",name:"Metal can",litter:true},
+    {icon:"🌱",name:"Reed seedlings",litter:false},
+    {icon:"🧵",name:"Discarded line",litter:true}
+  ];
+  let marshPicked=new Set();
+  function renderMarsh(){
+    const grid=$("marshGrid");grid.replaceChildren();
+    const total=marshItems.filter((item,i)=>item.litter&&marshPicked.has(i)).length;
+    $("marshProgress").textContent=total+" / 4 litter items";
+    for(let i=0;i<marshItems.length;i++){
+      const item=marshItems[i],done=marshPicked.has(i);
+      const tile=document.createElement("button");tile.type="button";
+      tile.className="marsh-item"+(done?" is-collected":"");
+      tile.disabled=done;
+      tile.setAttribute("aria-label",item.name+(done?", removed":", inspect or collect"));
+      const icon=document.createElement("span");icon.className="marsh-item-icon";icon.textContent=done?"✓":item.icon;
+      const name=document.createElement("span");name.className="marsh-item-title";name.textContent=item.name;
+      tile.append(icon);tile.append(name);
+      tile.addEventListener("click",()=>inspectMarsh(i));
+      grid.append(tile);
+    }
+    const status=$("marshStatus");
+    status.className="marsh-status"+(total===4?" is-success":"");
+    status.textContent=total===4?"All litter is collected. The nest and seedlings are safe. Complete the cleanup!":
+      "Identify litter to remove; protect habitat features and living things.";
+  }
+  function inspectMarsh(index){
+    if(state.modalKind!=="marsh"||marshPicked.has(index))return;
+    const item=marshItems[index];
+    if(!item.litter){
+      drain(3);if(state.ended)return;
+      const status=$("marshStatus");status.className="marsh-status is-error";
+      status.textContent=item.name+" belongs in the habitat. Leave it undisturbed (−3 energy).";
+      tone(190,.12);updateUI();return;
+    }
+    marshPicked.add(index);tone(650+index*40,.085);renderMarsh();
+  }
+  function verifyMarsh(){
+    if(state.modalKind!=="marsh")return;
+    if(marshPicked.size!==4){
+      const status=$("marshStatus");status.className="marsh-status is-error";
+      status.textContent="Look for all four litter items before finishing.";
+      return;
+    }
+    closeModal();doneOnce("marsh","habitatBadge",180);updateUI();
+    notify("🪷 Wetland cleaned up · Habitat protected · +180 impact");
+  }
+  function marshChallenge(){
+    if(state.done.has("marsh")){
+      openModal({tag:"WETLAND FIELD NOTES",icon:"🪷",title:"The sanctuary is protected",
+        description:"You collected litter while leaving wildlife habitat undisturbed. You earned your habitat stewardship badge.",
+        choices:[{text:"Continue exploring",primary:true,action:()=>closeModal()}]});
+      return;
+    }
+    marshPicked=new Set();
+    openModal({tag:"OPTIONAL HABITAT MISSION",icon:"🪷",title:"Protect the Wetland Sanctuary",
+      description:"A boardwalk overlooks a fragile wetland. Collect four pieces of litter, but don't disturb nests or living plants.",
+      kind:"marsh",
+      tip:"Select the items you would safely remove. Disturbing wildlife and plants costs 3 energy.",
+      choices:[{text:"✓ Finish cleanup",primary:true,action:verifyMarsh},
+        {text:"Back to the trail",action:()=>closeModal()}]});
+    $("marshPanel").hidden=false;renderMarsh();
+  }
   // Optional Raincatch Ridge activity. These are collection precautions,
   // not a guarantee that collected water is safe to drink.
   const rainOptions=[
@@ -829,7 +900,8 @@
       ["gasket",1190,825,"Supply Depot",0xffd45b],
       ["pump",1540,690,"Water Pump",0xffd45b],
       ["spring",1460,265,"Hill Spring",0x75edff],
-      ["ridge",1160,200,"Raincatch Ridge",0xa4dbe7]
+      ["ridge",1160,200,"Raincatch Ridge",0xa4dbe7],
+      ["marsh",560,970,"Wetland Sanctuary",0x9fe8ba]
     ];
     const scene = new THREE.Scene();
     scene.background = new THREE.Color(0xb9dfdf);
@@ -1000,6 +1072,7 @@
     road([[280,490],[420,435],[540,350]],.65);
     road([[970,580],[1170,415],[1460,265]],.65);
     road([[1100,440],[1120,315],[1160,200]],.65);
+    road([[455,765],[510,870],[560,970]],.67);
     // Discreet trail lights provide readable depth cues after sunset without
     // adding expensive point lights to each marker.
     const lanternGlow=new THREE.MeshBasicMaterial({color:0xffe7a2});
