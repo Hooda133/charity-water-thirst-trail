@@ -1032,6 +1032,62 @@
       drop.scale.set(.75,1.1,.75);flowDroplets.push(drop);
     }
     pumpFlow.visible=false;
+    // The hillside waterworks is an explorable landmark, not a flat icon:
+    // terraced stone, blue reservoirs, a small wooden waterwheel and distant orchard.
+    const terrace=new THREE.Group();
+    terrace.position.set(wx(1360),0,wz(365));scene.add(terrace);
+    const stoneDeep=makeMat(0x718b80),stoneLite=makeMat(0xb6c8aa);
+    for(let level=0;level<3;level++){
+      const width=5.9-level*.65;
+      box(terrace,stoneDeep,0,level*.27,.0+level*.65,width,.44,1.45);
+      box(terrace,stoneLite,0,level*.27+.23,.0+level*.65,width+.07,.08,1.43);
+      for(let i=0;i<9;i++){
+        const x=(i-4)*(width/10);
+        ball(terrace,i%2?mats.grass3:mats.leaf2,x,level*.27+.38,level*.65,
+          .22,.19,.24,false);
+      }
+    }
+    const reservoir=mesh(new THREE.CylinderGeometry(1.38,1.48,.34,24),mats.rock2,terrace);
+    reservoir.position.set(1.55,.52,2.95);
+    const basinWater=mesh(new THREE.CylinderGeometry(1.28,1.28,.06,24),waterMat,terrace,false);
+    basinWater.position.set(1.55,.73,2.95);
+    const waterwheel=new THREE.Group();
+    waterwheel.position.set(-1.15,1.0,2.35);terrace.add(waterwheel);
+    const wheelAxle=cyl(waterwheel,mats.wood,0,0,0,.17,.17,.62,10);
+    wheelAxle.rotation.x=Math.PI/2;
+    for(const offset of [-.32,.32]){
+      const rim=mesh(new THREE.TorusGeometry(.84,.085,8,24),mats.lightWood,waterwheel);
+      rim.position.z=offset;
+      for(let i=0;i<10;i++){
+        const angle=i*Math.PI/5;
+        const spoke=box(waterwheel,mats.wood,
+          Math.cos(angle)*.44,Math.sin(angle)*.44,offset,.11,.85,.11);
+        spoke.rotation.z=angle-Math.PI/2;
+      }
+    }
+    for(let i=0;i<10;i++){
+      const a=i*Math.PI/5;
+      const paddle=box(waterwheel,mats.wood,Math.cos(a)*.84,Math.sin(a)*.84,0,
+        .12,.31,.85);
+      paddle.rotation.z=a;
+    }
+    // A short stream links the high basin to the valley with layered flow.
+    const chute=new THREE.Group();terrace.add(chute);
+    box(chute,mats.wood,1.55,.93,1.74,.91,.16,1.75);
+    const chuteWater=box(chute,waterMat,1.55,1.035,1.74,.65,.035,1.69,false);
+    // Orchards beside the hill use foliage colors distinct from the forest.
+    const orchardLeaf=makeMat(0x8bc47f),fruitMat=makeMat(0xf0ac62);
+    for(let i=0;i<10;i++){
+      const x=wx(1200+(i%5)*59),z=wz(145+Math.floor(i/5)*70);
+      const group=new THREE.Group();group.position.set(x,0,z);scene.add(group);
+      cyl(group,mats.trunks,0,.64,0,.13,.18,1.28);
+      ball(group,orchardLeaf,0,1.67,0,.75,.61,.72);
+      for(let k=0;k<3;k++){
+        const a=(i+k)*2.4;
+        ball(group,fruitMat,Math.cos(a)*.48,1.50+Math.sin(a)*.16,Math.sin(a)*.47,
+          .11,.11,.11,false);
+      }
+    }
     // Alternative mountain spring.
     const spring=new THREE.Group();spring.position.set(wx(1460),0,wz(265));scene.add(spring);
     for(let i=0;i<7;i++){
@@ -1447,6 +1503,9 @@
           ?Math.abs(Math.sin(time*4.5+i))*.14
           :Math.sin(time*1.3+i)*.027);
       }
+      // Waterwheel speed changes after successful repair and pauses for reduced motion.
+      if(!reduceMotion)waterwheel.rotation.z=-time*(state.done?.has("pump")?.63:.28);
+      if(!reduceMotion)chuteWater.material.opacity=.92;
       const restored=!!state.done?.has("pump");
       pumpFlow.visible=restored;
       if(restored){
