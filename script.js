@@ -1161,11 +1161,11 @@
       }else if(!isMoving&&state.nearby&&state.screen==="playing"){
         arms[1].rotation.z=reduceMotion?.85:1.04+Math.sin(time*4)*.13;
       }
-      body.position.y=isMoving?Math.abs(Math.sin(time*11))*.08:
-        (!reduceMotion&&celebrating?Math.abs(Math.sin(time*9))*.13:Math.sin(time*1.9)*.027);
-      body.rotation.z=isMoving?Math.sin(time*5.5)*.028:Math.sin(time*.85)*.011;
-      body.rotation.x=isMoving?-.045:Math.sin(time*1.5)*.012;
-      scarfTail.rotation.z=-.25+(isMoving?Math.sin(time*11)*.15:Math.sin(time*1.5)*.03);
+      body.position.y=reduceMotion?0:(isMoving?Math.abs(Math.sin(time*11))*.08:
+        (celebrating?Math.abs(Math.sin(time*9))*.13:Math.sin(time*1.9)*.027));
+      body.rotation.z=reduceMotion?0:(isMoving?Math.sin(time*5.5)*.028:Math.sin(time*.85)*.011);
+      body.rotation.x=reduceMotion?0:(isMoving?-.045:Math.sin(time*1.5)*.012);
+      scarfTail.rotation.z=-.25+(reduceMotion?0:(isMoving?Math.sin(time*11)*.15:Math.sin(time*1.5)*.03));
       if(isMoving){
         const dx=playerX-explorer.userData.lastX, dz=playerZ-explorer.userData.lastZ;
         if(Number.isFinite(dx)&&Number.isFinite(dz)&&Math.hypot(dx,dz)>.003){
@@ -1198,7 +1198,10 @@
           }
         }
       }
-      for(let i=0;i<clouds.length;i++){clouds[i].position.x+=.0014;if(clouds[i].position.x>28)clouds[i].position.x=-28;}
+      if(!reduceMotion)for(let i=0;i<clouds.length;i++){
+        clouds[i].position.x+=.0014;
+        if(clouds[i].position.x>28)clouds[i].position.x=-28;
+      }
       for(const [key,m] of Object.entries(markers)){
         const done=(state.done&&state.done.has(key))||(key==="river"&&state.inventory&&state.inventory.has("testKit"));
         m.mat.color.setHex(done?0x69edaa:(key==="camp"?0x8af9bf:(key==="river"||key==="spring"?0x75edff:0xffd45b)));
@@ -1221,20 +1224,20 @@
           const angle=i*2.39996323;
           const tier=.42+(i%7)/8;
           gem.visible=!reduceMotion||i<12;
-          const radius=tier*spread*(.32+progress*.85);
-          const rise=.45+Math.sin(progress*Math.PI)*(1.2+(i%5)*.24);
-          gem.position.set(Math.cos(angle)*radius,rise+Math.sin(angle*3+time)*.12,
+          const radius=reduceMotion?.8*tier:tier*spread*(.32+progress*.85);
+          const rise=reduceMotion?.95:.45+Math.sin(progress*Math.PI)*(1.2+(i%5)*.24);
+          gem.position.set(Math.cos(angle)*radius,rise+(reduceMotion?0:Math.sin(angle*3+time)*.12),
             Math.sin(angle)*radius);
-          const size=(.55+.5*Math.sin(progress*Math.PI))*(1-progress*.6);
+          const size=reduceMotion?.65:(.55+.5*Math.sin(progress*Math.PI))*(1-progress*.6);
           gem.scale.setScalar(size);
           if(!reduceMotion)gem.rotation.set(time*1.2+i*.2,time*1.9+i*.4,0);
         }
         for(let i=0;i<achievementRings.length;i++){
           const ring=achievementRings[i];
           const t=Math.max(0,Math.min(1,progress*1.65-i*.17));
-          ring.visible=t>0&&t<1;
-          ring.scale.setScalar(.48+t*(effect.kind==="victory"?3.3:2.2));
-          ring.material.opacity=(1-t)*.48;
+          ring.visible=reduceMotion?i===0:(t>0&&t<1);
+          ring.scale.setScalar(reduceMotion?1.45:.48+t*(effect.kind==="victory"?3.3:2.2));
+          ring.material.opacity=reduceMotion?.34:(1-t)*.48;
         }
         achievementLight.intensity=reduceMotion?0:Math.sin(progress*Math.PI)*8;
       }else{
@@ -1243,8 +1246,13 @@
       for(let i=0;i<villagers.length;i++){
         const resident=villagers[i];
         const nearby=Math.hypot(state.x-(i?472:245),state.y-(i?825:515))<135;
-        resident.waveArm.rotation.z=nearby?(reduceMotion?-.45:-.6+Math.sin(time*5)*.3):.05;
-        resident.g.position.y=reduceMotion?0:Math.sin(time*1.3+i)*.027;
+        const communityVictory=state.screen==="ended"&&state.done?.has("pump");
+        resident.waveArm.rotation.z=communityVictory
+          ?(reduceMotion?-.75:-.8+Math.sin(time*6+i)*.4)
+          :(nearby?(reduceMotion?-.45:-.6+Math.sin(time*5)*.3):.05);
+        resident.g.position.y=reduceMotion?0:(communityVictory
+          ?Math.abs(Math.sin(time*4.5+i))*.14
+          :Math.sin(time*1.3+i)*.027);
       }
       const restored=!!state.done?.has("pump");
       pumpFlow.visible=restored;
