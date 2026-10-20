@@ -4,11 +4,13 @@
 
 ## Features
 
-- Canvas-based top-down exploration with click-to-walk navigation
+- Canvas-based 2.5D exploration with layered hills, procedural terrain, click-to-walk navigation, and a smooth camera
+- Procedural adventure artwork: dimensional trees, houses, bridge, pump, campsite, animated river highlights, particles, shadows, and an explorer character
 - Energy management, sprinting, obstacles, rest stops, impact scoring, and a timed expedition
 - Story quests, water-safety quizzes, a bonus spring route, and progressive mission feedback
 - Start, pause, resume, restart, replay, win, and out-of-energy flows
 - Responsive keyboard, pointer, and touch controls with visible focus states
+- Premium landing scene and polished HUD, mission panels, modal challenges, pause flow, and reduced-motion support
 - Optional first-run tutorial, mute control, reduced-motion support, and local high-score storage
 
 ## How to play
@@ -25,6 +27,6 @@ Visit `http://localhost:8000` in your browser. No build step, backend, API key, 
 
 ## Technologies
 
-HTML5, CSS3, JavaScript, Canvas 2D, Web Audio API, and localStorage.
+HTML5, CSS3, JavaScript, Canvas 2D, Web Audio API, and localStorage. The visual style is intentionally rendered procedurally in the existing Canvas engine, avoiding large libraries and external image dependencies while keeping ordinary laptops and mobile browsers responsive.
 
 This is an independent educational game inspired by charity: water, not an official charity: water product. Water-safety scenarios are simplified for gameplay and are not real-world drinking-water guidance.

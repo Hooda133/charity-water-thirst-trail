@@ -11,3 +11,24 @@
   .touch-controls .touch-action{display:block;position:static;grid-column:4;grid-row:2;right:auto;bottom:auto;font-size:12px;font-weight:900;color:#1b3234;background:var(--yellow);border-color:#ffe48b}
   .nearby-prompt{position:relative;left:auto;bottom:auto;transform:none;justify-content:space-between;margin:10px auto;width:calc(100% - 20px);max-width:340px}
 }
+  /* Art-direction pass: a warmer, layered interface frame around the procedural world. */
+  body{background:radial-gradient(circle at 78% -10%,#245560 0,transparent 39%),linear-gradient(145deg,#071b23 0%,#0b2930 54%,#061920 100%);background-attachment:fixed}
+  .topbar{border-bottom-color:#3b6267;box-shadow:0 12px 34px #03111655}
+  .water-mark{box-shadow:0 0 0 5px #ffd34418,0 9px 24px #0005}
+  .start-screen{isolation:isolate}
+  .start-screen::before{content:"";position:absolute;inset:8% -12% 4%;background:radial-gradient(ellipse at 72% 50%,#48b7ac18,transparent 55%);pointer-events:none;z-index:-1}
+  .start-copy h1{text-shadow:0 10px 32px #0005}
+  .button-primary{box-shadow:0 9px 0 #b18e2d,0 18px 34px #f5c73c25}
+  .button-primary:active{transform:translateY(3px);box-shadow:0 5px 0 #b18e2d,0 10px 20px #f5c73c25}
+  .hero-scene{background:linear-gradient(180deg,#173b50 0%,#50a1a0 43%,#d2d59a 44%,#8ebd7d 67%,#426d5d 100%);box-shadow:0 32px 80px #0006,0 0 0 7px #ffffff06;transform:perspective(900px) rotateY(-2deg)}
+  .hero-scene::after{content:"";position:absolute;inset:0;background:linear-gradient(115deg,#fff3 0%,transparent 18%,transparent 72%,#071e2e55 100%),radial-gradient(ellipse at 50% 30%,transparent 35%,#123a384d 100%);pointer-events:none}
+  .hero-caption{backdrop-filter:blur(8px);box-shadow:0 15px 34px #071b2380}
+  .hud>div,.sidebar{box-shadow:0 14px 28px #020e124d,inset 0 1px #ffffff0b}
+  .world-frame{box-shadow:0 20px 38px #020e125c,0 0 0 5px #ffffff05}
+  .canvas-top-left,.canvas-bottom,.nearby-prompt{filter:drop-shadow(0 5px 8px #06171b88)}
+  .quest-card,.destination-btn,.inventory-list{box-shadow:0 5px 14px #020e1228}
+  .destination-btn:hover,.quest-card:hover{border-color:#5d9290;transform:translateX(3px)}
+  .destination-btn,.quest-card{transition:transform .18s ease,border-color .18s ease,background .18s ease}
+  .modal-backdrop{backdrop-filter:blur(7px);background:#04161bcc}
+  .modal-card{box-shadow:0 30px 70px #0009,0 0 0 1px #ffffff0b}
+  .toast{box-shadow:0 12px 30px #0007}
