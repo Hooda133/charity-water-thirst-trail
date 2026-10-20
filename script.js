@@ -34,7 +34,7 @@
     walkT:0, facing:1, keys:new Set(), touch:new Set(), path:[], goal:null, destination:null,
     done:new Set(), inventory:new Set(), campUses:0, quizStep:0, modalOpen:false, modalKind:"",
     sound:safeStore.getSound(), cameraX:0, cameraY:0, nearby:null, ended:false, lastStatus:"",
-    toastTimeout:null
+    toastTimeout:null, effect:null, impactTimer:null
   };
   // The 3D world is loaded without blocking startup. If Three.js cannot be reached,
   // the original Canvas 2D renderer remains available as a playable fallback.
@@ -88,6 +88,23 @@
     state.toastTimeout=setTimeout(()=>t.hidden=true,3500);
   }
   function addItem(item){if(!state.inventory.has(item))state.inventory.add(item);}
+  const rewardNames={elder:"A promise made",toolkit:"Toolkit collected",gasket:"Gasket secured",pump:"The Last Well restored",river:"Water research complete",spring:"New water source discovered"};
+  const rewardIcons={elder:"🤝",toolkit:"🧰",gasket:"🔩",pump:"💧",river:"🔬",spring:"🏔️"};
+  function celebrate(key,points=0,victory=false){
+    const time=performance.now()/1000;
+    state.effect={key,kind:victory?"victory":"quest",at:time};
+    const panel=$("impactBurst");
+    $("impactBurstIcon").textContent=victory?"🏆":(rewardIcons[key]||"✦");
+    $("impactBurstTitle").textContent=rewardNames[key]||"Mission progress!";
+    $("impactBurstPoints").textContent=victory?"YOU MADE AN IMPACT":points?`+${points} IMPACT POINTS`:"";
+    panel.hidden=false;
+    panel.classList.remove("replay");
+    // Restart the short CSS entry animation when consecutive achievements arrive.
+    void panel.offsetWidth;
+    panel.classList.add("replay");
+    if(state.impactTimer)clearTimeout(state.impactTimer);
+    state.impactTimer=setTimeout(()=>{panel.hidden=true;panel.classList.remove("replay");},victory?4200:2400);
+  }
   function updateUI(){
     $("energyValue").textContent=`${Math.ceil(state.energy)}%`;
     $("energyBar").style.width=`${state.energy}%`;
@@ -125,8 +142,10 @@
   }
   function start(){
     Object.assign(state,{screen:"playing",energy:100,score:0,elapsed:0,x:310,y:620,walkT:0,
-      path:[],goal:null,destination:null,nearby:null,campUses:0,ended:false,lastStatus:"",cameraX:0,cameraY:0});
+      path:[],goal:null,destination:null,nearby:null,campUses:0,ended:false,lastStatus:"",cameraX:0,cameraY:0,effect:null});
     state.keys.clear();state.touch.clear();state.done.clear();state.inventory.clear();
+    if(state.impactTimer)clearTimeout(state.impactTimer);
+    state.impactTimer=null;$("impactBurst").hidden=true;
     $("startScreen").hidden=true;$("gameScreen").hidden=false;$("toast").hidden=true;
     closeModal(true);updateUI();
     if(world3d)world3d.focus();else canvas.focus({preventScroll:true});
@@ -177,8 +196,9 @@
     state.moving=true;state.walkT+=dt*10;state.facing=dx<-.05?-1:dx>.05?1:state.facing;
     drain(speed*dt*(sprint?.020:.014));
   }
-  function openModal({tag="FIELD NOTES",icon="💧",title,description,choices=[],progress=0,total=0,tip="",kind="dialog",allowClose=true}){
+  function openModal({tag="FIELD NOTES",icon="💧",title,description,choices=[],progress=0,total=0,tip="",kind="dialog",allowClose=true,celebrateWin=false}){
     state.modalOpen=true;state.modalKind=kind;
+    $("dialog").classList.toggle("is-victory",celebrateWin);
     $("modalTag").textContent=tag;$("modalIllustration").textContent=icon;
     $("modalTitle").textContent=title;$("modalDescription").textContent=description;
     $("modalClose").hidden=!allowClose;
@@ -203,7 +223,13 @@
       if(world3d)world3d.focus();else canvas.focus({preventScroll:true});
     }
   }
-  function doneOnce(key,item=null,points=100){if(state.done.has(key))return false;state.done.add(key);if(item)addItem(item);addScore(points);return true;}
+  function doneOnce(key,item=null,points=100){
+    if(state.done.has(key))return false;
+    state.done.add(key);if(item)addItem(item);addScore(points);
+    // The pump uses the larger finale effect from end() rather than a duplicate reward.
+    if(key!=="pump")celebrate(key,points);
+    return true;
+  }
   function interact(){
     if(state.screen!=="playing"||state.modalOpen)return;
     const key=nearest();if(!key){notify("Walk closer to a glowing location, then press E.");return;}
@@ -251,7 +277,7 @@
   }
   function riverChallenge(){
     if(state.inventory.has("testKit")){openModal({tag:"RIVER RESEARCH",icon:"🔬",title:"You studied the river",description:"You already collected the water test kit. Take it to Hill Spring if you want to explore an alternate route to victory.",choices:[{text:"Continue",primary:true,action:()=>closeModal()}]});return;}
-    quiz({tag:"WATER KNOWLEDGE",icon:"🔬",title:"The River Test",questions:riverQuestions,onWin:()=>{addItem("testKit");addScore(130);drain(4);updateUI();notify("🧪 Water test kit earned! Explore Hill Spring to use it.");}});
+    quiz({tag:"WATER KNOWLEDGE",icon:"🔬",title:"The River Test",questions:riverQuestions,onWin:()=>{addItem("testKit");addScore(130);drain(4);celebrate("river",130);updateUI();notify("🧪 Water test kit earned! Explore Hill Spring to use it.");}});
   }
   function springChallenge(){
     if(!state.inventory.has("testKit")){openModal({tag:"HILL SPRING",icon:"💧",title:"A promising discovery",description:"The mountain spring looks beautiful, but appearance doesn't guarantee safety. Visit the River Bank to learn about testing and collect a test kit.",choices:[{text:"Go to the River Bank",primary:true,action:()=>{closeModal();navigateTo("river");}},{text:"Keep exploring",action:()=>closeModal()}]});return;}
@@ -269,7 +295,8 @@
     if(won){state.score+=Math.ceil(state.energy)*3;state.score+=Math.max(0,240-Math.floor(state.elapsed))*2;const best=safeStore.get();if(state.score>best)safeStore.set(state.score);}
     const best=safeStore.get();$("highScoreStart").textContent=best?best.toLocaleString():"—";
     updateUI();
-    openModal({tag:won?"✦ MISSION COMPLETE":"MISSION PAUSED FOREVER",icon:won?"🏆":"🌵",title:won?headline:"Out of energy!",description:`${description}  •  FINAL IMPACT: ${state.score.toLocaleString()}  •  TIME: ${fmtTime(state.elapsed)}  •  BEST: ${best.toLocaleString()}`,kind:"end",allowClose:false,choices:[{text:"↻ Play a new expedition",primary:true,action:start},{text:"↩ Back to title",action:()=>{closeModal(true);state.screen="start";$("gameScreen").hidden=true;$("startScreen").hidden=false;}}]});
+    if(won)celebrate(state.done.has("pump")?"pump":"spring",0,true);
+    openModal({tag:won?"✦ MISSION COMPLETE":"MISSION PAUSED FOREVER",icon:won?"🏆":"🌵",title:won?headline:"Out of energy!",description:`${description}  •  FINAL IMPACT: ${state.score.toLocaleString()}  •  TIME: ${fmtTime(state.elapsed)}  •  BEST: ${best.toLocaleString()}`,kind:"end",allowClose:false,celebrateWin:won,choices:[{text:"↻ Play a new expedition",primary:true,action:start},{text:"↩ Back to title",action:()=>{closeModal(true);state.screen="start";$("gameScreen").hidden=true;$("startScreen").hidden=false;}}]});
     tone(won?920:210,.22);
   }
   function pause(){
