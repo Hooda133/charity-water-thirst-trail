@@ -997,8 +997,47 @@
       const edge=Math.max(0,(Math.abs(x)-19)/7,(Math.abs(z)-11)/6);
       positions.setY(i,-.19+Math.sin(x*.43)*.07+Math.cos(z*.67)*.06+edge*edge*1.4);
     }
+    // Vertex colors give the whole valley broad patches of warm grass, forest
+    // greens, and sunlit meadows rather than a single uniform green surface.
+    const colors=new Float32Array(positions.count*3);
+    const meadowA=new THREE.Color(0x82b768),meadowB=new THREE.Color(0xa8c87c);
+    const meadowC=new THREE.Color(0x679f70);
+    const vertexColor=new THREE.Color();
+    for(let i=0;i<positions.count;i++){
+      const x=positions.getX(i),z=positions.getZ(i);
+      const pattern=Math.sin(x*.24+z*.31)*Math.cos(z*.35-x*.17);
+      const contrast=Math.sin(x*.67)*Math.cos(z*.42)*.14;
+      vertexColor.copy(meadowA).lerp(pattern>0?meadowB:meadowC,Math.min(.82,Math.abs(pattern)*.58+.15));
+      vertexColor.multiplyScalar(.95+contrast);
+      colors[i*3]=vertexColor.r;colors[i*3+1]=vertexColor.g;colors[i*3+2]=vertexColor.b;
+    }
+    terrainGeometry.setAttribute("color",new THREE.BufferAttribute(colors,3));
     terrainGeometry.computeVertexNormals();
-    mesh(terrainGeometry,mats.grass,scene,false);
+    mesh(terrainGeometry,new THREE.MeshStandardMaterial({
+      vertexColors:true,roughness:1,metalness:0,side:THREE.DoubleSide
+    }),scene,false);
+    // Layered distant mountain silhouettes add scale and recognizable scenery.
+    // Mountains sit beyond the playable bounds and never affect navigation.
+    const mountainDistant=makeMat(0x769c99),mountainNear=makeMat(0x6d887d);
+    const mountainLit=makeMat(0xa1b5a0),snowCap=makeMat(0xe9ebd7);
+    const scenicMountains=[];
+    for(let i=0;i<15;i++){
+      const x=-57+i*8.15;
+      const z=-36-(i%3)*5.5;
+      const height=9+(i*7%10);
+      const radius=5.8+(i%4)*1.1;
+      const group=new THREE.Group();group.position.set(x,-.7,z);scene.add(group);
+      const body=mesh(new THREE.ConeGeometry(radius,height,6),i%3?mountainDistant:mountainNear,group,false);
+      body.position.y=height*.45;body.rotation.y=i*.76;
+      const snow=mesh(new THREE.ConeGeometry(radius*.33,height*.23,6),snowCap,group,false);
+      snow.position.y=height*.45+height*.385;
+      snow.rotation.y=i*.76;
+      if(i%3===0){
+        const shoulder=mesh(new THREE.ConeGeometry(radius*.58,height*.64,5),mountainLit,group,false);
+        shoulder.position.set(-radius*.49,height*.33,radius*.1);
+      }
+      scenicMountains.push(group);
+    }
     for(let i=0;i<34;i++){
       const x=(rng()-.5)*43,z=(rng()-.5)*26;
       const patch=mesh(new THREE.CircleGeometry(1,22),i%3===0?mats.grass3:mats.grass2,scene,false);
@@ -1036,6 +1075,45 @@
       const size=.7+rng()*1.3;shine.scale.set(size,size,1);
       glints.push({mesh:shine,baseZ:z,phase:rng()*6.283,offset:drift});
     }
+    // Instanced meadow wildflowers: colorful detail without expensive draw calls.
+    // Leave the main route, riverbank and all quest interaction areas clear.
+    const flowerStemGeo=new THREE.CylinderGeometry(.013,.019,.28,5);
+    const blossomGeo=new THREE.IcosahedronGeometry(.10,0);
+    const flowerStemMat=makeMat(0x447f53);
+    const blossomMats=[makeMat(0xf3da7d),makeMat(0xe8a6b8),makeMat(0xf5ede2),makeMat(0x9ec9e7)];
+    const flowers=[];
+    const flowersPerColor=62;
+    const stemBatch=new THREE.InstancedMesh(flowerStemGeo,flowerStemMat,flowersPerColor*4);
+    stemBatch.castShadow=false;
+    const blossomBatches=blossomMats.map(mat=>{
+      const batch=new THREE.InstancedMesh(blossomGeo,mat,flowersPerColor);
+      batch.castShadow=false;return batch;
+    });
+    const flowerDummy=new THREE.Object3D();
+    const flowerLocations=[];
+    let flowerAttempts=0;
+    while(flowerLocations.length<flowersPerColor*4 && flowerAttempts++<2500){
+      const x=(rng()-.5)*43.2,z=(rng()-.5)*26.2;
+      const y=z*SCALE+550,px=x*SCALE+900;
+      if(Math.abs(x-wx(riverCenter(y)))<3.5)continue;
+      if(spots.some(([key,sx,sy])=>Math.hypot(px-sx,y-sy)<125))continue;
+      // Leave wide breaks at the busiest village and bridge routes.
+      if(z>-.3&&z<2.3&&x>-5.2&&x<3.9)continue;
+      flowerLocations.push({x,z,s:.8+rng()*.85});
+    }
+    for(let i=0;i<flowerLocations.length;i++){
+      const spot=flowerLocations[i];
+      flowerDummy.position.set(spot.x,.14,spot.z);
+      flowerDummy.rotation.set(0,i*.47,0);
+      flowerDummy.scale.set(spot.s,spot.s,spot.s);flowerDummy.updateMatrix();
+      stemBatch.setMatrixAt(i,flowerDummy.matrix);
+      flowerDummy.position.y=.30*spot.s;
+      flowerDummy.rotation.set(i*.37,i*.2,i*.11);
+      flowerDummy.scale.setScalar(.65*spot.s);flowerDummy.updateMatrix();
+      blossomBatches[Math.floor(i/flowersPerColor)].setMatrixAt(i%flowersPerColor,flowerDummy.matrix);
+    }
+    stemBatch.instanceMatrix.needsUpdate=true;scene.add(stemBatch);
+    for(const batch of blossomBatches){batch.instanceMatrix.needsUpdate=true;scene.add(batch);}
     // Riverbank reeds and stones make the water part of a lived-in landscape.
     // Shared instanced geometry keeps the extra detail inexpensive to render.
     const reedStem=new THREE.ConeGeometry(.045,.66,5);
