@@ -21,16 +21,20 @@
     {key:"gasket",title:"Find a replacement gasket",detail:"Search the supply depot",icon:"📦"},
     {key:"pump",title:"Restore the village pump",detail:"Complete the repair challenge",icon:"⚙️"}
   ];
+  const safeStore = {
+    get() {try{return Number(localStorage.getItem("thirstTrailBest"))||0;}catch{return 0;}},
+    set(v) {try{localStorage.setItem("thirstTrailBest",String(v));}catch{/* optional storage */}},
+    getSound() {try{return localStorage.getItem("thirstTrailSound")!=="false";}catch{return true;}},
+    setSound(v) {try{localStorage.setItem("thirstTrailSound",String(v));}catch{/* optional storage */}},
+    tutorialSeen() {try{return localStorage.getItem("thirstTrailTutorial")==="true";}catch{return false;}},
+    markTutorialSeen() {try{localStorage.setItem("thirstTrailTutorial","true");}catch{/* optional storage */}}
+  };
   const state = {
     screen:"start", energy:100, score:0, elapsed:0, x:310, y:620, moving:false,
     walkT:0, facing:1, keys:new Set(), touch:new Set(), path:[], goal:null, destination:null,
     done:new Set(), inventory:new Set(), campUses:0, quizStep:0, modalOpen:false, modalKind:"",
-    sound:true, cameraX:0, cameraY:0, nearby:null, ended:false, lastStatus:"",
+    sound:safeStore.getSound(), cameraX:0, cameraY:0, nearby:null, ended:false, lastStatus:"",
     toastTimeout:null
-  };
-  const safeStore = {
-    get() {try{return Number(localStorage.getItem("thirstTrailBest"))||0;}catch{return 0;}},
-    set(v) {try{localStorage.setItem("thirstTrailBest",String(v));}catch{/* optional storage */}}
   };
   let audioContext = null;
   function tone(freq=620,duration=.09){
@@ -71,7 +75,11 @@
     $("energyBar").classList.toggle("low",state.energy<=28);
     $("scoreValue").textContent=String(state.score).padStart(4,"0");
     $("timeValue").textContent=fmtTime(state.elapsed);
-    $("questsCompleted").textContent=`${questDefs.filter(q=>state.done.has(q.key)).length} / 4`;
+    const completed=questDefs.filter(q=>state.done.has(q.key)).length;
+    $("questsCompleted").textContent=`${completed} / 4`;
+    $("progressLabel").textContent=`${completed} / 4 completed`;
+    $("progressBar").style.width=`${completed/4*100}%`;
+    $("chapterLabel").innerHTML=`<span class="live-dot"></span> ${completed>=4?"CHAPTER 02 / WATER STEWARDSHIP":"CHAPTER 01 / THE VALLEY"}`;
     const goals={elder:"Talk to the village elder.",toolkit:"Find the workshop and get your toolkit.",gasket:"Travel across the bridge to the supply depot.",pump:"Restore the pump to help the village."};
     const next=questDefs.find(q=>!state.done.has(q.key));
     const status=next?goals[next.key]:"You completed the main mission!";
@@ -103,6 +111,7 @@
     $("startScreen").hidden=true;$("gameScreen").hidden=false;$("toast").hidden=true;
     closeModal(true);updateUI();canvas.focus({preventScroll:true});
     notify("MISSION STARTED · Visit the Village Elder to begin.");tone(480,.18);
+    if(!safeStore.tutorialSeen())help();
   }
   function nearest(){let found=null,best=85;for(const [key,sp] of Object.entries(spots)){const d=dist({x:state.x,y:state.y},sp);if(d<best){found=key;best=d;}}return found;}
   function updateNearby(){
@@ -246,6 +255,7 @@
     openModal({tag:"GAME PAUSED",icon:"⏸️",title:"Take your time",description:"Your energy won't change while paused. Ready to continue your expedition?",kind:"pause",choices:[{text:"▶ Resume adventure",primary:true,action:()=>closeModal()},{text:"↻ Start a new expedition",action:start}]});
   }
   function help(){
+    safeStore.markTutorialSeen();
     openModal({tag:"HOW TO PLAY",icon:"🧭",title:"Your adventure guide",description:"Move using WASD or arrow keys. On phones, use the on-screen directional buttons. Click or tap the map to walk there, or select a destination in the mission panel for automatic navigation. When you're near a glowing marker, press E or tap INTERACT. Solve challenges, collect items, and restore the village pump before your energy runs out. Rest at the camp to recharge. Press Shift to sprint (uses more energy).",kind:"help",choices:[{text:"Got it — let's go!",primary:true,action:()=>closeModal()}],tip:"BONUS ROUTE: Earn a test kit at the River Bank, then survey the Hill Spring. Your game progress resets on refresh; only your best score is saved."});
   }
   const plants=[];
@@ -355,6 +365,10 @@
   });
   window.addEventListener("keyup",e=>state.keys.delete(e.key.toLowerCase()));
   window.addEventListener("blur",()=>{state.keys.clear();state.touch.clear();});
+  document.addEventListener("visibilitychange",()=>{
+    state.keys.clear();state.touch.clear();
+    if(document.hidden&&state.screen==="playing"&&!state.modalOpen)pause();
+  });
   canvas.addEventListener("click",moveFromCanvas);
   for(const b of document.querySelectorAll("[data-dir]")){
     const d=b.dataset.dir;
