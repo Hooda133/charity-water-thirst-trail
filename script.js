@@ -1462,6 +1462,36 @@
     const chute=new THREE.Group();terrace.add(chute);
     box(chute,mats.wood,1.55,.93,1.74,.91,.16,1.75);
     const chuteWater=box(chute,waterMat,1.55,1.035,1.74,.65,.035,1.69,false);
+    // A bright cascading spillway becomes a recognizable destination landmark.
+    // Layered translucent water curtains are cheaper than animated fluid geometry.
+    const cascade=new THREE.Group();cascade.position.set(1.55,0,3.85);terrace.add(cascade);
+    const fallMaterials=[
+      new THREE.MeshBasicMaterial({color:0x7cdeee,transparent:true,opacity:.59,
+        depthWrite:false,side:THREE.DoubleSide}),
+      new THREE.MeshBasicMaterial({color:0xdbffff,transparent:true,opacity:.39,
+        depthWrite:false,side:THREE.DoubleSide})
+    ];
+    const cascadeStrips=[];
+    for(let i=0;i<7;i++){
+      const strip=mesh(new THREE.PlaneGeometry(.15+i%2*.045,1.6),fallMaterials[i%2],cascade,false);
+      strip.position.set((i-3)*.115,1.28+(i%3)*.045,(i%2)*.08);
+      strip.rotation.x=-.12;
+      cascadeStrips.push(strip);
+    }
+    const plunge=mesh(new THREE.CylinderGeometry(.81,.88,.065,28),waterMat,cascade,false);
+    plunge.position.y=.19;plunge.position.z=.22;
+    const waterfallMist=new THREE.MeshBasicMaterial({color:0xd4fff9,
+      transparent:true,opacity:.67,depthWrite:false});
+    const mistParticles=[];
+    for(let i=0;i<21;i++){
+      const particle=ball(cascade,waterfallMist,0,.32,0,
+        .045+i%4*.019,.045+i%3*.014,.045+i%4*.019,false);
+      mistParticles.push(particle);
+    }
+    const sprayRing=mesh(new THREE.TorusGeometry(.78,.038,5,36),
+      new THREE.MeshBasicMaterial({color:0xd6ffff,transparent:true,opacity:.52,
+        depthWrite:false}),cascade,false);
+    sprayRing.rotation.x=-Math.PI/2;sprayRing.position.set(0,.255,.20);
     // Orchards beside the hill use foliage colors distinct from the forest.
     const orchardLeaf=makeMat(0x8bc47f),fruitMat=makeMat(0xf0ac62);
     for(let i=0;i<10;i++){
@@ -2045,6 +2075,21 @@
           drop.position.set(1.45+p*.65,2.07-p*.66,.61);
           drop.scale.y=.75+(1-p)*.55;
         }
+      }
+      if(!reduceMotion){
+        for(let i=0;i<cascadeStrips.length;i++){
+          const strip=cascadeStrips[i];
+          strip.scale.y=.96+Math.sin(time*5+i*1.7)*.06;
+          strip.position.y=1.27+(i%3)*.045+Math.sin(time*3.1+i)*.04;
+        }
+        for(let i=0;i<mistParticles.length;i++){
+          const m=mistParticles[i],p=(time*.63+i/mistParticles.length)%1;
+          const angle=i*2.39996;
+          m.position.set(Math.cos(angle)*(.17+p*.87),.20+p*.65,
+            .23+Math.sin(angle)*(.12+p*.57));
+          m.scale.setScalar((.5+(1-p)*.85)*(.7+i%4*.14));
+        }
+        sprayRing.scale.setScalar(.94+Math.sin(time*2.4)*.12);
       }
       if(!reduceMotion)waterwheel.rotation.z=-time*(state.done?.has("pump")?0.63:0.28);
       const restored=!!state.done?.has("pump");
