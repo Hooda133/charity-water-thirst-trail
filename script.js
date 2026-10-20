@@ -71,6 +71,17 @@
       o.connect(g).connect(audioContext.destination);o.start();o.stop(audioContext.currentTime+duration);
     }catch{/* Audio is optional */}
   }
+  // One gentle dawn-to-dusk cycle lasts eight in-game minutes. Exploration
+  // remains fully playable after sunset; nothing changes collision or quests.
+  function timeOfDay(elapsed){
+    const phase=(Math.max(0,elapsed)%480)/480;
+    const evening=(1-Math.cos(phase*Math.PI*2))/2;
+    const label=phase<.18?"☀️ DAY ONE · MORNING":
+      phase<.38?"🌤️ DAY ONE · GOLDEN HOUR":
+      phase<.62?"🌙 DAY ONE · STARLIGHT":
+      phase<.82?"🌅 DAY TWO · DAWN":"☀️ DAY TWO · MORNING";
+    return {phase,evening,label};
+  }
   function fmtTime(t){const sec=Math.floor(t);return `${String(Math.floor(sec/60)).padStart(2,"0")}:${String(sec%60).padStart(2,"0")}`;}
   function dist(a,b){return Math.hypot(a.x-b.x,a.y-b.y);}
   function riverCenter(y){return 850+44*Math.sin(y/195+.35);}
@@ -201,6 +212,7 @@
     $("energyBar").classList.toggle("low",state.energy<=28);
     $("scoreValue").textContent=String(state.score).padStart(4,"0");
     $("timeValue").textContent=fmtTime(state.elapsed);
+    $("daypartLabel").textContent=timeOfDay(state.elapsed).label;
     const completed=questDefs.filter(q=>state.done.has(q.key)).length;
     $("questsCompleted").textContent=`${completed} / 4`;
     $("progressLabel").textContent=`${completed} / 4 completed`;
@@ -806,7 +818,8 @@
     const host = originalCanvas.parentElement;
     const hero = document.querySelector(".hero-scene");
   
-    scene.add(new THREE.HemisphereLight(0xe6faff, 0x557d51, 1.75));
+    const ambient=new THREE.HemisphereLight(0xe6faff,0x557d51,1.75);
+    scene.add(ambient);
     const sun = new THREE.DirectionalLight(0xffe7b1, 2.8);
     sun.position.set(-19, 32, -18);
     sun.castShadow = true;
@@ -955,7 +968,8 @@
     road([[1100,440],[1120,315],[1160,200]],.65);
     // Discreet trail lights provide readable depth cues after sunset without
     // adding expensive point lights to each marker.
-    const lanternGlow=new THREE.MeshBasicMaterial({color:0xffe7a2,emissive:0xffcc75});
+    const lanternGlow=new THREE.MeshBasicMaterial({color:0xffe7a2});
+    const lanternLights=[];
     for(const [px,py] of [[390,620],[610,709],[1040,650],[1310,735]]){
       const g=new THREE.Group();g.position.set(wx(px),0,wz(py));scene.add(g);
       cyl(g,mats.wood,0,.48,0,.065,.09,.92);
@@ -963,6 +977,9 @@
       frame.castShadow=false;
       ball(g,lanternGlow,0,1.02,.02,.14,.17,.14,false);
       box(g,mats.gold,0,1.29,0,.37,.08,.37);
+      // Only four low-intensity sources; keeps graphics practical for laptops.
+      const light=new THREE.PointLight(0xffc475,0,5.8,2);
+      light.position.set(0,1.14,0);g.add(light);lanternLights.push(light);
     }
     // The bridge is true geometry: elevated planks, support pillars, railings and posts.
     const bridge=new THREE.Group();bridge.position.set(wx(850),0,wz(580));scene.add(bridge);
@@ -1513,6 +1530,26 @@
       }
       scene.add(g);clouds.push(g);
     }
+    // A few dusk fireflies and distant stars use inexpensive unlit geometry.
+    const fireflyMat=new THREE.MeshBasicMaterial({color:0xffeaa0,transparent:true,opacity:.75,depthWrite:false});
+    const fireflyGeo=new THREE.SphereGeometry(.065,6,5);
+    const fireflies=[];
+    for(let i=0;i<20;i++){
+      const glow=mesh(fireflyGeo,fireflyMat,scene,false);
+      const x=(rng()-.5)*39,z=(rng()-.5)*23;
+      glow.position.set(x,.8+rng()*.9,z);
+      glow.visible=false;
+      fireflies.push({glow,baseX:x,baseZ:z,phase:i*2.34});
+    }
+    const stars=[];
+    const starGeo=new THREE.SphereGeometry(.125,5,4);
+    const starMat=new THREE.MeshBasicMaterial({color:0xffffdc,transparent:true,opacity:.7,depthWrite:false,fog:false});
+    for(let i=0;i<45;i++){
+      const star=mesh(starGeo,starMat,scene,false);
+      star.position.set((rng()-.5)*90,31+rng()*24,-20-rng()*30);
+      star.scale.setScalar(.45+rng());
+      star.visible=false;stars.push(star);
+    }
     const camTarget=new THREE.Vector3(),camPos=new THREE.Vector3();
     // Gentle camera zoom without changing the existing keyboard movement controls.
     let cameraDistance=.93;
@@ -1566,6 +1603,26 @@
         renderer.setSize(width,height,false);
         camera.aspect=width/height;camera.updateProjectionMatrix();
         lastWidth=width;lastHeight=height;
+      }
+      // Lighting is based on expedition time, never on frame rate.
+      const cycle=timeOfDay(state.elapsed||0), night=cycle.evening;
+      scene.background.setRGB(.725-.34*night,.875-.42*night,.875-.30*night);
+      scene.fog.color.copy(scene.background);
+      ambient.intensity=1.75-.62*night;
+      sun.intensity=2.8-1.85*night;
+      fill.intensity=.58+.16*night;
+      renderer.toneMappingExposure=1.22+.10*night;
+      for(const light of lanternLights)light.intensity=night*2.6;
+      const darkSky=night>.55;
+      for(let i=0;i<stars.length;i++)stars[i].visible=darkSky;
+      for(const firefly of fireflies){
+        firefly.glow.visible=night>.4;
+        if(firefly.glow.visible&&!reduceMotion){
+          firefly.glow.position.set(
+            firefly.baseX+Math.sin(time*.73+firefly.phase)*.34,
+            1.05+Math.sin(time*1.3+firefly.phase)*.38,
+            firefly.baseZ+Math.cos(time*.53+firefly.phase)*.28);
+        }
       }
       const playerX=wx(state.x),playerZ=wz(state.y);
       const crossing=state.y>530&&state.y<635&&state.x>735&&state.x<967;
