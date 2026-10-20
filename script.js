@@ -292,12 +292,23 @@
   function end(won,description,headline="EXPEDITION ENDED"){
     if(state.ended)return;
     state.ended=true;state.screen="ended";state.path=[];
+    if(!won){
+      // A failed expedition must never leave a previous quest's victory effects visible.
+      state.effect=null;
+      if(state.impactTimer)clearTimeout(state.impactTimer);
+      state.impactTimer=null;$("impactBurst").hidden=true;
+    }
     if(won){state.score+=Math.ceil(state.energy)*3;state.score+=Math.max(0,240-Math.floor(state.elapsed))*2;const best=safeStore.get();if(state.score>best)safeStore.set(state.score);}
     const best=safeStore.get();$("highScoreStart").textContent=best?best.toLocaleString():"—";
     updateUI();
     if(won)celebrate(state.done.has("pump")?"pump":"spring",0,true);
     openModal({tag:won?"✦ MISSION COMPLETE":"MISSION PAUSED FOREVER",icon:won?"🏆":"🌵",title:won?headline:"Out of energy!",description:`${description}  •  FINAL IMPACT: ${state.score.toLocaleString()}  •  TIME: ${fmtTime(state.elapsed)}  •  BEST: ${best.toLocaleString()}`,kind:"end",allowClose:false,celebrateWin:won,choices:[{text:"↻ Play a new expedition",primary:true,action:start},{text:"↩ Back to title",action:()=>{closeModal(true);state.screen="start";$("gameScreen").hidden=true;$("startScreen").hidden=false;}}]});
-    tone(won?920:210,.22);
+    if(won){
+      // A short three-note flourish, using the existing optional Web Audio system.
+      tone(620,.13);
+      setTimeout(()=>{if(state.screen==="ended")tone(825,.15);},130);
+      setTimeout(()=>{if(state.screen==="ended")tone(1100,.24);},280);
+    }else tone(210,.22);
   }
   function pause(){
     if(state.screen!=="playing"||state.modalOpen)return;
