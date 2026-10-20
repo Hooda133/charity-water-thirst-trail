@@ -1731,7 +1731,6 @@
         }
       }
       if(!reduceMotion)waterwheel.rotation.z=-time*(state.done?.has("pump")?0.63:0.28);
-      if(!reduceMotion)chuteWater.material.opacity=.92;
       const restored=!!state.done?.has("pump");
       pumpFlow.visible=restored;
       if(restored){
