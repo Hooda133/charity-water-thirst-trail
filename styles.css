@@ -46,3 +46,30 @@
   .hero-scene.is-3d .hero-caption{left:15px;right:15px;bottom:15px;padding:12px 15px}
   .hero-scene.is-3d .hero-caption strong{font-size:20px}
 }
+
+
+/* Portfolio-quality interface pass: scenery remains the visual focus. */
+:root{--gold-soft:#fff1ac;--glass-edge:rgba(178,231,218,.28)}
+.hero-scene.is-3d{border:2px solid #6da6a4;box-shadow:0 30px 85px #0009,0 0 0 6px #a0f9d20b}
+.hero-scene.is-3d .hero-caption{background:linear-gradient(145deg,#092e37ee,#092a37d5);border:1px solid #b9f3dc77;box-shadow:0 13px 30px #061d20a8;backdrop-filter:blur(14px)}
+.start-copy .eyebrow{color:#b7e2dc}
+.start-copy h1{letter-spacing:-.06em;line-height:.98}
+.button-primary{background:linear-gradient(180deg,#ffe579 0%,#ffd244 100%);border:1px solid #fff2a8;text-shadow:0 1px #fff6}
+.button-primary:hover{background:linear-gradient(180deg,#fff2a8 0%,#ffda5d 100%)}
+.world-frame{border:1px solid #5b9d96;background:linear-gradient(160deg,#123740,#071e29);box-shadow:0 22px 45px #010d13a8,0 0 0 4px #5dd3bb0b}
+.frame-label{background:linear-gradient(90deg,#123840,#183d46);border-bottom:1px solid var(--glass-edge)}
+.hud>div,.sidebar{background:linear-gradient(145deg,#193e46f5,#0b2834f7);border:1px solid #4b7478}
+.hud-mission,.hud-resource{position:relative;overflow:hidden}
+.hud-mission::before,.hud-resource::before{content:"";position:absolute;inset:0 0 auto;height:2px;background:linear-gradient(90deg,transparent,#ffde70,transparent);opacity:.55;pointer-events:none}
+.sidebar-header h2{color:#fff5df}
+.quest-card{background:linear-gradient(145deg,#214650,#183840);border-color:#365e63}
+.quest-card.done{background:linear-gradient(145deg,#1c4d43,#193b3a)}
+.destination-btn{background:linear-gradient(110deg,#1a3f49,#13323d)}
+.destination-btn:hover,.destination-btn:focus-visible{background:linear-gradient(110deg,#2b6464,#24505a)}
+.destination-btn.here{box-shadow:inset 3px 0 #ffd54c,0 0 13px #ffd54c13}
+.modal-card{background:linear-gradient(145deg,#244f57 0%,#0d2834 67%);border-color:#9ccac255}
+#world3dCanvas:focus-visible{outline:3px solid var(--yellow);outline-offset:-5px}
+@media(prefers-reduced-motion:reduce){
+  #world3dCanvas,.destination-btn,.quest-card,.button-primary{transition:none!important}
+  .hero-scene.is-3d .hero-caption{backdrop-filter:none}
+}
