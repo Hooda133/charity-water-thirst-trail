@@ -973,6 +973,79 @@
       trim:makeMat(0xffeed0), roofDark:makeMat(0x884537), flower:makeMat(0xf9b4b6),
       pine:makeMat(0x26775d), pineLight:makeMat(0x469570)
     };
+    // Procedural, offline textures. Generated once on startup and shared by
+    // all meshes — no broken CDN links, downloads, or bloated model files.
+    function artTexture(style){
+      const canvas=document.createElement("canvas");canvas.width=256;canvas.height=256;
+      const p=canvas.getContext("2d");
+      if(!p)return null;
+      let seed=style.split("").reduce((n,c)=>n*31+c.charCodeAt(0),72341)>>>0;
+      const rand=()=>((seed=(Math.imul(seed,1664525)+1013904223)>>>0)/4294967296);
+      p.fillStyle=style==="roof"?"#f2d9cf":style==="stone"?"#e2e4dc":
+        style==="grass"?"#f0f7e9":style==="plaster"?"#f7f3e7":
+        style==="trail"?"#f6ead7":"#eee0cd";
+      p.fillRect(0,0,256,256);
+      if(style==="roof"){
+        // Overlapping terracotta tiles with slight individual-color variation.
+        for(let row=0;row<17;row++)for(let col=-1;col<14;col++){
+          const x=col*22+(row%2?11:0),y=row*16;
+          const tone=rand();
+          p.fillStyle=tone>.7?"#d8a899":tone>.27?"#e8c5b6":"#bb897e";
+          p.fillRect(x+1,y+1,20,15);
+          p.strokeStyle="#8d615d";p.lineWidth=1;
+          p.beginPath();p.moveTo(x+1,y+15);p.lineTo(x+21,y+15);p.stroke();
+          p.fillStyle="#fff9";p.fillRect(x+2,y+2,17,1);
+        }
+      }else if(style==="wood"){
+        p.strokeStyle="#8b6759";
+        for(let i=0;i<12;i++){
+          const x=i*24+rand()*8;p.lineWidth=1.3+rand();
+          p.beginPath();p.moveTo(x,0);p.bezierCurveTo(x+5,72,x-5,160,x+3,256);p.stroke();
+        }
+        for(let i=0;i<160;i++){
+          const x=rand()*256,y=rand()*256;
+          p.strokeStyle=rand()>.5?"#b6958055":"#775b4755";
+          p.lineWidth=.45;p.beginPath();p.moveTo(x,y);
+          p.lineTo(x-2+rand()*5,y+12+rand()*16);p.stroke();
+        }
+      }else if(style==="stone"){
+        for(let y=0;y<256;y+=37)for(let x=-40;x<280;x+=52){
+          const xx=x+(Math.floor(y/37)%2)*23;
+          p.fillStyle=rand()>.5?"#c8c9be":"#f0f1e6";
+          p.fillRect(xx+2,y+2,49,33);
+          p.strokeStyle="#8c968d";p.lineWidth=2;p.strokeRect(xx+2,y+2,49,33);
+        }
+      }else{
+        const n=style==="grass"?1200:style==="plaster"?930:1150;
+        for(let i=0;i<n;i++){
+          const x=rand()*256,y=rand()*256, r=rand()*2.3+.45;
+          p.fillStyle=style==="grass"?(rand()>.5?"#608f5e48":"#accd855e"):
+            style==="plaster"?(rand()>.5?"#a38f7666":"#ffffff66"):
+            (rand()>.5?"#b9a48e64":"#ffffff74");
+          p.fillRect(x,y,r,r+rand()*2);
+        }
+      }
+      const map=new THREE.CanvasTexture(canvas);
+      map.colorSpace=THREE.SRGBColorSpace;
+      map.wrapS=THREE.RepeatWrapping;map.wrapT=THREE.RepeatWrapping;
+      map.anisotropy=Math.min(4,renderer.capabilities.getMaxAnisotropy());
+      return map;
+    }
+    const art={
+      roof:artTexture("roof"),wood:artTexture("wood"),
+      stone:artTexture("stone"),plaster:artTexture("plaster"),
+      grass:artTexture("grass"),trail:artTexture("trail")
+    };
+    for(const [key,kind] of [
+      ["roof","roof"],["roofDark","roof"],["wood","wood"],
+      ["lightWood","wood"],["trunks","wood"],["door","wood"],
+      ["rock","stone"],["rock2","stone"],["wall","plaster"],
+      ["sand","trail"]
+    ])if(art[kind]){
+      mats[key].map=art[kind];
+      mats[key].roughness=kind==="roof"?.83:1;
+      mats[key].needsUpdate=true;
+    }
     const unitBox = new THREE.BoxGeometry(1,1,1);
     const unitSphere = new THREE.IcosahedronGeometry(1,1);
     const cylinder = new THREE.CylinderGeometry(1,1,1,8);
@@ -1035,8 +1108,11 @@
     }
     terrainGeometry.setAttribute("color",new THREE.BufferAttribute(colors,3));
     terrainGeometry.computeVertexNormals();
+    const groundArt=art.grass;
+    if(groundArt)groundArt.repeat.set(13,9);
     mesh(terrainGeometry,new THREE.MeshStandardMaterial({
-      vertexColors:true,roughness:1,metalness:0,side:THREE.DoubleSide
+      vertexColors:true,map:groundArt||null,roughness:1,metalness:0,
+      side:THREE.DoubleSide
     }),scene,false);
     // Layered distant mountain silhouettes add scale and recognizable scenery.
     // Mountains sit beyond the playable bounds and never affect navigation.
@@ -1310,6 +1386,7 @@
     function cottage(px,py,size=1,tint=0xf0d5a3){
       const g=new THREE.Group();g.position.set(wx(px),0,wz(py));g.scale.setScalar(size);scene.add(g);
       const wall=makeMat(tint);
+      if(art.plaster)wall.map=art.plaster;
       box(g,wall,0,1.25,0,3.2,2.5,2.7);
       box(g,mats.door,0,.83,1.36,.78,1.65,.12);
       ball(g,mats.gold,.26,.92,1.47,.06);
