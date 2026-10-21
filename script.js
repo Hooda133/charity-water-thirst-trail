@@ -1630,7 +1630,7 @@
           villageFallbacks[i].visible=false;
           villageAssetState.loaded++;
         }
-        villageAssetState.status=villageAssetState.loaded?"ready":"fallback";
+        villageAssetState.status=villageAssetState.loaded===villagePlacements.length?"ready":villageAssetState.loaded?"partial":"fallback";
         if(villageAssetState.loaded&&typeof console!=="undefined"&&typeof console.info==="function")
           console.info("Thirst Trail: loaded "+villageAssetState.loaded+" original glTF village models.");
       }catch(error){
