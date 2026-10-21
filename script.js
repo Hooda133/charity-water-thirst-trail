@@ -1609,7 +1609,8 @@
         for(let i=0;i<villagePlacements.length;i++){
           const p=villagePlacements[i];
           const original=pack.scene.getObjectByName(p.name);
-          if(!original || !original.children?.length)continue;
+          // A glTF node may be a Mesh directly, without child objects.
+          if(!original || !(original.isMesh || original.children?.length))continue;
           const asset=original.clone(true);
           asset.position.set(wx(p.x),0,wz(p.y));
           asset.scale.setScalar(p.size);
