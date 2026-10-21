@@ -59,6 +59,14 @@
   // The 3D world is loaded without blocking startup. If Three.js cannot be reached,
   // the original Canvas 2D renderer remains available as a playable fallback.
   let world3d = null;
+  function setRenderLoading(visible, message="Loading the 3D expedition view…"){
+    const loading=$("renderLoading");
+    if(!loading)return;
+    loading.hidden=!visible;
+    const copy=loading.querySelector("small");
+    if(copy)copy.textContent=message;
+  }
+  setRenderLoading(true);
   createWorld(canvas, {
       onSelect(x,y) {
         if(state.screen!=="playing" || state.modalOpen)return;
@@ -73,8 +81,8 @@
         } else navToPosition({x,y});
       }
     })
-    .then(engine => {world3d=engine;world3d.render(state,performance.now()/1000);})
-    .catch(error => console.warn("3D graphics unavailable; using the original 2D game.", error));
+    .then(engine => {world3d=engine;world3d.render(state,performance.now()/1000);setRenderLoading(false);})
+    .catch(error => {setRenderLoading(false);console.warn("3D graphics unavailable; using the original 2D game.", error);});
   let audioContext = null;
   function tone(freq=620,duration=.09){
     if (!state.sound) return;
@@ -291,6 +299,7 @@
     if(state.impactTimer)clearTimeout(state.impactTimer);
     state.impactTimer=null;$("impactBurst").hidden=true;
     $("startScreen").hidden=true;$("gameScreen").hidden=false;$("toast").hidden=true;
+    setRenderLoading(!world3d,"Preparing the 2D expedition fallback…");
     closeModal(true);updateUI();
     if(world3d)world3d.focus();else canvas.focus({preventScroll:true});
     notify("MISSION STARTED · Visit the Village Elder to begin.");tone(480,.18);
@@ -1017,9 +1026,14 @@
     function applyGraphicsSettings(next){
       effectsEnabled=!!next.effects;
       cameraSensitivity=Math.max(.5,Math.min(1.8,Number(next.sensitivity)||1));
-      renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,Math.max(.65,Math.min(1.5,Number(next.resolution)||1)*1.7)));
+      const scale=Math.max(.65,Math.min(1.5,Number(next.resolution)||1));
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,scale*1.7));
       renderer.shadowMap.enabled=!!next.shadows;
       sun.castShadow=!!next.shadows;
+      const quality=graphicsPreset==="ultra"?2048:graphicsPreset==="high"?1536:graphicsPreset==="medium"?1024:512;
+      sun.shadow.mapSize.set(quality,quality);
+      renderer.toneMappingExposure=graphicsPreset==="low"?1.08:graphicsPreset==="ultra"?1.16:1.2;
+      scene.fog.density=graphicsPreset==="low"?.012:graphicsPreset==="ultra"?.0075:.009;
     }
     view.id = "world3dCanvas";
     view.tabIndex = 0;

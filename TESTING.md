@@ -79,6 +79,9 @@ Automated-integration simulation checks run in the development connection cover 
 - [ ] Valley trees show forked trunks and layered canopies; understory shrubs and trail cobbles do not block routes
 - [ ] Workshop, supply depot, village square, campsite, bridge and pump remain recognizable at their existing mission coordinates
 - [ ] Graphics gear menu applies Low, Medium, High and Ultra presets without restarting
+- [ ] Loading overlay appears while the 3D renderer is preparing and disappears after either WebGL or the Canvas fallback is ready
+- [ ] Low/Medium/High/Ultra visibly change renderer resolution, shadow-map budget, atmospheric density and exposure while preserving gameplay
+- [ ] HUD, quest cards, inventory, mission markers, dialogue, pause and victory presentation remain readable at desktop and narrow viewport widths
 - [ ] Resolution scale, dynamic shadows, effects and camera sensitivity persist after refresh
 
 Testing caveat: Source, mocked 3D construction and gameplay checks are useful but do not replace a real browser GPU/WebGL rendering test.

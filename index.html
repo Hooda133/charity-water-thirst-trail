@@ -67,6 +67,7 @@
           <div class="canvas-column">
             <div class="world-frame">
               <div class="frame-label"><span>🌿 GREENWATER VALLEY</span><div class="frame-tools"><span id="locationHint">Follow the golden markers</span><button id="scenicViewButton" type="button" class="scenic-button" aria-pressed="false" title="Toggle a scenic overview of the valley (V)">◈ SCENIC VIEW</button></div></div>
+              <div id="renderLoading" class="render-loading" role="status" aria-live="polite"><span class="render-loading-mark">◈</span><div><strong>Preparing the valley</strong><small>Loading the 3D expedition view…</small></div><i aria-hidden="true"></i></div>
               <canvas id="gameCanvas" width="1000" height="610" tabindex="0" role="img" aria-label="Stylized 2.5D adventure map of Greenwater Valley. Use WASD or arrow keys to move, E to interact, or use the destination buttons in the mission panel.">Your browser does not support canvas.</canvas>
               <div id="impactBurst" class="impact-burst" role="status" aria-live="polite" aria-atomic="true" hidden>
                 <span class="impact-burst-medal" id="impactBurstIcon" aria-hidden="true">✦</span>
