@@ -516,8 +516,47 @@
       }
       const brim=new THREE.Mesh(new THREE.CylinderGeometry(.45,.45,.045,16),hat);
       brim.position.y=2.31;player.add(brim);
+      // Drag-to-explore is independent of character movement and mission progression.
+      const pan=new THREE.Vector3(),drag={id:null,x:0,y:0,startX:0,startY:0,moved:false,suppress:false};
+      let zoom=1;
+      const recenterCamera=()=>{pan.set(0,0,0);zoom=1;};
+      dom.style.cursor="grab";
+      dom.addEventListener("pointerdown",event=>{
+        if(event.button!==0||event.pointerType==="touch"||!state.active||state.modal||state.paused)return;
+        drag.id=event.pointerId;drag.startX=drag.x=event.clientX;
+        drag.startY=drag.y=event.clientY;drag.moved=false;drag.suppress=false;
+        dom.setPointerCapture?.(event.pointerId);
+      });
+      dom.addEventListener("pointermove",event=>{
+        if(event.pointerId!==drag.id||!state.active||state.modal||state.paused)return;
+        const dx=event.clientX-drag.x,dy=event.clientY-drag.y;
+        drag.x=event.clientX;drag.y=event.clientY;
+        if(!drag.moved&&Math.hypot(event.clientX-drag.startX,event.clientY-drag.startY)<7)return;
+        drag.moved=true;event.preventDefault();dom.style.cursor="grabbing";
+        const height=Math.max(1,dom.getBoundingClientRect().height);
+        const scale=2*Math.tan(camera.fov*Math.PI/360)*Math.max(8,camera.position.distanceTo(cameraTarget))/height*1.35;
+        const right=new THREE.Vector3().setFromMatrixColumn(camera.matrixWorld,0).setY(0).normalize();
+        const forward=new THREE.Vector3(cameraTarget.x-camera.position.x,0,cameraTarget.z-camera.position.z).normalize();
+        pan.addScaledVector(right,-dx*scale).addScaledVector(forward,dy*scale);
+      });
+      const finishDrag=event=>{
+        if(drag.id!==event.pointerId)return;
+        if(drag.moved)drag.suppress=true;
+        drag.id=null;dom.style.cursor="grab";
+        if(dom.hasPointerCapture?.(event.pointerId))dom.releasePointerCapture(event.pointerId);
+      };
+      dom.addEventListener("pointerup",finishDrag);
+      dom.addEventListener("pointercancel",finishDrag);
+      dom.addEventListener("lostpointercapture",event=>{if(drag.id===event.pointerId)finishDrag(event);});
+      dom.addEventListener("contextmenu",event=>event.preventDefault());
+      dom.addEventListener("wheel",event=>{
+        if(!state.active||state.modal||state.paused)return;
+        event.preventDefault();zoom=clamp(zoom+(event.deltaY>0?.09:-.09),.72,1.85);
+      },{passive:false});
+      const cameraTarget=new THREE.Vector3();
       const raycaster=new THREE.Raycaster(),pointer=new THREE.Vector2();
       function select(event){
+        if(drag.suppress){drag.suppress=false;return;}
         if(!state.active||state.modal||state.paused)return;
         const rect=dom.getBoundingClientRect();
         pointer.set((event.clientX-rect.left)/rect.width*2-1,
@@ -540,6 +579,7 @@
       }
       world={
         dom,renderer,scene,camera,player,limbs,marks,broken,pipeMesh,water,
+        recenterCamera,
         draw(time){
           const width=dom.clientWidth||1000,height=dom.clientHeight||610;
           const targetWidth=Math.max(300,Math.floor(width)),targetHeight=Math.max(180,Math.floor(height));
@@ -554,9 +594,12 @@
             const p=state.path[0];player.rotation.y=Math.atan2(wX(p.x)-px,wZ(p.y)-pz);
           }
           for(let i=0;i<limbs.length;i++)limbs[i].rotation.x=Math.sin(time*9+Math.floor(i/2)*Math.PI+(i%2)*Math.PI)*(state.path.length||state.keys.size ? .35 : .07);
-          const target=new THREE.Vector3(px*worldSpread,0,pz*worldSpread);
-          camera.position.lerp(new THREE.Vector3(target.x+7.4,10.5,target.z+13.6),.09);
-          camera.lookAt(target);
+          // Clamp the free camera within the entire expanded canyon; player stays put.
+          const baseX=px*worldSpread,baseZ=pz*worldSpread;
+          cameraTarget.set(clamp(baseX+pan.x,-31,31),0,clamp(baseZ+pan.z,-23,23));
+          pan.x=cameraTarget.x-baseX;pan.z=cameraTarget.z-baseZ;
+          camera.position.lerp(new THREE.Vector3(cameraTarget.x+7.4*zoom,10.5*zoom,cameraTarget.z+13.6*zoom),.09);
+          camera.lookAt(cameraTarget);
           for(const m of marks){
             const done=state.done.has(m.key);
             m.pillar.visible=!done;m.ring.material.color.set(done?0x70c5a4:0xffd787);
@@ -594,6 +637,7 @@
     const saved=!forceNew?progress.saved("canyon"):null;
     if(forceNew)progress.clearSave("canyon");
     state=defaultState();state.active=true;
+    world?.recenterCamera?.();
     if(saved)restore(saved);
     $("startScreen").hidden=true;$("gameScreen").hidden=true;$("canyonScreen").hidden=false;
     closeModal();refreshUI();
@@ -608,6 +652,10 @@
     if(state.active&&!state.finished)save();
     state.active=false;state.paused=false;state.keys.clear();state.path=[];
     $("canyonModalBackdrop").hidden=true;state.modal=false;
+  }
+  function recenterCanyonCamera(){
+    world?.recenterCamera?.();
+    toast("Camera returned to your explorer.");
   }
   function goHome(){
     suspend();
@@ -636,6 +684,7 @@
   $("canyonTouchInteract").addEventListener("click",interact);
   $("canyonToChapters").addEventListener("click",goHome);
   $("canyonPause").addEventListener("click",pause);
+  $("canyonCameraReset").addEventListener("click",recenterCanyonCamera);
   for(const btn of document.querySelectorAll("[data-canyon-move]")){
     const key={up:"w",down:"s",left:"a",right:"d"}[btn.dataset.canyonMove];
     if(!key)continue;
@@ -651,6 +700,7 @@
     if(["w","a","s","d","arrowup","arrowdown","arrowleft","arrowright"].includes(key))state.keys.add(key);
     if((key==="e"||key===" ")&&!event.repeat)interact();
     if(key==="p"&&!event.repeat)pause();
+    if(key==="c"&&!event.repeat)recenterCanyonCamera();
   });
   window.addEventListener("keyup",event=>state.keys.delete(event.key.toLowerCase()));
   window.addEventListener("blur",()=>state.keys.clear());
