@@ -96,3 +96,18 @@ The previously generated premium screenshots are **visual direction references**
 - [ ] Confirm older tasks, pipe challenge, Raincatch Ridge and Wetland Sanctuary still work
 
 Actual visual rendering and performance must be verified in a browser using WebGL.
+
+
+## Original glTF village asset upgrade (October 21)
+- [ ] In the repository root, run `node tools/validate-village.mjs` and expect all checks to pass
+- [ ] Open the site through Codespaces Live Preview / a local HTTP server; the browser must not use `file://`
+- [ ] In browser DevTools → Console, look for `Thirst Trail: loaded 4 original glTF village models.`
+- [ ] Confirm the elder house, upper cottage, lower cottage and workshop have richer authored geometry, with readable entry steps, roof tiles, window framing and distinct decorative details
+- [ ] Confirm there are **not two overlapping cottages** at the same locations
+- [ ] With the model URL unavailable (DevTools Network request blocking), the original procedural cottages remain visible and gameplay does not crash
+- [ ] Switch to Scenic View and back, start and restart expeditions, travel to the workshop and collect the toolkit
+- [ ] Inspect Chrome DevTools console for GLTFLoader warnings, 404s, cross-origin module failures or WebGL errors
+- [ ] Check lighting at dawn and at night; warm windows should remain visible
+- [ ] Verify frame rate and memory on an integrated-graphics laptop; consider simplifying assets or moving assets to GLB + compressed textures later
+
+**Validation scope:** the repository includes static glTF and source checks and a mocked asynchronous loader/fallback test was exercised during integration. These tests are not a substitute for real GPU/WebGL screenshot testing.
