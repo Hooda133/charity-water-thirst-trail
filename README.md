@@ -1,6 +1,17 @@
-# Thirst Trail: The Last Well
+# Thirst Trail 2.0: The Last Well
 
-**Thirst Trail** is a polished, browser-based 3D adventure game inspired by charity: water. Explore Greenwater Valley, listen to the village, collect repair supplies, and restore a broken pump while learning why water sources need testing and maintenance.
+**Thirst Trail** is a polished, browser-based 3D adventure game inspired by charity: water. Play two connected chapters: restore the Greenwater Valley pump, then unlock The Forgotten Canyon to rebalance pressure valves, rebuild an aqueduct and inspect a cistern. Both chapters feature 3D exploration with a playable 2D fallback.
+
+## Thirst Trail 2.0 — New chapters and progress
+
+- **Chapter 1: Greenwater Valley** — the complete original adventure is retained, including NPCs, mission puzzles, 3D model packs, mini-map and environmental effects.
+- **Chapter 2: The Forgotten Canyon** — a separate red-rock 3D chapter with cliff mesas, a gorge and bridge, aqueduct, control station, cistern, desert foliage and floating destination signs.
+- **Five playable canyon objectives:** Meet Surveyor Nia, recover the seal kit, calibrate three pressure valves, rebuild the aqueduct in four stages, and complete a cistern safety check.
+- **Interactive valve puzzle:** set three regulators to achieve **65–73 kPa**, keep the regulator open, and balance intake/return settings. Incorrect tests cost energy.
+- **Aqueduct assembly puzzle:** place anchors, braces, pipes and sealing material in the right order; repair stages save automatically.
+- **Chapter selection & unlocking:** finishing the Chapter 1 pump mission unlocks Chapter 2. The previous Valley victory screen offers direct access to Canyon.
+- **Autosave and resume:** Valley and Canyon checkpoints, unlocks and completion status persist using versioned browser `localStorage`; saves are on this browser/device, not synced online. Original best-score storage is preserved.
+- **Performance & accessibility:** the Valley renderer pauses when Canyon is visible; interactive keyboard and touch controls; 2D fallback if the 3D library is unavailable.
 
 ## Features
 
@@ -42,7 +53,7 @@
 
 ## How to play
 
-Open `index.html` in a modern browser, or serve the folder with any static file server. Use **WASD** or **arrow keys** to move, **E** or **Space** to interact, **Shift** to sprint, **P** to pause, and the **mouse wheel** to zoom the 3D camera, and **M** to hide or show the mini-map, and **V** to toggle the scenic camera. The mini-map also lets you click destination markers to plan a route. On mobile, use the directional controls. Meet the elder, gather the toolkit and gasket, rotate the 3×3 pipeline sections until water can flow from the left inlet to the right outlet, then complete the final water-safety questions. Optionally travel to Raincatch Ridge for a rainwater collection challenge or visit Wetland Sanctuary to remove litter while protecting nests and plants. Look for four sealed drinking-water caches to restore energy. Water collected from roofs still requires testing and appropriate treatment before drinking.
+Run a local static web server (recommended because glTF models load over HTTP) and open `index.html`. Use **WASD** or **arrow keys** to move, **E** or **Space** to interact, **Shift** to sprint, **P** to pause, and the **mouse wheel** to zoom the 3D camera, and **M** to hide or show the mini-map, and **V** to toggle the scenic camera. The mini-map also lets you click destination markers to plan a route. On mobile, use the directional controls. In Chapter 1, meet the elder, gather the toolkit and gasket, rotate all nine pipeline sections to form a leak-free network, then complete the water-safety questions. Chapter 2 unlocks automatically; choose it from the new chapter selection panel. In Forgotten Canyon use WASD/arrows, E to interact, the fast-travel list, and P to pause. Optionally travel to Raincatch Ridge for a rainwater collection challenge or visit Wetland Sanctuary to remove litter while protecting nests and plants. Look for four sealed drinking-water caches to restore energy. Water collected from roofs still requires testing and appropriate treatment before drinking.
 
 ## Run locally
 
@@ -54,7 +65,7 @@ Visit `http://localhost:8000` in your browser. No build step, backend, API key, 
 
 ## Technologies
 
-HTML5, CSS3, JavaScript, Three.js/WebGL (loaded from a CDN), a fallback Canvas 2D renderer, Web Audio API, and localStorage. The 3D environment is constructed from procedural geometry and materials, with no separate model downloads. For compatibility with GitHub Codespaces Live Preview, the 3D renderer is embedded in `script.js` rather than loaded from a separate local JavaScript module.
+HTML5, CSS3, JavaScript, Three.js/WebGL (loaded from a CDN), a fallback Canvas 2D renderer, Web Audio API, and localStorage. The environments use procedural 3D geometry and the Valley additionally loads original local glTF models for the buildings and explorer. For compatibility with GitHub Codespaces Live Preview, the 3D renderer is embedded in `script.js` rather than loaded from a separate local JavaScript module.
 
 This is an independent educational game inspired by charity: water, not an official charity: water product. Water-safety scenarios are simplified for gameplay and are not real-world drinking-water guidance.
 
@@ -63,3 +74,17 @@ This is an independent educational game inspired by charity: water, not an offic
 The Three.js engine needs access to a public CDN. If the original 2D artwork appears, open the browser Console (F12) and look for a 3D loading warning. Serve the project over HTTP using `python3 -m http.server 8000` and open port 8000 from the Codespaces **Ports** tab rather than relying on Live Preview when it returns 401. The 2D game is an intentional fallback.
 
 See [TESTING.md](TESTING.md) for gameplay and browser verification steps.
+
+
+## Automated checks
+
+Run from the repository root:
+
+```bash
+node tools/test-chapters.mjs
+node tools/test-pipes.mjs
+node tools/validate-village.mjs
+node tools/validate-explorer.mjs
+```
+
+GitHub Actions runs these checks when gameplay source changes. The chapter integration test covers unlocking, autosaves, both canyon puzzles, wrong-answer penalties, final completion and checkpoint resume. **Actual WebGL visual appearance, sound and laptop frame rate still require testing in a browser.**
