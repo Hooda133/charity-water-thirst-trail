@@ -1327,6 +1327,7 @@
     // Richly grouped trees: roots, tapered bark, several shaded foliage crowns.
     const treeMaterials=[mats.leaf1,mats.leaf2,mats.leaf3,mats.leaf4];
     const windTrees=[];
+    const canopySparkleLocations=[];
     function tree(x,z,s=1){
       const g=new THREE.Group();g.position.set(x,0,z);g.scale.setScalar(s);scene.add(g);
       cyl(g,mats.trunks,0,.76,0,.22,.33,1.57);
@@ -1334,6 +1335,17 @@
       const offsets=[[0,2.2,0,.95],[-.65,1.86,.15,.73],[.58,2.08,.25,.79],[.16,2.58,-.41,.83],[-.25,2.47,.43,.65]];
       for(let j=0;j<offsets.length;j++){const v=offsets[j];ball(g,treeMaterials[j%4],v[0],v[1],v[2],v[3],v[3]*.89,v[3]);}
       if(windTrees.length<23 && rng()<.27)windTrees.push({group:g,phase:rng()*Math.PI*2});
+      // Collect clustered leaf highlights for a single instanced detail pass.
+      // Creating one mesh per leaf would substantially hurt integrated GPUs.
+      for(let j=0;j<5;j++){
+        const angle=j*2.39996+rng()*.35;
+        canopySparkleLocations.push({
+          x:x+Math.cos(angle)*(.34+.34*rng())*s,
+          y:(1.91+.48*rng())*s,
+          z:z+Math.sin(angle)*(.32+.30*rng())*s,
+          scale:(.15+.15*rng())*s
+        });
+      }
       return g;
     }
     const objectivePositions=spots.map(p=>[wx(p[1]),wz(p[2])]);
@@ -1345,6 +1357,26 @@
       if(Math.abs(x+13)<3.2 && z> -5 && z<8)continue;
       tree(x,z,.52+rng()*.66);
     }
+    const leafHighlightGeo=new THREE.IcosahedronGeometry(1,0);
+    const leafHighlightMat=new THREE.MeshStandardMaterial({
+      color:0xb7de8d,roughness:1,flatShading:true,
+      vertexColors:false
+    });
+    const leafHighlights=new THREE.InstancedMesh(
+      leafHighlightGeo,leafHighlightMat,canopySparkleLocations.length);
+    const leafDummy=new THREE.Object3D();
+    for(let i=0;i<canopySparkleLocations.length;i++){
+      const spot=canopySparkleLocations[i];
+      leafDummy.position.set(spot.x,spot.y,spot.z);
+      leafDummy.scale.set(spot.scale,spot.scale*.58,spot.scale*.86);
+      leafDummy.rotation.set(0,i*.71,i*.37);
+      leafDummy.updateMatrix();
+      leafHighlights.setMatrixAt(i,leafDummy.matrix);
+    }
+    leafHighlights.instanceMatrix.needsUpdate=true;
+    leafHighlights.castShadow=false;
+    leafHighlights.receiveShadow=false;
+    scene.add(leafHighlights);
     // Tall cedar and pine trees break up the repeated round canopies.
     function pine(x,z,s=1){
       const g=new THREE.Group();g.position.set(x,0,z);g.scale.setScalar(s);scene.add(g);
@@ -2113,12 +2145,14 @@
       }
       // Lighting is based on expedition time, never on frame rate.
       const cycle=timeOfDay(state.elapsed||0), night=cycle.evening;
-      scene.background.setRGB(.725-.34*night,.875-.42*night,.875-.30*night);
+      // Intentional cinematic grading: blue atmospheric distance, golden sun,
+      // and deeper under-canopy shade. Preserve enough light for nighttime play.
+      scene.background.setRGB(.61-.38*night,.78-.47*night,.89-.42*night);
       scene.fog.color.copy(scene.background);
-      ambient.intensity=1.75-.62*night;
-      sun.intensity=2.8-1.85*night;
-      fill.intensity=.58+.16*night;
-      renderer.toneMappingExposure=1.22+.10*night;
+      ambient.intensity=1.30-.38*night;
+      sun.intensity=3.05-2.05*night;
+      fill.intensity=.44+.18*night;
+      renderer.toneMappingExposure=1.10+.11*night;
       for(const light of lanternLights)light.intensity=night*2.6;
       const darkSky=night>.55;
       const solarVisible=night<.80;
