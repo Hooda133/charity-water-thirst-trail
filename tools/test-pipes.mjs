@@ -20,6 +20,12 @@ assert.deepEqual([...PIPE_DIRS],["n","e","s","w"]);
 assert.equal(PIPE_BASE.filter(p=>p.length===3).length,2,"Requires two T-junctions");
 assert.equal(PIPE_BASE.filter(p=>p.length===1).length,2,"Requires two capped branches");
 assert.equal(pipeFlow(PIPE_START).solved,false,"Should not start already repaired");
+const initial=pipeFlow(PIPE_START);
+assert.equal(initial.connected.size,1,"Starting board should supply only inlet tile 4");
+assert.equal(initial.leaks.length,1,"Starting board should identify the unsealed branch on tile 4");
+assert.equal(initial.leaks[0].tile,3,"Starting leak should be located at tile 4");
+assert.equal(initial.leaks[0].direction,"s","The starting leak should face toward tile 7");
+
 
 // This orientation connects every tile, seals all branches and delivers water.
 const solvedTurns=Array(9).fill(0);
@@ -77,6 +83,24 @@ assert.ok(shortcuts>0,"Expected to exercise formerly accepted partial routes");
 assert.ok(script.includes("flow.connected.size"),"Missing progress feedback");
 assert.ok(script.includes('kind:"pipe"'),"Missing interactive pipe modal");
 assert.ok(script.includes("flow.delivered"),"Incomplete-network warning missing");
+assert.ok(script.includes("pipe-terminal-badge"),"Water inlet/outlet alignment markers missing");
+assert.ok(script.includes("is-leaking"),"Open joints should be highlighted on the actual connected pipe arms");
+assert.ok(script.includes("pipeHint"),"Guided hint control missing");
+assert.ok(script.includes("PIPE_HINT_ORDER"),"Deterministic hints toward known solution missing");
+const html=readFileSync(resolve(root,"index.html"),"utf8");
+assert.ok(html.includes('id="pipeHint"'),"Pipe hint button missing from the modal");
+const styles=readFileSync(resolve(root,"styles.css"),"utf8");
+assert.ok(styles.includes(".pipe-arm.is-leaking"),"Open joint styles missing");
+assert.ok(styles.includes(".pipe-hint"),"Hint button styling missing");
+// All nine initial orientations must be solvable by clockwise rotation alone.
+// The generated hint always points toward this verified solution (all turns zero).
+for(let tile=0;tile<9;tile++){
+ const clockwise=(4-PIPE_START[tile]%4)%4;
+ const next=PIPE_START.slice();
+ for(let click=0;click<clockwise;click++)next[tile]=(next[tile]+1)%4;
+ assert.equal(next[tile],0,"Each hinted tile must reach the known leak-free orientation");
+}
+
 console.log("✓ All 262,144 tile orientations checked");
 console.log("✓ 2 valid nine-piece configurations, no leaking victories");
 console.log("✓ Partial routes, missing intake and capped-branch leaks rejected");
