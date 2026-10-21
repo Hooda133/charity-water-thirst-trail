@@ -1257,28 +1257,28 @@
     // Sculpt a rugged-looking river channel with shallow boulders and mossy
     // shore stones. Instancing gives hundreds of facets in just two draw calls.
     const riverStoneGeo=new THREE.IcosahedronGeometry(1,1);
-    const channelBoulders=new THREE.InstancedMesh(riverStoneGeo,mats.rock,108);
-    const brightBoulders=new THREE.InstancedMesh(riverStoneGeo,mats.rock2,48);
+    const channelBoulders=new THREE.InstancedMesh(riverStoneGeo,mats.rock,66);
+    const brightBoulders=new THREE.InstancedMesh(riverStoneGeo,mats.rock2,30);
     const pebbleDummy=new THREE.Object3D();
-    for(let i=0;i<108;i++){
-      const z=-13.1+(i/108)*26.2;
+    for(let i=0;i<66;i++){
+      const z=-13.1+((i+rng()*.7)/66)*26.2;
       if(Math.abs(z-wz(580))<1.45){ // clear the bridge's center crossing
         pebbleDummy.position.set(0,-20,0);pebbleDummy.scale.setScalar(.001);
       }else{
         const mid=wx(riverCenter(z*SCALE+550));
         const shore=i%2?-1:1;
-        const x=mid+shore*(2.48+rng()*1.45);
-        const scale=.20+rng()*.56;
+        const x=mid+shore*(2.65+rng()*1.80);
+        const scale=.18+rng()*.40;
         pebbleDummy.position.set(x,scale*.23-.08,z);
         pebbleDummy.scale.set(scale*1.3,scale*.52,scale*.95);
       }
       pebbleDummy.rotation.set(rng()*.25,rng()*6.28,rng()*.20);
       pebbleDummy.updateMatrix();channelBoulders.setMatrixAt(i,pebbleDummy.matrix);
     }
-    for(let i=0;i<48;i++){
-      const z=-13.1+(i/48)*26.2,mid=wx(riverCenter(z*SCALE+550));
-      const sc=.20+rng()*.41;
-      pebbleDummy.position.set(mid+(i%2?-1:1)*(1.75+rng()*.85),sc*.24,z);
+    for(let i=0;i<30;i++){
+      const z=-13.1+((i+rng()*.8)/30)*26.2,mid=wx(riverCenter(z*SCALE+550));
+      const sc=.14+rng()*.31;
+      pebbleDummy.position.set(mid+(i%2?-1:1)*(2.05+rng()*1.20),sc*.24,z);
       pebbleDummy.scale.set(sc*1.2,sc*.35,sc*.82);
       pebbleDummy.rotation.set(rng()*.4,rng()*6.28,rng()*.25);
       pebbleDummy.updateMatrix();brightBoulders.setMatrixAt(i,pebbleDummy.matrix);
