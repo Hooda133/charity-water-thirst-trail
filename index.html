@@ -8,6 +8,7 @@
   <meta name="description" content="Thirst Trail: The Last Well, a playable water-access adventure game. Explore, solve puzzles, and help a village find safe water.">
   <title>Thirst Trail — The Last Well</title>
   <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="canyon.css">
   <!-- GLTFLoader and the scene use the same exact Three.js instance. -->
   <script type="importmap">
   {"imports":{
@@ -15,7 +16,9 @@
     "three/addons/":"https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"
   }}
   </script>
+  <script src="progression.js" defer></script>
   <script src="script.js" defer></script>
+  <script src="canyon.js" defer></script>
 </head>
 <body>
   <div class="app-shell">
@@ -38,6 +41,19 @@
             <button id="startButton" type="button" class="button button-primary">Start adventure <span aria-hidden="true">↗</span></button>
             <button id="instructionsButton" type="button" class="button button-ghost">How to play <span aria-hidden="true">→</span></button>
           </div>
+          <section class="chapter-select" aria-labelledby="chapterSelectTitle">
+            <div class="chapter-select-heading"><span class="eyebrow">CHOOSE YOUR JOURNEY</span><h2 id="chapterSelectTitle">Expedition chapters</h2><small>Progress saves automatically in this browser.</small></div>
+            <div class="chapter-select-grid">
+              <button id="valleyChapter" class="chapter-select-card is-ready" type="button" aria-label="Play Greenwater Valley">
+                <span class="chapter-select-number">01 · THE LAST WELL</span><strong>🌿 Greenwater Valley</strong>
+                <small>Restore the village water pump</small><span id="valleyChapterStatus" class="chapter-select-status">Start chapter →</span>
+              </button>
+              <button id="canyonChapter" class="chapter-select-card is-locked" type="button" disabled aria-label="The Forgotten Canyon is locked until you complete the valley">
+                <span class="chapter-select-number">02 · THE FORGOTTEN CANYON</span><strong>🏜️ Forgotten Canyon</strong>
+                <small>Repair an aqueduct and balance pressure</small><span id="canyonChapterStatus" class="chapter-select-status">🔒 Finish Chapter 1 to unlock</span>
+              </button>
+            </div>
+          </section>
           <div class="start-highscore">🏆 <span>BEST EXPEDITION</span> <strong id="highScoreStart">—</strong></div>
         </div>
         <div class="hero-scene" aria-hidden="true">
@@ -58,7 +74,7 @@
           <div class="hud-resource"><div class="resource-label"><span>💧 ENERGY</span><strong id="energyValue">100%</strong></div><div class="bar"><div id="energyBar" class="bar-fill"></div></div></div>
           <div class="hud-stat"><span>✦ IMPACT</span><strong id="scoreValue">0000</strong></div>
           <div class="hud-stat"><span>◷ TIME</span><strong id="timeValue">00:00</strong></div>
-          <div class="hud-buttons"><button id="pauseButton" class="button button-compact button-ghost-dark" type="button">Ⅱ Pause</button><button id="resetButton" class="button button-compact button-ghost-dark" type="button">↻ Restart</button></div>
+          <div class="hud-buttons"><button id="valleyChapters" class="button button-compact button-ghost-dark" type="button">◈ Chapters</button><button id="pauseButton" class="button button-compact button-ghost-dark" type="button">Ⅱ Pause</button><button id="resetButton" class="button button-compact button-ghost-dark" type="button">↻ Restart</button></div>
         </div>
 
         <div class="game-layout">
@@ -106,6 +122,33 @@
           </aside>
         </div>
         <div class="game-bottom"><span>💛 Every action creates impact. Plan your route and conserve your energy.</span><span>Fictional educational game · Not real-world drinking-water guidance</span></div>
+      </section>
+
+      <section id="canyonScreen" class="canyon-screen" hidden aria-label="Level 2: The Forgotten Canyon">
+        <div class="canyon-header">
+          <div><span class="overline">CHAPTER 02 · THE FORGOTTEN CANYON</span><h2>Restore the forgotten aqueduct<span class="yellow">.</span></h2><p id="canyonSubtitle">Meet the canyon surveyor to begin.</p></div>
+          <div class="canyon-controls"><span id="canyonProgressLabel" class="canyon-progress-label">0 / 5 repaired</span><button id="canyonPause" class="button button-compact button-ghost-dark" type="button">Ⅱ Pause</button><button id="canyonToChapters" class="button button-compact button-ghost-dark" type="button">◈ Chapters</button></div>
+        </div>
+        <div class="canyon-layout">
+          <div class="canyon-stage">
+            <div class="canyon-stage-heading"><span>🏜️ SUNSTONE CANYON · OPEN WORLD</span><span id="canyonPositionLabel">Explore the red cliffs</span></div>
+            <canvas id="canyonCanvas" width="1000" height="610" tabindex="0" role="img" aria-label="Playable canyon environment. Use WASD or arrow keys to explore, E to interact, or click on a destination.">Your browser does not support canvas.</canvas>
+            <div class="canyon-overlay-hud"><span id="canyonEnergy">⚡ 100% energy</span><span id="canyonScore">✦ 0 impact</span><span id="canyonTimer">◷ 00:00</span></div>
+            <div id="canyonPrompt" class="canyon-prompt" hidden><span id="canyonPromptText">Talk to the surveyor</span><button id="canyonInteract" type="button">E · INTERACT</button></div>
+            <div class="canyon-key-hint"><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> MOVE <kbd>E</kbd> INTERACT <span>CLICK A MARKER TO TRAVEL</span></div>
+            <div class="canyon-touch-controls" aria-label="Canyon movement controls"><button data-canyon-move="up" type="button">▲</button><button data-canyon-move="left" type="button">◀</button><button data-canyon-move="down" type="button">▼</button><button data-canyon-move="right" type="button">▶</button><button id="canyonTouchInteract" type="button">✦ ACT</button></div>
+            <p id="canyonToast" class="canyon-toast" role="status" aria-live="polite" hidden></p>
+          </div>
+          <aside class="canyon-sidebar">
+            <span class="overline">CANYON EXPEDITION LOG</span><h3>Water through the stone<span class="yellow">.</span></h3>
+            <p>Survey the canyon, recover parts, regulate water pressure, and restore the cistern.</p>
+            <div class="canyon-progress-track"><span id="canyonProgressFill"></span></div>
+            <div id="canyonQuestList" class="canyon-quest-list"></div>
+            <span class="overline">FAST TRAVEL · CANYON MAP</span>
+            <div id="canyonDestinations" class="canyon-destinations"></div>
+            <p class="canyon-save-note"><span id="canyonSaveStatus">Progress saves automatically.</span></p>
+          </aside>
+        </div>
       </section>
     </main>
     <footer class="footer"><span>THIRST:TRAIL © AN INDEPENDENT WATER-ACCESS ADVENTURE</span><span>Inspired by <a href="https://www.charitywater.org/" target="_blank" rel="noopener noreferrer">charity: water</a> · Not an official game or affiliation</span></footer>
