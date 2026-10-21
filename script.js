@@ -590,40 +590,49 @@
         {text:"Back to the valley",action:()=>closeModal()}]});
     $("rainPanel").hidden=false;renderRainControls();
   }
-  // Physical pipeline repair: players rotate actual pipe sections before
-  // applying the knowledge they gained through the original safety quiz.
-  // Each piece is a two-way junction; flow only passes through reciprocal ports.
+  // A full nine-piece plumbing network with T-junctions and end caps.
+  // With only two-ended pipes, all nine cells cannot form a path between
+  // these two middle-edge terminals (checkerboard parity). The tees branch
+  // to the capped ends so every tile genuinely participates.
   const PIPE_DIRS=["n","e","s","w"];
   const PIPE_BASE=[
-    ["s","e"],["s","e"],["w","s"],
-    ["w","e"],["w","n"],["n","e"],
-    ["n","e"],["n","s"],["n","w"]
+    ["s","e"],["w","s","e"],["w","s"],
+    ["w","n"],["n","s"],["n","e"],
+    ["e"],["n","w","e"],["w"]
   ];
   const PIPE_START=[1,2,3,1,2,1,3,1,2];
   let pipeTurns=[...PIPE_START],pipeTests=0;
   const rotatedPipe=(index,turns=pipeTurns)=>{
-    const r=turns[index]%4;
+    const r=((turns[index]%4)+4)%4;
     return PIPE_BASE[index].map(dir=>PIPE_DIRS[(PIPE_DIRS.indexOf(dir)+r)%4]);
   };
   function pipeFlow(turns=pipeTurns){
-    const start=3, goal=5, seen=new Set(), queue=[];
+    const start=3,goal=5,seen=new Set(),queue=[],leaks=[];
     if(rotatedPipe(start,turns).includes("w")){seen.add(start);queue.push(start);}
     const offset={n:-3,e:1,s:3,w:-1};
     const inverse={n:"s",e:"w",s:"n",w:"e"};
     for(let i=0;i<queue.length;i++){
-      const current=queue[i], row=Math.floor(current/3),col=current%3;
+      const current=queue[i],row=Math.floor(current/3),col=current%3;
       for(const dir of rotatedPipe(current,turns)){
+        // These are the only permitted exterior source/sink connections.
+        if((current===start&&dir==="w")||(current===goal&&dir==="e"))continue;
         const nr=row+(dir==="s"?1:dir==="n"?-1:0);
         const nc=col+(dir==="e"?1:dir==="w"?-1:0);
-        if(nr<0||nr>2||nc<0||nc>2)continue;
-        const target=current+offset[dir];
-        if(!seen.has(target)&&rotatedPipe(target,turns).includes(inverse[dir])){
-          seen.add(target);queue.push(target);
+        if(nr<0||nr>2||nc<0||nc>2){
+          leaks.push({tile:current,direction:dir,reason:"edge"});
+          continue;
         }
+        const target=current+offset[dir];
+        if(!rotatedPipe(target,turns).includes(inverse[dir])){
+          leaks.push({tile:current,direction:dir,reason:"disconnected"});
+          continue;
+        }
+        if(!seen.has(target)){seen.add(target);queue.push(target);}
       }
     }
-    return {solved:seen.has(goal)&&rotatedPipe(goal,turns).includes("e"),
-      connected:seen};
+    const delivered=seen.has(goal)&&rotatedPipe(goal,turns).includes("e");
+    return {solved:delivered&&seen.size===PIPE_BASE.length&&leaks.length===0,
+      delivered,connected:seen,leaks};
   }
   function renderPipePuzzle(){
     const board=$("pipeGrid");board.replaceChildren();
@@ -652,9 +661,16 @@
     }
     status.className="pipe-status"+(flow.solved?" is-success":"");
     status.textContent=flow.solved?
-      "A complete pipeline is connected! Select Test the flow to inspect it.":
-      (flow.connected.size?flow.connected.size+" of 9 pipe sections connected. ":"Connect WATER IN at middle left. ")+
-      "Rotate sections to reach the village outlet on the right.";
+      "All nine pipes are connected with both capped branches sealed. Test the flow!":
+      !flow.connected.size?
+      "Start at WATER IN on middle left. Turn tile 4 toward the supply.":
+      flow.delivered?
+      "Water reaches the outlet, but only "+flow.connected.size+"/9 pipes are connected."+
+        (flow.leaks.length?" "+flow.leaks.length+" open joint(s).":"")+
+        " Complete the side branches.":
+      flow.connected.size+"/9 pipes receiving water."+
+        (flow.leaks.length?" "+flow.leaks.length+" open joint(s) need sealing.":"")+
+        " Connect to VILLAGE OUTLET.";
   }
   function rotatePipe(index){
     if(state.modalKind!=="pipe")return;
@@ -682,7 +698,10 @@
     if(state.ended)return;
     const status=$("pipeStatus");
     status.className="pipe-status is-error";
-    status.textContent="No water reached the outlet. Find the disconnected bend and try again (−2 energy).";
+    const flow=pipeFlow();
+    status.textContent=(flow.delivered?"The outlet has water but the branches are incomplete. ":"No safe water reached the outlet. ")+
+      flow.connected.size+"/9 pieces connected, "+flow.leaks.length+
+      " open joints. Repair the pipeline and try again (−2 energy).";
     updateUI();
     tone(210,.15);
   }
@@ -690,8 +709,8 @@
     pipeTurns=[...PIPE_START];pipeTests=0;
     openModal({tag:"PUMP REPAIR • STEP 1 OF 2",icon:"🔧",
       title:"Reconnect the water pipeline",
-      description:"Rotate the 9 pipe sections. Water enters from the LEFT of the middle row and must reach the RIGHT side. Then test the flow.",
-      kind:"pipe",tip:"Rotate a square by clicking it, or tab to it and press Enter. Testing a broken line costs 2 energy.",
+      description:"Connect all nine pipe sections. Water enters from middle LEFT and exits middle RIGHT. Turn the T-junctions to feed the branches and use the end caps to prevent leaks.",
+      kind:"pipe",tip:"Rotate a square by clicking it, or Tab then Enter. Both capped branches must receive water. Testing an incomplete or leaking system costs 2 energy.",
       choices:[
         {text:"💧 Test the flow",primary:true,action:verifyPipe},
         {text:"↩ Back to the valley",action:()=>closeModal()}
