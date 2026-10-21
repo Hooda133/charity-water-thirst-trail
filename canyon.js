@@ -232,7 +232,10 @@
     $("canyonScore").textContent="✦ "+state.score.toLocaleString()+" impact";
     $("canyonTimer").textContent="◷ "+formatTime(state.elapsed);
     const quests=$("canyonQuestList"),dest=$("canyonDestinations");
-    quests.replaceChildren();dest.replaceChildren();
+    const questStamp=[...state.done].sort().join("|");
+    if(state.questStamp!==questStamp){
+      state.questStamp=questStamp;
+      quests.replaceChildren();dest.replaceChildren();
     for(const [key,goal] of Object.entries(goals)){
       const item=document.createElement("div");item.className="canyon-quest"+(state.done.has(key)?" done":"");
       const icon=document.createElement("span");icon.className="canyon-quest-icon";icon.textContent=state.done.has(key)?"✓":goal.icon;
@@ -246,6 +249,7 @@
     }
     const restBtn=document.createElement("button");restBtn.type="button";restBtn.className="canyon-destination";
     restBtn.textContent="⛺ Shaded rest shelter · +34 energy";restBtn.addEventListener("click",()=>pathTo(rest));dest.append(restBtn);
+    }
     const nearby=closest();state.nearby=nearby;
     $("canyonPrompt").hidden=!nearby||!state.active||state.paused;
     if(nearby)$("canyonPromptText").textContent=nearby==="rest"?"Rest at shelter":goals[nearby].title;
@@ -277,7 +281,9 @@
     state.elapsed+=dt;
     if(state.elapsed-state.lastSave>7)save();
     if(state.toast&&performance.now()>state.toastUntil){$("canyonToast").hidden=true;state.toast="";}
-    if(Math.floor(state.elapsed*5)%2===0)refreshUI();
+    if(state.elapsed-(state.lastUI||0)>.28){
+      state.lastUI=state.elapsed;refreshUI();
+    }
   }
   function drawFallback(){
     const c=ctx;c.clearRect(0,0,W,H);
@@ -498,7 +504,8 @@
           if(camera.aspect!==targetWidth/targetHeight){
             camera.aspect=targetWidth/targetHeight;camera.updateProjectionMatrix();
           }
-          renderer.setSize(targetWidth,targetHeight,false);
+          if(dom.width!==targetWidth||dom.height!==targetHeight)
+            renderer.setSize(targetWidth,targetHeight,false);
           const px=wX(state.x),pz=wZ(state.y);
           player.position.set(px,.07+Math.sin(time*9)*.035,pz);
           if(state.path.length){
