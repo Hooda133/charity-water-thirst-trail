@@ -2512,7 +2512,7 @@
       if(freeCamera)return;
       freeCamera=true;
       freeTarget.copy(explorer.position);
-      freeTarget.y=.8;
+      freeTarget.y+=.8;
       const offset=camera.position.clone().sub(freeTarget);
       const horizontal=Math.max(.001,Math.hypot(offset.x,offset.z));
       cameraYaw=Math.atan2(offset.x,offset.z);
@@ -2522,9 +2522,10 @@
       freeCamera=false;
       cameraGesture=null;
       freeTarget.copy(explorer.position);
-      freeTarget.y=.8;
+      freeTarget.y+=.8;
       cameraYaw=Math.atan2(10.2,20);
       cameraPitch=Math.atan2(16.3,Math.hypot(10.2,20));
+      cameraDistanceTarget=.82;
       firstFrame=true;
     }
     function clampFreeTarget(){
@@ -2533,11 +2534,12 @@
     }
     // Gentle camera zoom without changing the existing keyboard movement controls.
     let cameraDistance=.82;
+    let cameraDistanceTarget=.82;
     view.addEventListener("wheel",event=>{
       if(!view.isConnected || view.parentElement===hero)return;
       event.preventDefault();
       beginFreeCamera();
-      cameraDistance=Math.max(.62,Math.min(1.65,cameraDistance+event.deltaY*.0009));
+      cameraDistanceTarget=Math.max(.62,Math.min(1.65,cameraDistanceTarget+event.deltaY*.0009));
     },{passive:false});
     const raycaster=new THREE.Raycaster();
     const groundPlane=new THREE.Plane(new THREE.Vector3(0,1,0),0);
@@ -2682,7 +2684,7 @@
       }
       const playerX=wx(state.x),playerZ=wz(state.y);
       const crossing=state.y>530&&state.y<635&&state.x>735&&state.x<967;
-      const playerY=crossing?.58:0;
+      const playerY=crossing?.58:terrainElevation(playerX,playerZ);
       explorer.position.set(playerX,playerY,playerZ);
       const isMoving=!!state.moving&&state.screen==="playing";
       const effect=state.effect;
@@ -2928,6 +2930,8 @@
       }
       fire.scale.y=reduceMotion?1:.84+Math.sin(time*13)*.15;
       fireLight.intensity=effectsEnabled?(2.4+night*8.6+(reduceMotion?0:Math.sin(time*9)*1.2)):1.2;
+      const cameraFrameDelta=characterMotion.lastTime?Math.min(.05,Math.max(0,time-characterMotion.lastTime)):.016;
+      cameraDistance+=(cameraDistanceTarget-cameraDistance)*(1-Math.exp(-10*cameraFrameDelta));
       let aim;
       if(playing){
         // Scenic overview deliberately frames the whole explorable island;
@@ -2944,7 +2948,7 @@
             Math.cos(cameraYaw)*horizontal
           ));
         }else{
-          aim=new THREE.Vector3(playerX,.8,playerZ);
+          aim=new THREE.Vector3(playerX,playerY+.8,playerZ);
           // After victory, briefly reveal more of the restored valley.
           const finaleZoom=effect?.kind==="victory"&&effectAge<4.5&&!reduceMotion?1.17:1;
           camPos.copy(aim).add(new THREE.Vector3(10.2,16.3,20).multiplyScalar(cameraDistance*finaleZoom));
@@ -2955,6 +2959,10 @@
         aim=new THREE.Vector3(-4+drift*2.0,0,-1+Math.cos(time*.09)*.6);
         camPos.copy(aim).add(new THREE.Vector3(
           16+drift*2.4,22+Math.sin(time*.08)*.8,27+Math.cos(time*.105)*2.0));
+      }
+      if(!state.scenic){
+        const floor=terrainElevation(camPos.x,camPos.z)+1.15;
+        if(camPos.y<floor)camPos.y=floor;
       }
       if(firstFrame){
         camera.position.copy(camPos);camTarget.copy(aim);firstFrame=false;

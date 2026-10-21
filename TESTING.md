@@ -73,6 +73,9 @@ Automated-integration simulation checks run in the development connection cover 
 - [ ] River shader movement, edge glints, waterfall strips, mist, pump flow and spring ripples render without shader errors
 - [ ] Dawn, golden hour, daylight, night, lanterns, windows and campfire remain balanced rather than overexposed
 - [ ] Contact-shadow accents sit beneath cottages, camp and pump without z-fighting or blocking navigation
+- [ ] Short left click walks, while left drag pans without walking and right drag orbits without triggering navigation
+- [ ] Wheel zoom eases smoothly; C recenters on the explorer; the camera remains above terrain during orbit and follow
+- [ ] WASD/sprint movement, turn blending, scenic view, missions and click-to-walk remain functional after camera changes
 - [ ] Valley trees show forked trunks and layered canopies; understory shrubs and trail cobbles do not block routes
 - [ ] Workshop, supply depot, village square, campsite, bridge and pump remain recognizable at their existing mission coordinates
 - [ ] Graphics gear menu applies Low, Medium, High and Ultra presets without restarting
