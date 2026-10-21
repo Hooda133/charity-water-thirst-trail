@@ -2743,7 +2743,9 @@
     const groundPlane=new THREE.Plane(new THREE.Vector3(0,1,0),0);
     const pointer=new THREE.Vector2(),hit=new THREE.Vector3();
     function selectWorldPosition(event){
-      if(exploreDrag.suppress){exploreDrag.suppress=false;return;}
+      // The previous exploreDrag state belonged to the removed camera controller.
+      // Current gestures are handled by cameraGesture and finishCameraGesture.
+      // This function is called only for a completed short left click.
       if(typeof options.onSelect!=="function")return;
       const rect=view.getBoundingClientRect();
       pointer.x=(event.clientX-rect.left)/rect.width*2-1;
