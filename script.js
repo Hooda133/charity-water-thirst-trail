@@ -35,8 +35,20 @@
     getSound() {try{return localStorage.getItem("thirstTrailSound")!=="false";}catch{return true;}},
     setSound(v) {try{localStorage.setItem("thirstTrailSound",String(v));}catch{/* optional storage */}},
     tutorialSeen() {try{return localStorage.getItem("thirstTrailTutorial")==="true";}catch{return false;}},
-    markTutorialSeen() {try{localStorage.setItem("thirstTrailTutorial","true");}catch{/* optional storage */}}
+    markTutorialSeen() {try{localStorage.setItem("thirstTrailTutorial","true");}catch{/* optional storage */}},
+    getGraphics() {try{return JSON.parse(localStorage.getItem("thirstTrailGraphics")||"null");}catch{return null;}},
+    setGraphics(v) {try{localStorage.setItem("thirstTrailGraphics",JSON.stringify(v));}catch{/* optional storage */}}
   };
+  const graphicsPresets={
+    low:{resolution:.75,shadows:false,effects:false,sensitivity:.9},
+    medium:{resolution:1,shadows:true,effects:true,sensitivity:1},
+    high:{resolution:1.25,shadows:true,effects:true,sensitivity:1},
+    ultra:{resolution:1.5,shadows:true,effects:true,sensitivity:1.15}
+  };
+  const savedGraphics=safeStore.getGraphics();
+  const graphics={...graphicsPresets.medium,...(savedGraphics||{})};
+  let graphicsPreset=savedGraphics?.preset||"medium";
+  function graphicsProfile(){return {...graphics,preset:graphicsPreset};}
   const state = {
     screen:"start", energy:100, score:0, elapsed:0, x:310, y:620, moving:false,
     walkT:0, facing:1, keys:new Set(), touch:new Set(), path:[], goal:null, destination:null,
@@ -912,6 +924,44 @@
   $("modalClose").addEventListener("click",()=>closeModal());
   $("modalBackdrop").addEventListener("click",e=>{if(e.target===$("modalBackdrop")&&state.modalKind!=="end")closeModal();});
   $("soundButton").addEventListener("click",()=>{state.sound=!state.sound;$("soundButton").setAttribute("aria-pressed",String(state.sound));$("soundButton").textContent=state.sound?"♫":"♪̸";if(state.sound)tone();});
+  const graphicsPanel=$("graphicsPanel"),qualityPreset=$("qualityPreset");
+  function syncGraphicsPanel(){
+    qualityPreset.value=graphicsPresets[graphicsPreset]?graphicsPreset:"medium";
+    $("resolutionScale").value=graphics.resolution;
+    $("cameraSensitivity").value=graphics.sensitivity;
+    $("resolutionValue").textContent=Math.round(graphics.resolution*100)+"%";
+    $("sensitivityValue").textContent=Math.round(graphics.sensitivity*100)+"%";
+    $("shadowToggle").checked=graphics.shadows;
+    $("effectsToggle").checked=graphics.effects;
+  }
+  function saveGraphics(){
+    world3d?.setGraphicsSettings(graphics);
+    safeStore.setGraphics(graphicsProfile());
+    syncGraphicsPanel();
+  }
+  $("graphicsButton").addEventListener("click",()=>{
+    graphicsPanel.hidden=!graphicsPanel.hidden;
+    if(!graphicsPanel.hidden)syncGraphicsPanel();
+  });
+  $("graphicsClose").addEventListener("click",()=>{graphicsPanel.hidden=true;});
+  qualityPreset.addEventListener("change",()=>{
+    graphicsPreset=qualityPreset.value;
+    Object.assign(graphics,graphicsPresets[graphicsPreset]);
+    saveGraphics();
+  });
+  $("resolutionScale").addEventListener("input",event=>{
+    graphicsPreset="medium";graphics.resolution=Number(event.target.value);saveGraphics();
+  });
+  $("cameraSensitivity").addEventListener("input",event=>{
+    graphicsPreset="medium";graphics.sensitivity=Number(event.target.value);saveGraphics();
+  });
+  $("shadowToggle").addEventListener("change",event=>{
+    graphicsPreset="medium";graphics.shadows=event.target.checked;saveGraphics();
+  });
+  $("effectsToggle").addEventListener("change",event=>{
+    graphicsPreset="medium";graphics.effects=event.target.checked;saveGraphics();
+  });
+  syncGraphicsPanel();
   $("highScoreStart").textContent=safeStore.get()?safeStore.get().toLocaleString():"—";
   populateSidebar();updateUI();requestAnimationFrame(loop);
   // In development tests, the read-only state snapshot can be inspected without changing gameplay.
@@ -951,13 +1001,22 @@
     scene.fog = new THREE.FogExp2(0x9bc9d1, .009);
     const camera = new THREE.PerspectiveCamera(46, 1, .1, 180);
     const renderer = new THREE.WebGLRenderer({antialias:true, alpha:false, powerPreference:"high-performance"});
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.7));
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, graphics.resolution * 1.7));
     renderer.outputColorSpace = THREE.SRGBColorSpace;
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
     renderer.toneMappingExposure = 1.22;
-    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.enabled = graphics.shadows;
     renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     const view = renderer.domElement;
+    let effectsEnabled=graphics.effects;
+    let cameraSensitivity=graphics.sensitivity;
+    function applyGraphicsSettings(next){
+      effectsEnabled=!!next.effects;
+      cameraSensitivity=Math.max(.5,Math.min(1.8,Number(next.sensitivity)||1));
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,Math.max(.65,Math.min(1.5,Number(next.resolution)||1)*1.7)));
+      renderer.shadowMap.enabled=!!next.shadows;
+      sun.castShadow=!!next.shadows;
+    }
     view.id = "world3dCanvas";
     view.tabIndex = 0;
     view.setAttribute("aria-label","Three-dimensional Thirst Trail adventure world. Use WASD to walk, E to interact, or click the landscape.");
@@ -982,6 +1041,7 @@
     sun.shadow.camera.far = 90;
     sun.shadow.bias = -.00015;
     scene.add(sun, sun.target);
+    applyGraphicsSettings(graphics);
     const fill = new THREE.DirectionalLight(0x8ae5eb, .58);
     fill.position.set(18,12,8); scene.add(fill);
     const makeMat = (color, roughness=1, metalness=0) => new THREE.MeshStandardMaterial({color,roughness,metalness,flatShading:true});
@@ -2370,14 +2430,14 @@
       if(!gesture.dragged)return;
       event.preventDefault();
       if(gesture.button===2){
-        cameraYaw-=dx*.008;
-        cameraPitch=Math.max(.22,Math.min(1.18,cameraPitch+dy*.006));
+          cameraYaw-=dx*.008*cameraSensitivity;
+          cameraPitch=Math.max(.22,Math.min(1.18,cameraPitch+dy*.006*cameraSensitivity));
         return;
       }
       camera.getWorldDirection(cameraForward);
       cameraForward.y=0;cameraForward.normalize();
       cameraRight.crossVectors(cameraForward,cameraUp).normalize();
-      const scale=(cameraDistanceForWorld*cameraDistance)/Math.max(240,view.clientHeight);
+      const scale=(cameraDistanceForWorld*cameraDistance*cameraSensitivity)/Math.max(240,view.clientHeight);
       freeTarget.addScaledVector(cameraRight,-dx*scale);
       freeTarget.addScaledVector(cameraForward,dy*scale);
       clampFreeTarget();
@@ -2457,7 +2517,7 @@
       moonHalo.quaternion.copy(camera.quaternion);
       for(let i=0;i<stars.length;i++)stars[i].visible=darkSky;
       for(const firefly of fireflies){
-        firefly.glow.visible=night>.4;
+        firefly.glow.visible=effectsEnabled&&night>.4;
         if(firefly.glow.visible&&!reduceMotion){
           firefly.glow.position.set(
             firefly.baseX+Math.sin(time*.73+firefly.phase)*.34,
@@ -2521,7 +2581,7 @@
         }
       }
       explorer.userData.lastX=playerX;explorer.userData.lastZ=playerZ;
-      if(!reduceMotion){
+      if(!reduceMotion&&effectsEnabled){
         // Time-based displacement stays consistent across refresh rates.
         for(let i=0;i<ripples.length;i++){
           const wave=ripples[i];
@@ -2592,7 +2652,7 @@
             wing.pivot.rotation.z=wing.side*(Math.sin(time*6+bird.phase)*.36);
           }
         }
-      }else for(const bird of birds)bird.group.visible=false;
+      }else for(const bird of birds)bird.group.visible=effectsEnabled;
       for(let i=0;i<supplyModels.length;i++){
         const entry=supplyModels[i];
         entry.g.visible=!state.supplies?.has(entry.id);
@@ -2654,7 +2714,7 @@
           :Math.sin(time*1.3+i)*.027);
       }
       // Waterwheel and raincatch station respond to the valley wind.
-      if(!reduceMotion){
+      if(!reduceMotion&&effectsEnabled){
         rainVane.rotation.y=Math.sin(time*.35)*1.1;
         for(let i=0;i<stationDroplets.length;i++){
           const drop=stationDroplets[i],p=(i/10+time*.27)%1;
@@ -2662,7 +2722,7 @@
           drop.scale.y=.75+(1-p)*.55;
         }
       }
-      if(!reduceMotion){
+      if(!reduceMotion&&effectsEnabled){
         for(let i=0;i<cascadeStrips.length;i++){
           const strip=cascadeStrips[i];
           strip.scale.y=.96+Math.sin(time*5+i*1.7)*.06;
@@ -2677,7 +2737,7 @@
         }
         sprayRing.scale.setScalar(.94+Math.sin(time*2.4)*.12);
       }
-      if(!reduceMotion)waterwheel.rotation.z=-time*(state.done?.has("pump")?0.63:0.28);
+      if(!reduceMotion&&effectsEnabled)waterwheel.rotation.z=-time*(state.done?.has("pump")?0.63:0.28);
       const restored=!!state.done?.has("pump");
       pumpFlow.visible=restored;
       if(restored){
@@ -2769,6 +2829,7 @@
         hero?.classList.remove("is-3d");originalCanvas.style.display="";
       },
       recenter(){recenterCamera();},
+      setGraphicsSettings(next){applyGraphicsSettings(next);},
       getCanvas(){return view;},
       getAssetStatus(){return {...villageAssetState};},
       getCharacterAssetStatus(){return {...characterAssetState};}

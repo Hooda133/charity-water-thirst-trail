@@ -67,6 +67,8 @@ Automated-integration simulation checks run in the development connection cover 
 - [ ] On mobile: world header controls do not overflow, hero overlays fit, and both camera modes work without layout shifts
 - [ ] Reduced-motion preferences stop the flyover and other decorative camera movements
 - [ ] Framerate stays acceptable on an integrated-graphics laptop and there are no WebGL or console errors
+- [ ] Graphics gear menu applies Low, Medium, High and Ultra presets without restarting
+- [ ] Resolution scale, dynamic shadows, effects and camera sensitivity persist after refresh
 
 Testing caveat: Source, mocked 3D construction and gameplay checks are useful but do not replace a real browser GPU/WebGL rendering test.
 

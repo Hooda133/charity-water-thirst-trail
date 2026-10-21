@@ -30,6 +30,7 @@
 - Optional Raincatch Ridge destination with a 3D collection station, roof gutter, covered tank and interactive collection-planning activity (+220 impact points)
 - Animated articulated explorer (walking, greeting, and celebratory poses), cinematic quest rewards with 3D sparkles, and a distinctive victory presentation
 - Reduced-motion support for the newer environment and achievement animations
+- Saved graphics profiles: Low, Medium, High and Ultra presets with live resolution, shadow, effects and camera-sensitivity controls
 - Energy management, sprinting, obstacles, rest stops, impact scoring, and a timed expedition
 - Story quests, water-safety quizzes, a bonus spring route, and progressive mission feedback
 - Start, pause, resume, restart, replay, win, and out-of-energy flows
@@ -39,7 +40,7 @@
 
 ## How to play
 
-Open `index.html` in a modern browser, or serve the folder with any static file server. Use **WASD** or **arrow keys** to move, **E** or **Space** to interact, **Shift** to sprint, **P** to pause, and the **mouse wheel** to zoom. In the 3D world, click once to walk, left-drag to pan the camera without moving the explorer, right-drag to orbit around the landscape, and press **C** to return the camera to the explorer. The camera stays where you explore until you recenter it. Use **M** to hide or show the mini-map, and **V** to toggle the scenic camera. The mini-map also lets you click destination markers to plan a route. On mobile, use the directional controls. Meet the elder, gather the toolkit and gasket, rotate the 3×3 pipeline sections until water can flow from the left inlet to the right outlet, then complete the final water-safety questions. Optionally travel to Raincatch Ridge for a rainwater collection challenge or visit Wetland Sanctuary to remove litter while protecting nests and plants. Look for four sealed drinking-water caches to restore energy. Water collected from roofs still requires testing and appropriate treatment before drinking.
+Open `index.html` in a modern browser, or serve the folder with any static file server. Use **WASD** or **arrow keys** to move, **E** or **Space** to interact, **Shift** to sprint, **P** to pause, and the **mouse wheel** to zoom. In the 3D world, click once to walk, left-drag to pan the camera without moving the explorer, right-drag to orbit around the landscape, and press **C** to return the camera to the explorer. The camera stays where you explore until you recenter it. Open the gear button for saved Low, Medium, High or Ultra rendering profiles; resolution scale, shadows, effects and camera sensitivity apply immediately. Use **M** to hide or show the mini-map, and **V** to toggle the scenic camera. The mini-map also lets you click destination markers to plan a route. On mobile, use the directional controls. Meet the elder, gather the toolkit and gasket, rotate the 3×3 pipeline sections until water can flow from the left inlet to the right outlet, then complete the final water-safety questions. Optionally travel to Raincatch Ridge for a rainwater collection challenge or visit Wetland Sanctuary to remove litter while protecting nests and plants. Look for four sealed drinking-water caches to restore energy. Water collected from roofs still requires testing and appropriate treatment before drinking.
 
 ## Run locally
 
