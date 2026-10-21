@@ -639,6 +639,8 @@
         renderer.dispose();dom.remove();canvas.style.display="";
         return;
       }
+      // Smooth locomotion and heading for the shared rig (keyboard and click-to-walk).
+      const playerMotion={lastTime:0,lastX:state.x,lastY:state.y,blend:0};
       world={
         dom,renderer,scene,camera,player,limbs,marks,broken,pipeMesh,water,
         recenterCamera,
@@ -651,14 +653,24 @@
           if(dom.width!==targetWidth||dom.height!==targetHeight)
             renderer.setSize(targetWidth,targetHeight,false);
           const px=wX(state.x),pz=wZ(state.y);
-          player.position.set(px,.07+Math.sin(time*9)*.035,pz);
-          if(state.path.length){
-            const p=state.path[0];player.rotation.y=Math.atan2(wX(p.x)-px,wZ(p.y)-pz);
+          const delta=playerMotion.lastTime?
+            clamp(time-playerMotion.lastTime,0,.05):.016;
+          const dx=state.x-playerMotion.lastX,dy=state.y-playerMotion.lastY;
+          const actuallyMoving=Math.hypot(dx,dy)>.01;
+          playerMotion.lastTime=time;playerMotion.lastX=state.x;playerMotion.lastY=state.y;
+          // Don't animate or rotate against an obstacle when keys are held.
+          playerMotion.blend+=(Number(actuallyMoving)-playerMotion.blend)*
+            (1-Math.exp(-delta*9));
+          player.position.set(px,.07+Math.sin(time*9)*.027*playerMotion.blend,pz);
+          if(actuallyMoving){
+            const targetHeading=Math.atan2(dx,dy);
+            const angle=((targetHeading-player.rotation.y+3*Math.PI)%(2*Math.PI))-Math.PI;
+            player.rotation.y+=angle*(1-Math.exp(-delta*11));
           }
-          const moving=!!(state.path.length||state.keys.size);
-          const gait=Math.sin(time*9)*(moving?.52:.04);
+          const moving=actuallyMoving;
+          const gait=Math.sin(time*9)*playerMotion.blend*.52;
           for(let i=0;i<limbs.length;i++)
-            limbs[i].rotation.x=(i%2?-1:1)*Math.sin(time*9+Math.floor(i/2)*Math.PI)*(moving?.35:.025);
+            limbs[i].rotation.x=(i%2?-1:1)*Math.sin(time*9+Math.floor(i/2)*Math.PI)*(.35*playerMotion.blend+.025);
           if(explorerRig){
             const rig=explorerRig;
             rig.ExplorerLegLeft.rotation.x=gait;
