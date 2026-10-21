@@ -78,3 +78,51 @@ for(const cb of handlers.get("keyup")||[])cb({key:"w"});
 assert.ok(snapshot().screen==="playing","Movement must not end the expedition");
 console.log("✓ Valley player responds to D and W across multiple frames");
 console.log("✓ Movement, frame scheduling and gameplay state remain active");
+
+
+// Exercise the REAL camera-controller click and release functions in isolation.
+// This catches JavaScript ReferenceErrors that a keyboard-only regression misses.
+const completeScript=readFileSync(resolve(root,"script.js"),"utf8");
+function between(start,end){
+  const a=completeScript.indexOf(start);
+  const b=completeScript.indexOf(end,a+start.length);
+  assert.ok(a>=0&&b>a,"Camera controller function missing: "+start);
+  return completeScript.slice(a,b);
+}
+const selectSource=between("    function selectWorldPosition(event){",'    view.addEventListener("pointerdown"');
+const finishSource=between("    function finishCameraGesture(event){",'    view.addEventListener("pointerup"');
+const selected=[];
+const pointer={x:0,y:0},hit={x:0,z:0};
+const canvas3d={
+ getBoundingClientRect(){return {left:0,top:0,width:1000,height:610}},
+ focus(){},releasePointerCapture(){}
+};
+const raycaster={
+ setFromCamera(){},
+ ray:{intersectPlane(plane,out){out.x=2;out.z=1;return true}}
+};
+const createController=new Function("view","raycaster","pointer","camera","groundPlane",
+ "hit","WORLD_W","WORLD_H","SCALE","options",`
+ let cameraGesture=null,suppressNextClick=false;
+ ${selectSource}
+ ${finishSource}
+ return {
+  click:selectWorldPosition,
+  release(gesture,event){
+   cameraGesture=gesture;
+   finishCameraGesture(event);
+   return suppressNextClick;
+  }
+ };
+`);
+const cameraController=createController(canvas3d,raycaster,pointer,{},null,hit,1800,1100,40,
+ {onSelect(x,y){selected.push([x,y])}});
+const releaseEvent={pointerId:7,preventDefault(){}};
+const tap={button:0,dragged:false,pointerId:7};
+assert.equal(cameraController.release(tap,releaseEvent),false);
+assert.deepEqual(selected,[[980,590]],"Short click should select a walking destination");
+const moved={button:0,dragged:true,pointerId:7};
+assert.equal(cameraController.release(moved,releaseEvent),true);
+assert.equal(selected.length,1,"Dragging should not trigger click-to-walk");
+console.log("✓ Actual 3D click release selects a destination without stale camera ReferenceErrors");
+console.log("✓ Mouse dragging does not trigger walking");
