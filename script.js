@@ -48,7 +48,7 @@
   const chapters=window.TrailProgress;
   let lastValleySaveTime=0;
   function saveValley(){
-    if(state.screen!=="playing"||!chapters||state.ended||state.modalOpen)return;
+    if(state.screen!=="playing"||!chapters||state.ended)return;
     chapters.save("valley",{
       energy:Math.round(state.energy*10)/10,score:state.score,
       elapsed:Math.round(state.elapsed),x:Math.round(state.x),y:Math.round(state.y),
@@ -910,7 +910,7 @@
       lastMapDraw=t;
     }
     if(state.screen==="playing"&&!state.modalOpen){state.elapsed+=dt;handleMovement(dt);collectNearbySupplies();updateNearby();uiTimer+=dt;if(uiTimer>.18){updateUI();uiTimer=0;}if(state.elapsed-lastValleySaveTime>=8){saveValley();lastValleySaveTime=state.elapsed;}}
-    if(world3d){
+    if(world3d && $("canyonScreen").hidden){
       try { world3d.render(state,t/1000); }
       catch(error){
         console.error("3D renderer stopped; falling back to the playable 2D game.",error);
