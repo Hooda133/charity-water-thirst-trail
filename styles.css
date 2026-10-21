@@ -380,3 +380,93 @@
  .start-buttons .button-primary,.scenic-button{transition:none}
  .start-buttons .button-primary:hover{transform:none}
 }
+
+
+/* Pipeline workshop dialog: readable side-by-side board on desktop.
+   The standard modal stays unchanged for quizzes, NPCs, and other quests. */
+@media (min-width:740px){
+  .modal-card.is-pipe{
+    width:min(900px,calc(100vw - 32px));
+    max-height:calc(100dvh - 32px);
+    padding:20px 25px 22px;
+    display:grid;
+    grid-template-columns:minmax(0,.86fr) minmax(0,1.14fr);
+    grid-template-areas:
+      "top top"
+      "illustration board"
+      "title board"
+      "description board"
+      "choices board"
+      "tip board";
+    grid-template-rows:auto auto auto auto 1fr auto;
+    align-items:start;
+    column-gap:28px;
+    row-gap:0;
+    overflow-x:hidden;
+    overflow-y:auto
+  }
+  .modal-card.is-pipe .modal-upper{grid-area:top}
+  .modal-card.is-pipe .modal-illustration{
+    grid-area:illustration;margin:2px 0 0;font-size:35px
+  }
+  .modal-card.is-pipe #modalTitle{
+    grid-area:title;font-size:clamp(25px,3vw,34px);
+    line-height:1.12;letter-spacing:-.75px;margin:5px 0 11px
+  }
+  .modal-card.is-pipe #modalDescription{
+    grid-area:description;font-size:13px;line-height:1.6;margin:0 0 12px
+  }
+  .modal-card.is-pipe #pipePuzzle{
+    grid-area:board;align-self:start;justify-self:center;
+    width:100%;max-width:425px;
+    margin:10px 0 0;padding:13px 14px 10px
+  }
+  .modal-card.is-pipe .pipe-endpoints{
+    letter-spacing:.65px;margin-bottom:9px;font-size:10px
+  }
+  .modal-card.is-pipe .pipe-status{margin:10px 0 0;min-height:30px;line-height:1.4}
+  .modal-card.is-pipe #modalChoices{
+    grid-area:choices;align-self:end;
+    display:grid;gap:10px;margin:12px 0 0
+  }
+  .modal-card.is-pipe #modalChoices .choice{
+    min-height:48px;padding:11px 14px
+  }
+  .modal-card.is-pipe #modalTip{
+    grid-area:tip;margin:12px 0 0;padding:10px 12px;
+    font-size:11px;line-height:1.5
+  }
+}
+/* On phones the puzzle remains vertical, but avoids oversized headers,
+   unnecessary margins and clipped controls at short screen heights. */
+@media (max-width:739px){
+  .modal-backdrop:has(.is-pipe){padding:8px}
+  .modal-card.is-pipe{
+    width:100%;max-width:490px;
+    max-height:calc(100dvh - 16px);
+    padding:14px 16px 16px
+  }
+  .modal-card.is-pipe .modal-illustration{font-size:27px;margin:0}
+  .modal-card.is-pipe #modalTitle{
+    font-size:clamp(23px,5.8vw,29px);line-height:1.12;margin:5px 0 8px
+  }
+  .modal-card.is-pipe #modalDescription{
+    font-size:12px;line-height:1.5;margin:0 0 10px
+  }
+  .modal-card.is-pipe #pipePuzzle{
+    width:100%;max-width:360px;margin:8px auto 10px;padding:9px 11px
+  }
+  .modal-card.is-pipe .pipe-endpoints{margin-bottom:7px}
+  .modal-card.is-pipe .pipe-status{min-height:0;line-height:1.35;margin:8px 0 0}
+  .modal-card.is-pipe #modalChoices{gap:8px}
+  .modal-card.is-pipe #modalChoices .choice{padding:11px 13px;min-height:44px}
+  .modal-card.is-pipe #modalTip{
+    margin-top:11px;padding:9px 11px;font-size:11px;line-height:1.4
+  }
+}
+@media (max-height:620px) and (min-width:740px){
+  .modal-card.is-pipe{padding:11px 19px;column-gap:18px}
+  .modal-card.is-pipe #pipePuzzle{max-width:340px}
+  .modal-card.is-pipe #modalTitle{font-size:25px}
+  .modal-card.is-pipe #modalChoices .choice{min-height:40px;padding:8px 12px}
+}
