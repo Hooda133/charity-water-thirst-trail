@@ -88,6 +88,7 @@ Automated-integration simulation checks run in the development connection cover 
 - [ ] WASD/sprint movement, turn blending, scenic view, missions and click-to-walk remain functional after camera changes
 - [ ] Valley trees show forked trunks and layered canopies; understory shrubs and trail cobbles do not block routes
 - [ ] Workshop, supply depot, village square, campsite, bridge and pump remain recognizable at their existing mission coordinates
+- [ ] The timber bridge deck, rope rails, posts and stone footings render at the existing river crossing without blocking click-to-walk or WASD navigation
 - [ ] Graphics gear menu applies Low, Medium, High and Ultra presets without restarting
 - [ ] Loading overlay appears while the 3D renderer is preparing and disappears after either WebGL or the Canvas fallback is ready
 - [ ] Low/Medium/High/Ultra visibly change renderer resolution, shadow-map budget, atmospheric density and exposure while preserving gameplay

@@ -50,6 +50,7 @@
 - Cinematic lighting and water pass: time-of-day sky grading, balanced key/fill/rim lights, landmark contact shadows, animated shader-driven river highlights, water-edge glints, and tuned lantern/window/campfire illumination
 - Modern third-person camera pass: eased zoom targets, terrain-aware follow framing, orbit/pan boundaries, practical ground clearance, smooth recentering, and drag-safe click-to-walk gestures
 - Final presentation pass: loading-state transition, clearer mission/HUD hierarchy, polished inventory and quest states, and quality presets that tune resolution, shadow cost, atmospheric density and exposure
+- Greenwater Valley landmark pass: a fully modeled timber crossing with planks, rope rails, stone footings and contact shadow, integrated into the existing river route without changing gameplay collision
 - Energy management, sprinting, obstacles, rest stops, impact scoring, and a timed expedition
 - Story quests, water-safety quizzes, a bonus spring route, and progressive mission feedback
 - Start, pause, resume, restart, replay, win, and out-of-energy flows

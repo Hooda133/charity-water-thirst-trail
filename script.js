@@ -1640,6 +1640,40 @@
     road([[970,580],[1170,415],[1460,265]],.65);
     road([[1100,440],[1120,315],[1160,200]],.65);
     road([[455,765],[510,870],[560,970]],.67);
+    // Timber bridge landmark at the existing collision-safe crossing. The
+    // deck is decorative only; navigation remains governed by the 2D route.
+    function riverBridge(screenY){
+      const riverX=wx(riverCenter(screenY)),z=wz(screenY);
+      const bridgeGroup=new THREE.Group();bridgeGroup.position.set(riverX,.05,z);scene.add(bridgeGroup);
+      const bridgeWood=makeMat(0x8a5536,.92);
+      const bridgeTrim=makeMat(0xc58b55,.84);
+      const bridgeStone=makeMat(0x71856f,.98);
+      box(bridgeGroup,bridgeWood,0,0,0,5.8,.18,1.42);
+      for(let i=-8;i<=8;i++){
+        const plank=box(bridgeGroup,bridgeTrim,i*.34,.13,0,.27,.10,1.52,false);
+        plank.rotation.y=(i%3-1)*.018;
+      }
+      for(const x of [-2.45,2.45])for(const zOffset of [-.55,.55]){
+        box(bridgeGroup,bridgeWood,x,.78,zOffset,.18,1.45,.18);
+        box(bridgeGroup,bridgeTrim,x*.5,1.42,zOffset,4.9,.13,.13);
+      }
+      for(const x of [-2.15,-1.08,0,1.08,2.15])for(const zOffset of [-.55,.55])
+        box(bridgeGroup,bridgeTrim,x,.82,zOffset,.10,1.05,.10);
+      for(const x of [-2.05,2.05])for(const zOffset of [-.52,.52])
+        cyl(bridgeGroup,bridgeStone,x,-.13,zOffset,.28,.38,.62,7);
+      const ropeMat=new THREE.MeshStandardMaterial({color:0x554438,roughness:1});
+      for(const zOffset of [-.60,.60]){
+        const ropeCurve=new THREE.CatmullRomCurve3([
+          new THREE.Vector3(-2.45,1.28,zOffset),
+          new THREE.Vector3(0,1.08,zOffset),
+          new THREE.Vector3(2.45,1.28,zOffset)
+        ]);
+        const rope=new THREE.Mesh(new THREE.TubeGeometry(ropeCurve,12,.035,5,false),ropeMat);
+        bridgeGroup.add(rope);
+      }
+      contactShadow(riverX,z,2.2,.72,.16);
+    }
+    riverBridge(580);
     // Hand-set path shoulders and courtyard cobbles break up the broad grass
     // plane while staying decorative and outside the navigation collision map.
     const cobbleGeo=new THREE.IcosahedronGeometry(1,1);
