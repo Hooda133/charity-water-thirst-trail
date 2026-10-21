@@ -726,7 +726,7 @@
   }
   function help(){
     safeStore.markTutorialSeen();
-    openModal({tag:"HOW TO PLAY",icon:"🧭",title:"Your adventure guide",description:"Move using WASD or arrow keys. On phones, use the on-screen directional buttons. Click the 3D world or select a destination in the mission panel to walk there automatically. The live mini-map shows your location and route; click one of its markers to travel there, or press M to hide or show it. Press V or select SCENIC VIEW above the world to see the full valley, and press it again to follow your explorer. When you're near a glowing marker, press E or tap INTERACT. Solve challenges, collect items, rotate the pipe sections during the pump repair, and restore water before your energy runs out. Raincatch Ridge is an optional hands-on collection activity. Rest at the camp to recharge. Press Shift to sprint (uses more energy).",kind:"help",choices:[{text:"Got it — let's go!",primary:true,action:()=>closeModal()}],tip:"BONUS ROUTES: Earn a test kit at the River Bank to survey Hill Spring, or inspect the collection station at Raincatch Ridge. Your current run resets on refresh; only your best score is saved."});
+    openModal({tag:"HOW TO PLAY",icon:"🧭",title:"Your adventure guide",description:"Move using WASD or arrow keys. On phones, use the on-screen directional buttons. Click the 3D world once to walk; hold and drag with the left button to pan the camera without moving, or right-drag to rotate around the landscape. Use the mouse wheel to zoom, and press C to return the camera to your explorer. The live mini-map shows your location and route; click one of its markers to travel there, or press M to hide or show it. Press V or select SCENIC VIEW above the world to see the full valley, and press it again to follow your explorer. When you're near a glowing marker, press E or tap INTERACT. Solve challenges, collect items, rotate the pipe sections during the pump repair, and restore water before your energy runs out. Raincatch Ridge is an optional hands-on collection activity. Rest at the camp to recharge. Press Shift to sprint (uses more energy).",kind:"help",choices:[{text:"Got it — let's go!",primary:true,action:()=>closeModal()}],tip:"BONUS ROUTES: Earn a test kit at the River Bank to survey Hill Spring, or inspect the collection station at Raincatch Ridge. Your current run resets on refresh; only your best score is saved."});
   }
   const plants=[];
   let seed=24521;function random(){seed=(1664525*seed+1013904223)>>>0;return seed/4294967296;}
@@ -866,6 +866,11 @@
     if(k==="p"&&state.screen==="playing")pause();
     if(k==="m"&&state.screen==="playing"&&!e.repeat)toggleNavigator();
     if(k==="v"&&state.screen==="playing"&&!e.repeat)toggleScenicView();
+    if(k==="c"&&state.screen==="playing"&&!e.repeat){
+      world3d?.recenter();
+      state.cameraX=0;state.cameraY=0;
+      notify("Camera centered on your explorer.");
+    }
   });
   window.addEventListener("keyup",e=>state.keys.delete(e.key.toLowerCase()));
   window.addEventListener("blur",()=>{state.keys.clear();state.touch.clear();});
@@ -956,7 +961,9 @@
     view.id = "world3dCanvas";
     view.tabIndex = 0;
     view.setAttribute("aria-label","Three-dimensional Thirst Trail adventure world. Use WASD to walk, E to interact, or click the landscape.");
-    view.style.touchAction = "manipulation";
+    // Pointer gestures belong to the renderer. "manipulation" lets the browser
+    // cancel a drag as a scroll gesture before pointer capture can take effect.
+    view.style.touchAction = "none";
     view.style.display = "block";
     const host = originalCanvas.parentElement;
     const hero = document.querySelector(".hero-scene");
@@ -2284,17 +2291,51 @@
       star.visible=false;stars.push(star);
     }
     const camTarget=new THREE.Vector3(),camPos=new THREE.Vector3();
+    const freeTarget=new THREE.Vector3();
+    let freeCamera=false;
+    let cameraYaw=Math.atan2(10.2,20);
+    let cameraPitch=Math.atan2(16.3,Math.hypot(10.2,20));
+    let cameraGesture=null;
+    let suppressNextClick=false;
+    const cameraUp=new THREE.Vector3(0,1,0);
+    const cameraForward=new THREE.Vector3();
+    const cameraRight=new THREE.Vector3();
+    const cameraDistanceForWorld=29;
+    function beginFreeCamera(){
+      if(freeCamera)return;
+      freeCamera=true;
+      freeTarget.copy(explorer.position);
+      freeTarget.y=.8;
+      const offset=camera.position.clone().sub(freeTarget);
+      const horizontal=Math.max(.001,Math.hypot(offset.x,offset.z));
+      cameraYaw=Math.atan2(offset.x,offset.z);
+      cameraPitch=Math.atan2(offset.y,horizontal);
+    }
+    function recenterCamera(){
+      freeCamera=false;
+      cameraGesture=null;
+      freeTarget.copy(explorer.position);
+      freeTarget.y=.8;
+      cameraYaw=Math.atan2(10.2,20);
+      cameraPitch=Math.atan2(16.3,Math.hypot(10.2,20));
+      firstFrame=true;
+    }
+    function clampFreeTarget(){
+      freeTarget.x=Math.max(-20,Math.min(20,freeTarget.x));
+      freeTarget.z=Math.max(-13,Math.min(13,freeTarget.z));
+    }
     // Gentle camera zoom without changing the existing keyboard movement controls.
     let cameraDistance=.93;
     view.addEventListener("wheel",event=>{
       if(!view.isConnected || view.parentElement===hero)return;
       event.preventDefault();
-      cameraDistance=Math.max(.72,Math.min(1.5,cameraDistance+(event.deltaY>0?.08:-.08)));
+      beginFreeCamera();
+      cameraDistance=Math.max(.62,Math.min(1.65,cameraDistance+event.deltaY*.0009));
     },{passive:false});
     const raycaster=new THREE.Raycaster();
     const groundPlane=new THREE.Plane(new THREE.Vector3(0,1,0),0);
     const pointer=new THREE.Vector2(),hit=new THREE.Vector3();
-    view.addEventListener("click",event=>{
+    function selectWorldPosition(event){
       if(typeof options.onSelect!=="function")return;
       const rect=view.getBoundingClientRect();
       pointer.x=(event.clientX-rect.left)/rect.width*2-1;
@@ -2305,6 +2346,59 @@
       const y=Math.max(45,Math.min(WORLD_H-45,hit.z*SCALE+550));
       options.onSelect(x,y);
       view.focus({preventScroll:true});
+    }
+    view.addEventListener("pointerdown",event=>{
+      if(event.button!==0&&event.button!==2)return;
+      if(!view.isConnected || view.parentElement===hero)return;
+      event.preventDefault();
+      view.setPointerCapture?.(event.pointerId);
+      cameraGesture={
+        button:event.button,startX:event.clientX,startY:event.clientY,
+        lastX:event.clientX,lastY:event.clientY,dragged:false,pointerId:event.pointerId
+      };
+    });
+    view.addEventListener("pointermove",event=>{
+      const gesture=cameraGesture;
+      if(!gesture||event.pointerId!==gesture.pointerId)return;
+      const dx=event.clientX-gesture.lastX,dy=event.clientY-gesture.lastY;
+      const totalX=event.clientX-gesture.startX,totalY=event.clientY-gesture.startY;
+      gesture.lastX=event.clientX;gesture.lastY=event.clientY;
+      if(!gesture.dragged&&Math.hypot(totalX,totalY)>5){
+        gesture.dragged=true;
+        beginFreeCamera();
+      }
+      if(!gesture.dragged)return;
+      event.preventDefault();
+      if(gesture.button===2){
+        cameraYaw-=dx*.008;
+        cameraPitch=Math.max(.22,Math.min(1.18,cameraPitch+dy*.006));
+        return;
+      }
+      camera.getWorldDirection(cameraForward);
+      cameraForward.y=0;cameraForward.normalize();
+      cameraRight.crossVectors(cameraForward,cameraUp).normalize();
+      const scale=(cameraDistanceForWorld*cameraDistance)/Math.max(240,view.clientHeight);
+      freeTarget.addScaledVector(cameraRight,-dx*scale);
+      freeTarget.addScaledVector(cameraForward,dy*scale);
+      clampFreeTarget();
+    });
+    function finishCameraGesture(event){
+      const gesture=cameraGesture;
+      if(!gesture)return;
+      cameraGesture=null;
+      view.releasePointerCapture?.(event.pointerId);
+      if(gesture.dragged){
+        suppressNextClick=true;
+        event.preventDefault();
+      }else if(gesture.button===0){
+        selectWorldPosition(event);
+      }
+    }
+    view.addEventListener("pointerup",finishCameraGesture);
+    view.addEventListener("pointercancel",event=>{cameraGesture=null;view.releasePointerCapture?.(event.pointerId);});
+    view.addEventListener("contextmenu",event=>event.preventDefault());
+    view.addEventListener("click",event=>{
+      if(suppressNextClick){suppressNextClick=false;event.preventDefault();}
     });
     const reduceMotion=typeof window.matchMedia==="function"
       &&window.matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -2609,6 +2703,14 @@
         if(state.scenic){
           aim=new THREE.Vector3(-.8,.5,-.1);
           camPos.copy(aim).add(new THREE.Vector3(13,30,37));
+        }else if(freeCamera){
+          aim=freeTarget;
+          const horizontal=Math.cos(cameraPitch)*cameraDistanceForWorld*cameraDistance;
+          camPos.copy(aim).add(new THREE.Vector3(
+            Math.sin(cameraYaw)*horizontal,
+            Math.sin(cameraPitch)*cameraDistanceForWorld*cameraDistance,
+            Math.cos(cameraYaw)*horizontal
+          ));
         }else{
           aim=new THREE.Vector3(playerX,.8,playerZ);
           // After victory, briefly reveal more of the restored valley.
@@ -2648,7 +2750,7 @@
               if(material&&!seenMat.has(material)){
                 seenMat.add(material);material.dispose();
               }
-            }
+            };
           });
         }
         // Geometry is shared by cloned models; clean up only once per pack.
@@ -2666,6 +2768,7 @@
         renderer.dispose();view.remove();
         hero?.classList.remove("is-3d");originalCanvas.style.display="";
       },
+      recenter(){recenterCamera();},
       getCanvas(){return view;},
       getAssetStatus(){return {...villageAssetState};},
       getCharacterAssetStatus(){return {...characterAssetState};}
