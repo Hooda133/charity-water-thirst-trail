@@ -6,6 +6,8 @@
 
 - Genuine Three.js/WebGL 3D exploration with terrain, 3D buildings, a modeled explorer, lighting, shadows, camera follow, and click-to-walk
 - **Original glTF village art pipeline:** four distinct, externally loadable 3D building models with detailed roofs, porches, windows, masonry, flower boxes, and workshop furnishings
+- **New animated explorer model:** original 5,928-triangle glTF character with articulated legs, arms, elbows, head and blinking eyes, textured-color gear, boots and backpack; safely falls back to the original procedural explorer if loading fails
+- Character details, asset provenance, and rig names in [assets/characters/README.md](assets/characters/README.md); validate with `node tools/validate-explorer.mjs`
 - **Safe asset swapping:** 3D asset pack is loaded asynchronously with GLTFLoader; built-in cottages stay in place if CDN access or model loading fails
 - Asset provenance and instructions in [assets/village/README.md](assets/village/README.md); validate with `node tools/validate-village.mjs`; automatic GitHub Action checks assets on updates
 - Showcase visual pass: layered alpine backdrop, vertex-colored valley terrain, densely scattered instanced meadow flowers, and a translucent animated waterfall
