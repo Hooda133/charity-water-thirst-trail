@@ -1,0 +1,28 @@
+{
+  "version": 1,
+  "origin": "original-project-artwork",
+  "file": "explorer.gltf",
+  "format": "glTF 2.0",
+  "geometry": "embedded binary",
+  "triangles": 5928,
+  "coordinateSystem": "right-handed Y-up +Z facing forward",
+  "rootNode": "ExplorerCharacter",
+  "rigJoints": [
+    "ExplorerBody",
+    "ExplorerHead",
+    "ExplorerEyes",
+    "ExplorerScarfTail",
+    "ExplorerArmLeft",
+    "ExplorerArmRight",
+    "ExplorerElbowLeft",
+    "ExplorerElbowRight",
+    "ExplorerLegLeft",
+    "ExplorerLegRight",
+    "ExplorerKneeLeft",
+    "ExplorerKneeRight",
+    "ExplorerPackFlap"
+  ],
+  "fallback": "procedural explorer in script.js",
+  "licenseDocument": "assets/characters/ASSET_LICENSE.md",
+  "validator": "node tools/validate-explorer.mjs"
+}
