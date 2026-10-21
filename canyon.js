@@ -322,11 +322,19 @@
       scene.fog=new THREE.FogExp2(0xe0b897,.0068);
       const camera=new THREE.PerspectiveCamera(47,1000/610,.1,300);
       camera.position.set(7.4,10.5,13.6);camera.lookAt(0,0,0);
+      // Honor the player's saved Valley graphics profile in Canyon as well.
+      let graphics={};
+      try{graphics=JSON.parse(localStorage.getItem("thirstTrailGraphics")||"null")||{};}
+      catch{/* use safe defaults when browser storage is disabled */}
+      const graphicsQuality=["low","medium","high","ultra"].includes(graphics.preset)?
+        graphics.preset:"high";
       const renderer=new THREE.WebGLRenderer({alpha:false,antialias:true,powerPreference:"high-performance"});
-      renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,1.6));
+      const requestedScale=clamp(Number(graphics.resolution)||1.1,.65,1.5);
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,requestedScale*1.65));
       renderer.outputColorSpace=THREE.SRGBColorSpace;
       renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.14;
-      renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;
+      renderer.shadowMap.enabled=graphics.shadows!==false;
+      renderer.shadowMap.type=THREE.PCFSoftShadowMap;
       const dom=renderer.domElement;dom.className="canyon-webgl";
       dom.style.cssText="display:block;width:100%;height:auto;aspect-ratio:1000/610;touch-action:none;outline:none";
       dom.tabIndex=0;
@@ -337,8 +345,11 @@
       const sand=mat(0xd8aa76),path=mat(0xf1d2a0),timber=mat(0x86624b),iron=mat(0x768d90,.25),teal=mat(0x5a9e9b);
       const water=new THREE.MeshStandardMaterial({color:0x50b1b9,roughness:.31,metalness:.05,transparent:true,opacity:.91});
       const hemi=new THREE.HemisphereLight(0xdff3f5,0x8d6656,1.55);scene.add(hemi);
-      const sun=new THREE.DirectionalLight(0xffd6a0,3.2);sun.position.set(-18,29,12);sun.castShadow=true;
-      sun.shadow.mapSize.set(2048,2048);sun.shadow.camera.left=-36;sun.shadow.camera.right=36;
+      const sun=new THREE.DirectionalLight(0xffd6a0,3.2);
+      sun.position.set(-18,29,12);sun.castShadow=renderer.shadowMap.enabled;
+      const shadowSize=graphicsQuality==="low"?512:graphicsQuality==="medium"?1024:
+        graphicsQuality==="high"?1536:2048;
+      sun.shadow.mapSize.set(shadowSize,shadowSize);sun.shadow.camera.left=-36;sun.shadow.camera.right=36;
       sun.shadow.camera.top=29;sun.shadow.camera.bottom=-29;sun.shadow.bias=-.0003;
       scene.add(sun);const fill=new THREE.DirectionalLight(0xa9dadd,.65);fill.position.set(16,12,-9);scene.add(fill);
       const put=(geometry,material,x,y,z,shadow=true)=>{
