@@ -1383,6 +1383,34 @@
       butterflies.push({group,x:bx,z:bz,phase:rng()*6.283});
     }
     // Village cottages use wall volumes, roof geometry, windows, chimney and door.
+    // Shared pitched-roof geometry with real gable ends. The old cottage
+    // roofs were square pyramids and read like low-detail placeholders.
+    const roofGeo=new THREE.BufferGeometry();
+    const roofVertices=[
+      -1.88,2.51,-1.64, 0,3.91,-1.64, -1.88,2.51,1.64, 0,3.91,1.64,
+       0,3.91,-1.64, 1.88,2.51,-1.64, 0,3.91,1.64, 1.88,2.51,1.64
+    ];
+    const roofUV=[0,0,3.4,0,0,4.6,3.4,4.6,0,0,3.4,0,0,4.6,3.4,4.6];
+    roofGeo.setAttribute("position",new THREE.Float32BufferAttribute(roofVertices,3));
+    roofGeo.setAttribute("uv",new THREE.Float32BufferAttribute(roofUV,2));
+    roofGeo.setIndex([0,2,1,1,2,3,4,6,5,5,6,7]);
+    roofGeo.computeVertexNormals();
+    mats.roof.side=THREE.DoubleSide;
+    const gableGeo=new THREE.BufferGeometry();
+    gableGeo.setAttribute("position",new THREE.Float32BufferAttribute([
+      -1.65,2.51,1.38,1.65,2.51,1.38,0,3.72,1.38,
+      -1.65,2.51,-1.38,1.65,2.51,-1.38,0,3.72,-1.38
+    ],3));
+    gableGeo.setAttribute("uv",new THREE.Float32BufferAttribute([0,0,1,0,.5,1,0,0,1,0,.5,1],2));
+    gableGeo.setIndex([0,1,2,5,4,3]);gableGeo.computeVertexNormals();
+    const warmWindow=new THREE.MeshStandardMaterial({
+      color:0xffc884,emissive:0xffb05c,emissiveIntensity:.49,
+      roughness:.36,metalness:0
+    });
+    const chimneySmokeMat=new THREE.MeshBasicMaterial({
+      color:0xd7eee1,transparent:true,opacity:.37,depthWrite:false
+    });
+    const chimneySmokes=[];
     function cottage(px,py,size=1,tint=0xf0d5a3){
       const g=new THREE.Group();g.position.set(wx(px),0,wz(py));g.scale.setScalar(size);scene.add(g);
       const wall=makeMat(tint);
@@ -1392,17 +1420,54 @@
       ball(g,mats.gold,.26,.92,1.47,.06);
       for(const x of [-1.1,1.1]){
         box(g,mats.dark,x,1.67,1.38,.61,.72,.07);
-        box(g,makeMat(0xa5e8e7),x,1.67,1.43,.44,.55,.05);
+        box(g,warmWindow,x,1.67,1.43,.44,.55,.05);
         box(g,mats.trim,x,1.66,1.49,.065,.65,.055);
         box(g,mats.trim,x,1.66,1.49,.50,.065,.055);
+        box(g,mats.wood,x,1.32,1.52,.73,.09,.22);
+        for(const side of [-1,1]){
+          const shutter=box(g,mats.wood,x+side*.37,1.68,1.46,.20,.76,.09);
+          shutter.rotation.y=side*.14;
+        }
       }
-      const roof=mesh(new THREE.ConeGeometry(2.48,1.8,4),mats.roof,g);
-      roof.position.set(0,3.16,0);roof.rotation.y=Math.PI/4;roof.scale.z=.83;
-      box(g,mats.rock2,-.9,3.25,-.35,.38,1.1,.38);
+      const gables=mesh(gableGeo,wall,g);
+      gables.material.side=THREE.DoubleSide;
+      const roof=mesh(roofGeo,mats.roof,g);
+      for(const side of [-1,1]){
+        const eave=box(g,mats.roofDark,side*1.88,2.52,0,.14,.16,3.48);
+        eave.castShadow=false;
+        // Actual sloped trim along the front and back edges.
+        for(const z of [-1.65,1.65]){
+          const rafter=box(g,mats.lightWood,side*.94,3.23,z,.11,.12,2.34);
+          rafter.rotation.z=side*.64;
+        }
+      }
+      const chimney=box(g,mats.rock2,-.98,3.30,-.42,.46,1.25,.48);
+      for(let row=0;row<5;row++){
+        box(g,row%2?mats.rock:mats.rock2,-.98,2.78+row*.24,-.16,.52,.057,.055,false);
+      }
+      box(g,mats.rock,-.98,3.98,-.42,.59,.14,.62);
+      // Small translucent chimney smoke puffs, no heavy volumetric effects.
+      const smoke=new THREE.Group();smoke.position.set(-.98,4.08,-.42);
+      g.add(smoke);
+      for(let i=0;i<5;i++){
+        const puff=ball(smoke,chimneySmokeMat,0,i*.28,0,
+          .17+i*.037,.13+i*.03,.16+i*.032,false);
+        chimneySmokes.push({puff,phase:i*.9+px*.01,source:smoke});
+      }
       for(const x of [-1.47,1.47]){
+        box(g,mats.wood,x,1.26,1.43,.15,2.5,.13);
         box(g,mats.wood,x,.3,0,.17,.6,2.8);
         box(g,mats.wood,x,1.95,1.44,.13,.95,.13);
         box(g,mats.lightWood,x,1.22,1.51,.16,.11,.16);
+      }
+      // Cottage timber framing adds structure to the previously flat walls.
+      for(const yy of [.43,2.38]){
+        box(g,mats.wood,0,yy,1.39,3.13,.11,.15);
+        box(g,mats.wood,0,yy,-1.39,3.13,.11,.15);
+      }
+      for(const z of [-1.23,1.23]){
+        box(g,mats.wood,-1.62,1.25,z,.10,2.50,.10);
+        box(g,mats.wood,1.62,1.25,z,.10,2.50,.10);
       }
       // Roof ridge, shutter panels, planters and entry step.
       box(g,mats.roofDark,0,3.85,0,.13,.14,3.48);
@@ -2101,6 +2166,11 @@
             if(pivot.userData.side)pivot.rotation.y=pivot.userData.side*Math.sin(time*15+item.phase)*.95;
           }
         }
+      }
+      if(!reduceMotion)for(const smoke of chimneySmokes){
+        const t=(time*.27+smoke.phase)%1.7;
+        smoke.puff.position.set(Math.sin(time*.7+smoke.phase)*t*.16,t*1.45,0);
+        smoke.puff.scale.setScalar(.72+t*.24);
       }
       if(!reduceMotion)for(let i=0;i<clouds.length;i++){
         clouds[i].position.x+=.0014;
