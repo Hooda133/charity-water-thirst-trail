@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64">
+  <title>Thirst Trail water drop</title>
+  <rect width="64" height="64" rx="16" fill="#0c2833"/>
+  <path d="M32 8C28 15 16 28 16 39a16 16 0 0 0 32 0C48 28 36 15 32 8Z" fill="#58c9c7"/>
+  <path d="M25 43a8 8 0 0 1-2-10" fill="none" stroke="#d4fbef" stroke-linecap="round" stroke-width="4"/>
+  <path d="m47 12 2.2 4.8L54 19l-4.8 2.2L47 26l-2.2-4.8L40 19l4.8-2.2Z" fill="#fbd374"/>
+</svg>
