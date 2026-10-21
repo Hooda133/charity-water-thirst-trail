@@ -40,7 +40,7 @@ const node=(id="div")=>{
 };
 const document={
  getElementById(id){if(!nodes.has(id))nodes.set(id,node(id));return nodes.get(id)},
- createElement:node,querySelectorAll(){return []},querySelector(){return node()}
+ createElement:node,querySelectorAll(){return []},querySelector(){return node()},addEventListener(){}
 };
 const window={
  TrailProgress:null,
