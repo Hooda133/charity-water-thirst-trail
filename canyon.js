@@ -313,6 +313,7 @@
       const scene=new THREE.Scene();scene.background=new THREE.Color(0xcba992);
       scene.fog=new THREE.FogExp2(0xd8bca4,.009);
       const camera=new THREE.PerspectiveCamera(52,1000/610,.1,250);
+      camera.position.set(10,15,19);camera.lookAt(0,0,0);
       const renderer=new THREE.WebGLRenderer({alpha:false,antialias:true,powerPreference:"high-performance"});
       renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,1.6));
       renderer.outputColorSpace=THREE.SRGBColorSpace;
@@ -434,6 +435,23 @@
         ring.rotation.x=-Math.PI/2;ring.position.y=.09;group.add(ring);
         const pillar=new THREE.Mesh(new THREE.CylinderGeometry(.08,.11,1.4,8),gold);
         pillar.position.y=.90;group.add(pillar);
+        // Canvas-backed nameplates remain readable in the distant canyon.
+        const tag=document.createElement("canvas");tag.width=384;tag.height=72;
+        const tc=tag.getContext("2d");
+        if(tc){
+          tc.fillStyle="#153d42e6";
+          tc.beginPath();tc.roundRect(6,7,372,58,15);tc.fill();
+          tc.strokeStyle="#ffe2a8";tc.lineWidth=3;tc.stroke();
+          tc.fillStyle="#fff8df";tc.font="bold 26px sans-serif";
+          tc.textAlign="center";tc.textBaseline="middle";
+          tc.fillText(obj.title,192,36,352);
+          const texture=new THREE.CanvasTexture(tag);
+          texture.colorSpace=THREE.SRGBColorSpace;
+          const sprite=new THREE.Sprite(new THREE.SpriteMaterial({
+            map:texture,transparent:true,depthWrite:false}));
+          sprite.scale.set(3.9,.74,1);
+          sprite.position.y=2.65;group.add(sprite);
+        }
         marks.push({key,ring,pillar});
       }
       // Character: local procedural fallback renders immediately.
@@ -468,6 +486,10 @@
         }
       }
       dom.addEventListener("click",select);
+      if(!state.active){
+        renderer.dispose();dom.remove();canvas.style.display="";
+        return;
+      }
       world={
         dom,renderer,scene,camera,player,limbs,marks,broken,pipeMesh,water,
         draw(time){
