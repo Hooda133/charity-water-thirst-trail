@@ -917,10 +917,11 @@
      Original quest, energy and interaction logic remains in script.js.
      Three.js is loaded at runtime; if unavailable, the original 2D game remains playable. */
   async function createWorld(originalCanvas, options = {}) {
-    let THREE;
+    let THREE, usePinnedThree=true;
     try {
       THREE = await import("https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js");
     } catch (primaryError) {
+      usePinnedThree=false;
       THREE = await import("https://esm.sh/three@0.170.0");
     }
   
@@ -1580,8 +1581,57 @@
       }
       return g;
     }
-    cottage(150,400,1.15);cottage(345,270,.86,0xeac7a3);cottage(270,830,.75,0xf8d2b4);
-    cottage(460,760,.87,0xe0bc8c);
+    // A real glTF asset pipeline, with one original authored model pack.
+    // The existing procedural houses remain visible until a model is fully
+    // loaded and validated. If CDN access, parsing, or asset fetch fails,
+    // the adventure keeps the playable fallback village.
+    const villagePlacements=[
+      {name:"ElderHall",x:150,y:400,size:1.15,tint:0xf0d5a3},
+      {name:"UpperCottage",x:345,y:270,size:.86,tint:0xeac7a3},
+      {name:"LowerCottage",x:270,y:830,size:.75,tint:0xf8d2b4},
+      {name:"Workshop",x:460,y:760,size:.87,tint:0xe0bc8c}
+    ];
+    const villageFallbacks=villagePlacements.map(p=>cottage(p.x,p.y,p.size,p.tint));
+    const upgradedVillageObjects=[];
+    let villageAssetDisposed=false;
+    const villageAssetState={status:"fallback",loaded:0,total:villagePlacements.length};
+    async function loadVillageModels(){
+      if(options.skipExternalAssets||!usePinnedThree)return;
+      villageAssetState.status="loading";
+      try{
+        // Import-map pin ensures GLTFLoader shares this exact Three.js runtime.
+        const {GLTFLoader}=await import("three/addons/loaders/GLTFLoader.js");
+        if(villageAssetDisposed)return;
+        const loader=new GLTFLoader();
+        const assetUrl=new URL("./assets/village/village-kit.gltf",document.baseURI).href;
+        const pack=await loader.loadAsync(assetUrl);
+        if(villageAssetDisposed)return;
+        for(let i=0;i<villagePlacements.length;i++){
+          const p=villagePlacements[i];
+          const original=pack.scene.getObjectByName(p.name);
+          if(!original || !original.children?.length)continue;
+          const asset=original.clone(true);
+          asset.position.set(wx(p.x),0,wz(p.y));
+          asset.scale.setScalar(p.size);
+          asset.traverse(node=>{
+            if(node.isMesh){
+              node.castShadow=true;node.receiveShadow=true;
+            }
+          });
+          scene.add(asset);
+          upgradedVillageObjects.push(asset);
+          villageFallbacks[i].visible=false;
+          villageAssetState.loaded++;
+        }
+        villageAssetState.status=villageAssetState.loaded?"ready":"fallback";
+        if(villageAssetState.loaded)console.info(
+          "Thirst Trail: loaded "+villageAssetState.loaded+" original glTF village models.");
+      }catch(error){
+        villageAssetState.status="fallback";
+        console.warn("Thirst Trail: keeping procedural village (model pack unavailable)",error);
+      }
+    }
+    void loadVillageModels();
     // Fence and field props create a sense of place around the homes.
     function fence(x,z,length=5){
       for(let i=0;i<=length;i++){
@@ -2456,8 +2506,25 @@
     return {
       render,
       focus(){view.focus({preventScroll:true});},
-      dispose(){renderer.dispose();view.remove();hero?.classList.remove("is-3d");originalCanvas.style.display="";},
-      getCanvas(){return view;}
+      dispose(){
+        villageAssetDisposed=true;
+        // Geometry is shared by cloned models; clean up only once per pack.
+        const seenGeometries=new Set(),seenMaterials=new Set();
+        for(const root of upgradedVillageObjects)root.traverse(object=>{
+          if(!object.isMesh)return;
+          if(object.geometry && !seenGeometries.has(object.geometry)){
+            seenGeometries.add(object.geometry);object.geometry.dispose();
+          }
+          const materials=Array.isArray(object.material)?object.material:[object.material];
+          for(const mat of materials)if(mat&&!seenMaterials.has(mat)){
+            seenMaterials.add(mat);mat.dispose();
+          }
+        });
+        renderer.dispose();view.remove();
+        hero?.classList.remove("is-3d");originalCanvas.style.display="";
+      },
+      getCanvas(){return view;},
+      getAssetStatus(){return {...villageAssetState};}
     };
   }
   
