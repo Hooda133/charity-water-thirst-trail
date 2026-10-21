@@ -1,0 +1,114 @@
+
+/* Thirst Trail 2.0 — chapter hub and Forgotten Canyon. */
+.chapter-select{margin-top:26px;max-width:580px}
+.chapter-select-heading{display:grid;gap:5px;margin-bottom:13px}
+.chapter-select-heading h2{font-size:22px;letter-spacing:-.4px;margin:0;color:#f8f4e6}
+.chapter-select-heading small{color:#99c1c1}
+.chapter-select-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.chapter-select-card{appearance:none;text-align:left;display:grid;gap:8px;padding:17px 15px;min-height:156px;
+ border:1px solid #9bd7c05b;border-radius:14px;background:linear-gradient(145deg,#173a43,#102a34);
+ color:#f5f2dc;cursor:pointer;transition:transform .15s,border-color .15s,box-shadow .15s;
+ box-shadow:0 8px 19px #05161a4d}
+.chapter-select-card strong{font-size:16px;line-height:1.3}
+.chapter-select-card small{font-size:11px;line-height:1.5;color:#a6cccc}
+.chapter-select-number{font-size:9px;letter-spacing:1.3px;color:#f2d16e;font-weight:900}
+.chapter-select-status{color:#a4eed7;font-size:11px;font-weight:800}
+.chapter-select-card:not(:disabled):hover{transform:translateY(-3px);border-color:#e9d17e;box-shadow:0 15px 28px #02171f77}
+.chapter-select-card:focus-visible{outline:3px solid #f3ce67;outline-offset:2px}
+.chapter-select-card.is-locked{cursor:not-allowed;opacity:.57;filter:saturate(.55)}
+.chapter-select-card.is-locked .chapter-select-status{color:#c4beb1}
+.canyon-screen{padding:20px 0 34px}
+.canyon-header{display:flex;justify-content:space-between;align-items:center;gap:20px;margin-bottom:18px;padding:20px 22px;
+ background:linear-gradient(125deg,#283f43,#173440 63%,#21454b);border:1px solid #a9bea654;
+ border-radius:18px;box-shadow:0 14px 32px #07151d66}
+.canyon-header h2{font-size:clamp(22px,3vw,34px);margin:5px 0;line-height:1.1;color:#f6eee0}
+.canyon-header p{color:#b9d1d3;font-size:12px;margin:0}
+.canyon-controls{display:flex;align-items:center;gap:9px;flex-wrap:wrap;justify-content:flex-end}
+.canyon-progress-label{font-weight:900;font-size:11px;color:#f9dfa0;white-space:nowrap;margin-right:8px}
+.canyon-layout{display:grid;grid-template-columns:minmax(0,1fr) 306px;gap:15px;align-items:start}
+.canyon-stage{border:1px solid #a7a88c67;border-radius:18px;overflow:hidden;min-width:0;position:relative;
+ box-shadow:0 27px 60px #051a2388;background:#b6d9d2}
+.canyon-stage-heading{display:flex;justify-content:space-between;gap:12px;align-items:center;
+ background:linear-gradient(95deg,#3b3336,#334f4b);padding:14px 17px;
+ color:#ffda8d;font-weight:900;font-size:10px;letter-spacing:1.2px}
+.canyon-stage-heading span+span{color:#bfddd4;font-size:10px;font-weight:700;letter-spacing:.2px}
+#canyonCanvas{display:block;width:100%;height:auto;aspect-ratio:1000/610;outline:none;touch-action:none;background:#c8c9a8}
+.canyon-overlay-hud{position:absolute;left:16px;top:65px;display:flex;gap:7px;flex-wrap:wrap;pointer-events:none}
+.canyon-overlay-hud span{font-size:10px;font-weight:900;color:#fff6db;padding:9px 11px;border-radius:10px;
+ background:#132e3bdc;border:1px solid #cee4bb70;box-shadow:0 6px 14px #02181e66}
+.canyon-prompt{position:absolute;bottom:57px;left:50%;transform:translateX(-50%);background:#142f39eb;color:#f5e4a1;
+ padding:9px 12px;display:flex;align-items:center;gap:15px;border:1px solid #e7d29288;border-radius:11px;font-size:11px;font-weight:900;z-index:2}
+.canyon-prompt[hidden]{display:none}
+.canyon-prompt button{border:0;border-radius:7px;background:#f5d969;color:#1e3439;padding:8px 12px;cursor:pointer;font-weight:900}
+.canyon-key-hint{position:absolute;bottom:12px;left:13px;display:flex;gap:5px;align-items:center;
+ font-size:9px;font-weight:900;color:#f4ffeb;text-shadow:0 2px 5px #102725}
+.canyon-key-hint kbd{border-radius:4px;padding:4px 6px;background:#1d3d48dd;border:1px solid #e9fbe180;font-size:10px}
+.canyon-key-hint span{margin-left:9px}
+.canyon-toast{position:absolute;z-index:4;top:113px;left:18px;right:18px;width:max-content;max-width:calc(100% - 36px);
+ padding:11px 14px;background:#133c42e8;color:#f7e4a6;border:1px solid #e0c27177;
+ border-radius:11px;font-size:12px;font-weight:750;pointer-events:none}
+.canyon-toast[hidden]{display:none}
+.canyon-touch-controls{display:none}
+.canyon-sidebar{background:linear-gradient(165deg,#1a3d43,#14313a);border:1px solid #68979273;
+ box-shadow:0 17px 38px #06151b66;padding:21px 17px;border-radius:18px;display:grid;gap:11px}
+.canyon-sidebar h3{font-size:23px;line-height:1.1;margin:0;color:#fff6e4}
+.canyon-sidebar p{font-size:11px;line-height:1.65;color:#abd0ca;margin:0}
+.canyon-progress-track{height:9px;border-radius:50px;background:#486568;overflow:hidden;margin-bottom:5px}
+.canyon-progress-track span{height:100%;display:block;width:0;background:linear-gradient(95deg,#e7aa62,#f7df9e);transition:width .3s}
+.canyon-quest-list,.canyon-destinations{display:grid;gap:7px;margin-bottom:8px}
+.canyon-quest{display:flex;gap:10px;align-items:center;border-radius:10px;background:#ffffff09;
+ padding:11px;border:1px solid #9bc0a729;color:#f3f0dc}
+.canyon-quest.done{background:#3d8d6533;border-color:#79df9e77}
+.canyon-quest .canyon-quest-icon{font-size:18px;min-width:22px}
+.canyon-quest strong{display:block;font-size:11px;line-height:1.35}
+.canyon-quest small{display:block;color:#a1c2c6;font-size:10px;line-height:1.5}
+.canyon-destination{display:flex;align-items:center;justify-content:space-between;width:100%;gap:10px;
+ text-align:left;background:#ffffff0c;border:1px solid #9ac3aa39;color:#f6f0d9;
+ border-radius:8px;padding:10px 11px;font-size:11px;font-weight:800;cursor:pointer}
+.canyon-destination:hover{background:#52988733}
+.canyon-destination:focus-visible{outline:2px solid #e8ce73;outline-offset:2px}
+.canyon-destination.done{color:#9ddfb4}
+.canyon-save-note{font-size:10px!important;color:#efcb8e!important}
+.canyon-modal-backdrop{position:fixed;inset:0;z-index:800;display:grid;place-items:center;
+ background:#061824d9;padding:16px;backdrop-filter:blur(7px)}
+.canyon-modal-backdrop[hidden]{display:none}
+.canyon-modal{border:1px solid #c3ae8e84;background:linear-gradient(140deg,#2d4142,#16343d);color:#fff6e6;
+ border-radius:21px;box-shadow:0 32px 95px #000b;width:min(610px,100%);max-height:calc(100dvh - 32px);
+ overflow:auto;padding:27px;outline:none}
+.canyon-modal-tag{font-size:10px;letter-spacing:1.5px;color:#f7d58d;font-weight:900}
+.canyon-modal h2{font-size:clamp(22px,4vw,32px);margin:12px 0;line-height:1.12}
+.canyon-modal p{line-height:1.65;color:#d5e5db;font-size:13px}
+.canyon-modal-options{display:grid;gap:9px;margin-top:18px}
+.canyon-modal-options button{border:1px solid #a2c4b76e;border-radius:10px;background:#325057;color:#f8f5e7;
+ padding:13px 15px;text-align:left;cursor:pointer;font-weight:850;font-size:12px}
+.canyon-modal-options button.primary{background:linear-gradient(110deg,#f2be62,#ffe194);color:#24323a;border-color:#ffe9a4}
+.canyon-modal-options button:hover{filter:brightness(1.1)}
+.canyon-pressure{display:grid;gap:13px;padding:17px;margin-top:15px;background:#0a2e3b78;border:1px solid #9dc6ae6e;border-radius:13px}
+.canyon-valve{display:flex;align-items:center;justify-content:space-between;gap:16px}
+.canyon-valve strong{font-size:12px}
+.canyon-valve button{min-width:110px;border-radius:9px;background:#e4b873;color:#233741;padding:10px;border:0;font-weight:900;cursor:pointer}
+.canyon-pressure-meter{height:13px;background:#597272;border-radius:50px;overflow:hidden}
+.canyon-pressure-meter span{height:100%;width:0;display:block;background:linear-gradient(90deg,#6bcbbf,#f3d58a);transition:width .2s}
+.canyon-pressure-hint{font-size:11px;color:#cbe8d5}
+.canyon-repair-tiles{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+.canyon-repair-tiles button{padding:15px 5px;border-radius:9px;border:1px solid #96baa8;background:#375962;color:#e5f5ef;font-size:20px;cursor:pointer}
+.canyon-repair-tiles button.selected{background:#447b64;border-color:#f2d78c}
+.canyon-repair-tiles button small{font-size:9px;display:block;margin-top:5px}
+@media(max-width:1070px){.canyon-layout{grid-template-columns:minmax(0,1fr) 265px}.canyon-header{padding:16px}}
+@media(max-width:760px){
+ .chapter-select-grid{grid-template-columns:1fr}
+ .chapter-select-card{min-height:130px}
+ .canyon-layout{grid-template-columns:1fr}
+ .canyon-header{align-items:flex-start;flex-direction:column}
+ .canyon-controls{justify-content:flex-start}
+ .canyon-stage-heading span+span{display:none}
+ .canyon-overlay-hud{left:8px;top:56px;gap:3px}
+ .canyon-overlay-hud span{padding:6px;font-size:8px}
+ .canyon-key-hint{display:none}
+ .canyon-touch-controls{position:absolute;bottom:8px;left:8px;display:flex;gap:3px}
+ .canyon-touch-controls button{border:1px solid #fff8;border-radius:6px;min-width:37px;min-height:35px;background:#193f49db;color:#fff5df;font-size:11px}
+ .canyon-touch-controls #canyonTouchInteract{background:#f4d27a;color:#152f39;font-weight:900}
+ .canyon-prompt{bottom:55px;white-space:nowrap;max-width:calc(100% - 10px)}
+ .canyon-modal{padding:19px}
+}
+@media(prefers-reduced-motion:reduce){.chapter-select-card,.canyon-progress-track span,.canyon-pressure-meter span{transition:none}}
