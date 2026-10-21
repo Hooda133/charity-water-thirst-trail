@@ -82,3 +82,17 @@ Testing caveat: Source, mocked 3D construction and gameplay checks are useful bu
 - [ ] Run the pipe repair, Raincatch Ridge and Wetland Sanctuary activities end-to-end to confirm unchanged gameplay
 
 The previously generated premium screenshots are **visual direction references**, not screenshots from the game. This rebuild improves the real in-browser rendering; a matching high-fidelity environment would require a dedicated authored-asset pipeline, meshes, materials, and visual validation on a GPU.
+
+
+## Screenshot-driven valley cleanup
+- [ ] Alpine peaks stay in the far background instead of crowding the top of the playable frame
+- [ ] Village buildings and marker labels remain readable despite foreground trees
+- [ ] Chimney smoke is soft and translucent, not opaque round white bubbles
+- [ ] The river remains teal across sunlit views without a white reflective wedge
+- [ ] Distant birds appear as pale small silhouettes instead of black foreground triangles
+- [ ] Riverbanks look irregular and natural, without dense rows of boulders
+- [ ] After stepping onto the middle of the bridge, select Village Elder and verify auto-walk moves to the **left** bank
+- [ ] Repeat from the bridge center to Supply Depot and verify auto-walk moves to the **right** bank
+- [ ] Confirm older tasks, pipe challenge, Raincatch Ridge and Wetland Sanctuary still work
+
+Actual visual rendering and performance must be verified in a browser using WebGL.
