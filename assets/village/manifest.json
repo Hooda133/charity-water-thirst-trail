@@ -1,0 +1,19 @@
+{
+  "version": 1,
+  "type": "gltf-village-pack",
+  "path": "assets/village/village-kit.gltf",
+  "fileFormat": "gltf2",
+  "buffer": "embedded-data-uri",
+  "origin": "original-project-art",
+  "nodes": [
+    "ElderHall",
+    "UpperCottage",
+    "LowerCottage",
+    "Workshop"
+  ],
+  "coordinateSystem": "right-handed Y-up +Z-front",
+  "scale": "original procedural house footprint, scale applied per placement",
+  "licenseDocument": "assets/village/ASSET_LICENSE.md",
+  "runtimeFallback": "procedural cottages in script.js",
+  "validationCommand": "node tools/validate-village.mjs"
+}
