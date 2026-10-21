@@ -715,23 +715,56 @@
     return {solved:delivered&&seen.size===PIPE_BASE.length&&leaks.length===0,
       delivered,connected:seen,leaks};
   }
+  // A deterministic guide follows one verified leak-free layout without automatically solving it.
+  // Prioritize the inlet, then the upper route, the outlet and the two capped branches.
+  const PIPE_HINT_ORDER=[3,0,1,2,5,4,7,6,8];
+  function showPipeHint(){
+    if(state.modalKind!=="pipe")return;
+    const next=PIPE_HINT_ORDER.find(i=>pipeTurns[i]%4!==0);
+    const status=$("pipeStatus");
+    if(next===undefined){
+      status.className="pipe-status is-success";
+      status.textContent="All tiles match a valid leak-free network. Select Test the flow!";
+      return;
+    }
+    const needed=(4-(pipeTurns[next]%4))%4;
+    const row=Math.floor(next/3)+1,col=next%3+1;
+    status.className="pipe-status is-hint";
+    status.textContent="Hint: Tile "+(next+1)+" (row "+row+", column "+col+"): click "+
+      needed+" more time"+(needed===1?"":"s")+" clockwise. Then follow the illuminated water route.";
+  }
   function renderPipePuzzle(){
     const board=$("pipeGrid");board.replaceChildren();
     const flow=pipeFlow(),status=$("pipeStatus");
     for(let i=0;i<9;i++){
       const button=document.createElement("button");
       button.type="button";
-      button.className="pipe-tile"+(flow.connected.has(i)?" is-connected":"");
+      const supplied=flow.connected.has(i);
+      const leakDirections=new Set(flow.leaks.filter(leak=>leak.tile===i).map(leak=>leak.direction));
+      button.className="pipe-tile"+(supplied?" is-connected":"")+
+        (leakDirections.size?" is-leaking":"")+(i===3||i===5?" is-terminal":"");
       const ports=rotatedPipe(i);
       button.setAttribute("aria-label",
         "Pipe row "+(Math.floor(i/3)+1)+", column "+(i%3+1)+
-        ". Open "+ports.join(" and ")+". Click to rotate clockwise.");
+        ". Open "+ports.join(" and ")+
+        (supplied?". Water reaches this pipe.":". Not yet supplied.")+
+        (leakDirections.size?". Open joint pointing "+[...leakDirections].join(", ")+".":"")+
+        (i===3?". Water enters from the LEFT.":i===5?". Village outlet is on the RIGHT.":"")+
+        " Click to rotate clockwise.");
       const number=document.createElement("span");
       number.className="pipe-tile-number";number.textContent=String(i+1);
       button.append(number);
+      if(i===3||i===5){
+        const endpoint=document.createElement("span");
+        endpoint.className="pipe-terminal-badge"+(
+          i===3&&ports.includes("w")||i===5&&ports.includes("e")?" is-aligned":"");
+        endpoint.textContent=i===3?"◀ IN":"OUT ▶";
+        endpoint.setAttribute("aria-hidden","true");
+        button.append(endpoint);
+      }
       for(const dir of ports){
         const arm=document.createElement("span");
-        arm.className="pipe-arm "+dir;
+        arm.className="pipe-arm "+dir+(supplied?" is-flowing":"")+(leakDirections.has(dir)?" is-leaking":"");
         arm.setAttribute("aria-hidden","true");
         button.append(arm);
       }
@@ -740,18 +773,22 @@
       button.addEventListener("click",()=>rotatePipe(i));
       board.append(button);
     }
+    const firstLeak=flow.leaks[0];
+    const directionName={n:"north (top)",e:"east (right)",s:"south (bottom)",w:"west (left)"};
+    const leakHelp=firstLeak?" Open joint: tile "+(firstLeak.tile+1)+
+      " points "+directionName[firstLeak.direction]+".":"";
     status.className="pipe-status"+(flow.solved?" is-success":"");
     status.textContent=flow.solved?
-      "All nine pipes are connected with both capped branches sealed. Test the flow!":
-      !flow.connected.size?
-      "Start at WATER IN on middle left. Turn tile 4 toward the supply.":
+      "Success: all 9 pipes supplied, both capped branches sealed and water reaches VILLAGE OUTLET. Test the flow!":
+      flow.connected.size===0?
+      "No water entering. Tile 4 must face LEFT toward WATER IN. Rotate tile 4 to open the inlet.":
       flow.delivered?
-      "Water reaches the outlet, but only "+flow.connected.size+"/9 pipes are connected."+
-        (flow.leaks.length?" "+flow.leaks.length+" open joint(s).":"")+
-        " Complete the side branches.":
-      flow.connected.size+"/9 pipes receiving water."+
-        (flow.leaks.length?" "+flow.leaks.length+" open joint(s) need sealing.":"")+
-        " Connect to VILLAGE OUTLET.";
+      "Water reaches VILLAGE OUTLET, but only "+flow.connected.size+
+      "/9 pipes are supplied; "+flow.leaks.length+" open joint(s) remain."+
+      leakHelp+" Connect all nine pieces, including the two capped branches.":
+      flow.connected.size+"/9 pipes receiving water. "+flow.leaks.length+
+      " open joint(s) remain."+leakHelp+
+      " Follow the teal tiles toward the outlet; red marks show leaks.";
   }
   function rotatePipe(index){
     if(state.modalKind!=="pipe")return;
@@ -791,7 +828,7 @@
     openModal({tag:"PUMP REPAIR • STEP 1 OF 2",icon:"🔧",
       title:"Reconnect the water pipeline",
       description:"Connect all nine pipe sections. Water enters from middle LEFT and exits middle RIGHT. Turn the T-junctions to feed the branches and use the end caps to prevent leaks.",
-      kind:"pipe",tip:"Rotate a square by clicking it, or Tab then Enter. Both capped branches must receive water. Testing an incomplete or leaking system costs 2 energy.",
+      kind:"pipe",tip:"IN connects to tile 4 on the left; OUT leaves tile 6 on the right. Teal shows supplied pipes, red shows open joints. Hints are free; unsuccessful flow tests cost 2 energy.",
       choices:[
         {text:"💧 Test the flow",primary:true,action:verifyPipe},
         {text:"↩ Back to the valley",action:()=>closeModal()}
@@ -1008,6 +1045,7 @@
   }
   $("interactButton").addEventListener("click",interact);
   $("touchAction").addEventListener("click",interact);
+  $("pipeHint").addEventListener("click",showPipeHint);
   $("startButton").addEventListener("click",start);
   $("valleyChapter").addEventListener("click",continueValley);
   $("canyonChapter").addEventListener("click",()=>{
