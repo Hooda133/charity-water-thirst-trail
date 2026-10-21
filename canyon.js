@@ -434,6 +434,29 @@
           put(new THREE.IcosahedronGeometry(.34*scale,0),leaves,x,.20*scale,z,false);
         }
       }
+      // Expanded-world detail pass: sunlit stone clusters, dry grass and historic trail posts.
+      const grass=mat(0xaab47b),sandstone=mat(0xf1bf87);
+      for(let i=0;i<175;i++){
+        const side=i%2?-1:1;
+        const x=side*(3.5+rng()*17.5),z=-14.5+rng()*29;
+        const stone=put(new THREE.DodecahedronGeometry(.12+rng()*.31,0),
+          i%3===0?rock[1]:sandstone,x,.12,z,false);
+        stone.rotation.y=rng()*Math.PI;stone.scale.y=.52+rng()*.85;
+        if(i%2===0){
+          for(let blade=0;blade<3;blade++){
+            const tuft=put(new THREE.ConeGeometry(.05,.43+rng()*.34,4),grass,
+              x+(blade-1)*.13,.25,z+.18,false);
+            tuft.rotation.z=(blade-1)*.29;
+          }
+        }
+      }
+      // Landmark posts are visible from farther away, giving the longer trek a clear direction.
+      for(const destination of Object.values(goals)){
+        const x=wX(destination.x)+.9,z=wZ(destination.y)+.85;
+        const post=box(timber,x,.85,z,.14,1.7,.15);
+        post.castShadow=true;
+        box(sandstone,x,1.67,z,.72,.34,.11);
+      }
       // Floating, player-facing world mission labels.
       const marks=[];
       for(const [key,obj] of Object.entries(goals)){
