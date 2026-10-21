@@ -317,9 +317,11 @@
     try{
       const THREE=await import("https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js");
       const scene=new THREE.Scene();scene.background=new THREE.Color(0xcba992);
+      // Widen the entire traversable 3D valley without changing quest logic or save coordinates.
+      const worldSpread=1.42;scene.scale.set(worldSpread,1,worldSpread);
       scene.fog=new THREE.FogExp2(0xd8bca4,.009);
-      const camera=new THREE.PerspectiveCamera(52,1000/610,.1,250);
-      camera.position.set(10,15,19);camera.lookAt(0,0,0);
+      const camera=new THREE.PerspectiveCamera(47,1000/610,.1,300);
+      camera.position.set(7.4,10.5,13.6);camera.lookAt(0,0,0);
       const renderer=new THREE.WebGLRenderer({alpha:false,antialias:true,powerPreference:"high-performance"});
       renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,1.6));
       renderer.outputColorSpace=THREE.SRGBColorSpace;
@@ -462,6 +464,8 @@
       }
       // Character: local procedural fallback renders immediately.
       const player=new THREE.Group();scene.add(player);
+      // Character remains human-sized while landscape and landmarks spread apart.
+      player.scale.set(1/worldSpread,1,1/worldSpread);
       const jacket=mat(0x1c8d8a),skin=mat(0xe0a87d),hat=mat(0xf4c776),boots=mat(0x293b50);
       const torso=new THREE.Mesh(new THREE.CapsuleGeometry(.31,.63,5,10),jacket);
       torso.position.y=1.2;torso.castShadow=true;player.add(torso);
@@ -471,9 +475,24 @@
       for(const side of [-1,1]){
         const leg=new THREE.Mesh(new THREE.CapsuleGeometry(.11,.50,4,7),boots);
         leg.position.set(side*.19,.54,0);player.add(leg);limbs.push(leg);
+        const arm=new THREE.Mesh(new THREE.CapsuleGeometry(.095,.48,5,9),jacket);
+        arm.position.set(side*.44,1.24,.03);arm.rotation.z=side*.16;arm.castShadow=true;
+        player.add(arm);limbs.push(arm);
+        const hand=new THREE.Mesh(new THREE.SphereGeometry(.115,9,8),skin);
+        hand.position.set(side*.49,.86,.05);player.add(hand);
       }
       const pack=new THREE.Mesh(new THREE.BoxGeometry(.60,.79,.34),rock[1]);
       pack.position.set(0,1.29,-.37);player.add(pack);
+      // Readable face, goggles, jacket trim and backpack straps for the closer follow camera.
+      const eyeMat=mat(0x1c2a33),strapMat=mat(0xc7a675);
+      for(const side of [-1,1]){
+        const eye=new THREE.Mesh(new THREE.SphereGeometry(.038,7,6),eyeMat);
+        eye.position.set(side*.12,2.10,.258);player.add(eye);
+        const strap=new THREE.Mesh(new THREE.BoxGeometry(.095,.55,.05),strapMat);
+        strap.position.set(side*.22,1.32,.30);player.add(strap);
+      }
+      const brim=new THREE.Mesh(new THREE.CylinderGeometry(.45,.45,.045,16),hat);
+      brim.position.y=2.31;player.add(brim);
       const raycaster=new THREE.Raycaster(),pointer=new THREE.Vector2();
       function select(event){
         if(!state.active||state.modal||state.paused)return;
@@ -511,9 +530,9 @@
           if(state.path.length){
             const p=state.path[0];player.rotation.y=Math.atan2(wX(p.x)-px,wZ(p.y)-pz);
           }
-          for(let i=0;i<2;i++)limbs[i].rotation.x=Math.sin(time*9+i*Math.PI)*.22;
-          const target=new THREE.Vector3(px,0,pz);
-          camera.position.lerp(new THREE.Vector3(px+10,15,pz+19),.09);
+          for(let i=0;i<limbs.length;i++)limbs[i].rotation.x=Math.sin(time*9+(i%2)*Math.PI)*(state.path.length||state.keys.size?.35:.07);
+          const target=new THREE.Vector3(px*worldSpread,0,pz*worldSpread);
+          camera.position.lerp(new THREE.Vector3(target.x+7.4,10.5,target.z+13.6),.09);
           camera.lookAt(target);
           for(const m of marks){
             const done=state.done.has(m.key);
