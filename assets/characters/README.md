@@ -19,6 +19,8 @@ The model uses named transform pivots instead of hard-coded positions baked into
 - `ExplorerScarfTail` — fluttering with movement.
 - `ExplorerPackFlap` — moving with footsteps.
 
+The source asset intentionally contains rig pivots rather than a large animation-library payload. The runtime builds smooth blended poses from the rig: idle breathing, walk/run stride, interaction greeting, celebration, turning lean, blinking, scarf movement and pack motion. Blend weights are frame-time based, so transitions do not snap when movement starts or stops. Materials are promoted to smooth PBR shading at load time, with tuned roughness for skin, hair, fabric, leather and metal equipment, and a small character fill light keeps the explorer readable in both daylight and night scenes.
+
 All animations are driven by the **same game movement and mission state as the original character**, including the reduced-motion setting.
 
 ## Loading and safe fallback

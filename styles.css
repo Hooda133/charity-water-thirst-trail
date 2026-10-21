@@ -34,7 +34,8 @@
   .toast{box-shadow:0 12px 30px #0007}
 
 /* Actual 3D WebGL scene integration, including a live 3D title-screen panorama. */
-#world3dCanvas{display:block;max-width:100%;outline-offset:-4px;touch-action:manipulation;cursor:crosshair;}
+#world3dCanvas{display:block;max-width:100%;outline-offset:-4px;touch-action:none;cursor:grab;}
+#world3dCanvas:active{cursor:grabbing}
 .hero-scene.is-3d{isolation:isolate;background:#91beb6;transform:none;overflow:hidden}
 .hero-scene.is-3d>:not(canvas):not(.hero-caption):not(.hero-top-label){display:none!important}
 .hero-scene.is-3d>#world3dCanvas{position:absolute;inset:0;width:100%;height:100%;z-index:0}
@@ -181,6 +182,31 @@
 @media(max-width:650px){.navigator-panel{padding:10px}.navigator-status{flex-wrap:wrap}}
 @media(prefers-reduced-motion:reduce){.navigator-toggle{transition:none}}
 
+/* Final presentation pass: make the playable frame read as a premium field
+   instrument while keeping the controls compact on narrow screens. */
+.world-frame{box-shadow:0 22px 48px #020d1270,inset 0 1px #ffffff12}
+.frame-label{background:linear-gradient(90deg,#102f38f2,#173e46e8 62%,#102d36e8);box-shadow:0 5px 18px #04151b55}
+.hud>div{box-shadow:inset 0 1px #ffffff0b,0 10px 22px #020e1450}
+.hud-mission{border-left:3px solid var(--yellow)!important}
+.hud-resource{border-left:3px solid var(--teal)!important}
+.quest-card,.destination-btn,.inventory-item{transition:transform .18s ease,border-color .18s ease,background .18s ease,box-shadow .18s ease}
+.quest-card:hover,.destination-btn:hover,.inventory-item:hover{transform:translateX(3px);border-color:#78a9a5;background:#1e4a51;box-shadow:0 7px 18px #03111755}
+.quest-card.done{background:linear-gradient(100deg,#173f3d,#183b43);border-color:#5eaa8c}
+.quest-card.done .quest-icon{background:#72dca4;color:#092b2b;box-shadow:0 0 0 4px #72dca422}
+.inventory-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}
+.inventory-item{min-height:42px!important;border-radius:10px!important;background:#173d45!important}
+.render-loading{position:absolute;z-index:5;inset:42px 0 0;display:flex;align-items:center;justify-content:center;gap:13px;background:linear-gradient(135deg,#092630ee,#123b42e8);backdrop-filter:blur(5px);color:#f7f6ed;transition:opacity .25s ease}
+.render-loading[hidden]{display:none}
+.render-loading-mark{display:grid;place-items:center;width:42px;height:42px;border:1px solid #ffe08099;border-radius:13px;color:var(--yellow);font-size:23px;animation:loadingPulse 1.25s ease-in-out infinite}
+.render-loading div{display:grid;gap:4px}
+.render-loading strong{font-size:16px;letter-spacing:.2px}
+.render-loading small{color:#a8c5c5;font-size:11px;letter-spacing:.3px}
+.render-loading i{width:42px;height:3px;border-radius:3px;background:linear-gradient(90deg,transparent,var(--teal),transparent);animation:loadingSweep 1.1s ease-in-out infinite}
+@keyframes loadingPulse{50%{transform:rotate(8deg) scale(1.08);box-shadow:0 0 22px #ffd34455}}
+@keyframes loadingSweep{50%{transform:translateX(8px);opacity:.45}}
+@media(max-width:900px){.hud{flex-wrap:wrap}.hud-mission{flex-basis:100%}.hud-resource{flex:1}.hud-stat{flex:1}}
+@media(prefers-reduced-motion:reduce){.render-loading-mark,.render-loading i{animation:none}.quest-card,.destination-btn,.inventory-item{transition:none}}
+
 /* Pump workshop: tactile 3x3 pipe fitting board with touch and keyboard access. */
 .pipe-puzzle{margin:14px auto 17px;max-width:375px;padding:14px 15px 12px;
   border-radius:17px;border:1px solid #77a69d99;background:linear-gradient(155deg,#0e333f,#174950);
@@ -259,6 +285,22 @@
 .marsh-status.is-success{color:#b7f7ba}
 @media(max-width:430px){.marsh-panel{padding:10px}.marsh-grid{gap:5px}.marsh-item{min-height:81px;padding:8px 3px}.marsh-item-icon{font-size:24px}}
 @media(prefers-reduced-motion:reduce){.marsh-item{transition:none}}
+
+.graphics-panel{
+  position:fixed;z-index:30;top:78px;right:28px;width:min(350px,calc(100vw - 32px));
+  padding:22px;background:#102c35f5;border:1px solid #5c8588;border-radius:17px;
+  box-shadow:0 24px 65px #0009;backdrop-filter:blur(18px)
+}
+.graphics-panel-header{display:flex;align-items:flex-start;justify-content:space-between;gap:14px;margin-bottom:18px}
+.graphics-panel h2{font-size:26px;letter-spacing:-.8px;margin:5px 0 0}
+.graphics-field{display:grid;gap:8px;margin:14px 0;color:#d9eeee;font-size:11px;font-weight:800}
+.graphics-field span{display:flex;justify-content:space-between;gap:12px}
+.graphics-field output{color:var(--yellow)}
+.graphics-field select,.graphics-field input{width:100%;accent-color:var(--yellow)}
+.graphics-field select{background:#193d47;border:1px solid #4d7277;border-radius:7px;color:#f4ffff;padding:8px}
+.graphics-check{display:flex;align-items:center;gap:9px;margin:13px 0;color:#c8e1e2;font-size:11px;font-weight:700}
+.graphics-check input{accent-color:var(--yellow)}
+.graphics-note{color:#8eafb3;font-size:10px;line-height:1.55;margin:18px 0 0}
 
 
 /* SHOWCASE PASS — cinematic composition, clearer world controls and premium HUD. */

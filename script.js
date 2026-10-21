@@ -35,8 +35,20 @@
     getSound() {try{return localStorage.getItem("thirstTrailSound")!=="false";}catch{return true;}},
     setSound(v) {try{localStorage.setItem("thirstTrailSound",String(v));}catch{/* optional storage */}},
     tutorialSeen() {try{return localStorage.getItem("thirstTrailTutorial")==="true";}catch{return false;}},
-    markTutorialSeen() {try{localStorage.setItem("thirstTrailTutorial","true");}catch{/* optional storage */}}
+    markTutorialSeen() {try{localStorage.setItem("thirstTrailTutorial","true");}catch{/* optional storage */}},
+    getGraphics() {try{return JSON.parse(localStorage.getItem("thirstTrailGraphics")||"null");}catch{return null;}},
+    setGraphics(v) {try{localStorage.setItem("thirstTrailGraphics",JSON.stringify(v));}catch{/* optional storage */}}
   };
+  const graphicsPresets={
+    low:{resolution:.75,shadows:false,effects:false,sensitivity:.9},
+    medium:{resolution:1,shadows:true,effects:true,sensitivity:1},
+    high:{resolution:1.25,shadows:true,effects:true,sensitivity:1},
+    ultra:{resolution:1.5,shadows:true,effects:true,sensitivity:1.15}
+  };
+  const savedGraphics=safeStore.getGraphics();
+  const graphics={...graphicsPresets.medium,...(savedGraphics||{})};
+  let graphicsPreset=savedGraphics?.preset||"medium";
+  function graphicsProfile(){return {...graphics,preset:graphicsPreset};}
   const state = {
     screen:"start", energy:100, score:0, elapsed:0, x:310, y:620, moving:false,
     walkT:0, facing:1, keys:new Set(), touch:new Set(), path:[], goal:null, destination:null,
@@ -95,6 +107,14 @@
   // The 3D world is loaded without blocking startup. If Three.js cannot be reached,
   // the original Canvas 2D renderer remains available as a playable fallback.
   let world3d = null;
+  function setRenderLoading(visible, message="Loading the 3D expedition view…"){
+    const loading=$("renderLoading");
+    if(!loading)return;
+    loading.hidden=!visible;
+    const copy=loading.querySelector("small");
+    if(copy)copy.textContent=message;
+  }
+  setRenderLoading(true);
   createWorld(canvas, {
       onSelect(x,y) {
         if(state.screen!=="playing" || state.modalOpen)return;
@@ -109,8 +129,8 @@
         } else navToPosition({x,y});
       }
     })
-    .then(engine => {world3d=engine;world3d.render(state,performance.now()/1000);})
-    .catch(error => console.warn("3D graphics unavailable; using the original 2D game.", error));
+    .then(engine => {world3d=engine;world3d.render(state,performance.now()/1000);setRenderLoading(false);})
+    .catch(error => {setRenderLoading(false);console.warn("3D graphics unavailable; using the original 2D game.", error);});
   let audioContext = null;
   function tone(freq=620,duration=.09){
     if (!state.sound) return;
@@ -327,9 +347,10 @@
     state.keys.clear();state.touch.clear();state.done.clear();state.inventory.clear();state.supplies.clear();
     if(state.impactTimer)clearTimeout(state.impactTimer);
     state.impactTimer=null;$("impactBurst").hidden=true;
-    world3d?.recenterCamera?.();
+    world3d?.recenter?.();
     chapters?.clearSave("valley");
     $("startScreen").hidden=true;$("gameScreen").hidden=false;$("toast").hidden=true;
+    setRenderLoading(!world3d,"Preparing the 2D expedition fallback…");
     closeModal(true);updateUI();
     if(world3d)world3d.focus();else canvas.focus({preventScroll:true});
     notify("MISSION STARTED · Visit the Village Elder to begin.");tone(480,.18);
@@ -374,7 +395,7 @@
   function navigateTo(key){const sp=spots[key];if(sp)navToPosition(sp,key);}
   function recenterValleyCamera(){
     if(state.screen!=="playing"||state.modalOpen)return;
-    world3d?.recenterCamera?.();
+    world3d?.recenter?.();
     state.scenic=false;
     $("scenicViewButton").setAttribute("aria-pressed","false");
     $("scenicViewButton").textContent="◈ SCENIC VIEW";
@@ -811,7 +832,7 @@
   }
   function help(){
     safeStore.markTutorialSeen();
-    openModal({tag:"HOW TO PLAY",icon:"🧭",title:"Your adventure guide",description:"Move using WASD or arrow keys. On phones, use the on-screen directional buttons. Click the 3D world or select a destination in the mission panel to walk there automatically. The live mini-map shows your location and route; click one of its markers to travel there, or press M to hide or show it. Press V or select SCENIC VIEW above the world to see the full valley, and press it again to follow your explorer. When you're near a glowing marker, press E or tap INTERACT. Solve challenges, collect items, rotate the pipe sections during the pump repair, and restore water before your energy runs out. Raincatch Ridge is an optional hands-on collection activity. Rest at the camp to recharge. Press Shift to sprint (uses more energy).",kind:"help",choices:[{text:"Got it — let's go!",primary:true,action:()=>closeModal()}],tip:"BONUS ROUTES: Earn a test kit at the River Bank to survey Hill Spring, or inspect the collection station at Raincatch Ridge. Your current run resets on refresh; only your best score is saved."});
+    openModal({tag:"HOW TO PLAY",icon:"🧭",title:"Your adventure guide",description:"Move using WASD or arrow keys. On phones, use the on-screen directional buttons. Click the 3D world once to walk; hold and drag with the left button to pan the camera without moving, or right-drag to rotate around the landscape. Use the mouse wheel to zoom, and press C to return the camera to your explorer. The live mini-map shows your location and route; click one of its markers to travel there, or press M to hide or show it. Press V or select SCENIC VIEW above the world to see the full valley, and press it again to follow your explorer. When you're near a glowing marker, press E or tap INTERACT. Solve challenges, collect items, rotate the pipe sections during the pump repair, and restore water before your energy runs out. Raincatch Ridge is an optional hands-on collection activity. Rest at the camp to recharge. Press Shift to sprint (uses more energy).",kind:"help",choices:[{text:"Got it — let's go!",primary:true,action:()=>closeModal()}],tip:"BONUS ROUTES: Earn a test kit at the River Bank to survey Hill Spring, or inspect the collection station at Raincatch Ridge. Your current run resets on refresh; only your best score is saved."});
   }
   const plants=[];
   let seed=24521;function random(){seed=(1664525*seed+1013904223)>>>0;return seed/4294967296;}
@@ -1004,6 +1025,44 @@
   $("modalClose").addEventListener("click",()=>closeModal());
   $("modalBackdrop").addEventListener("click",e=>{if(e.target===$("modalBackdrop")&&state.modalKind!=="end")closeModal();});
   $("soundButton").addEventListener("click",()=>{state.sound=!state.sound;$("soundButton").setAttribute("aria-pressed",String(state.sound));$("soundButton").textContent=state.sound?"♫":"♪̸";if(state.sound)tone();});
+  const graphicsPanel=$("graphicsPanel"),qualityPreset=$("qualityPreset");
+  function syncGraphicsPanel(){
+    qualityPreset.value=graphicsPresets[graphicsPreset]?graphicsPreset:"medium";
+    $("resolutionScale").value=graphics.resolution;
+    $("cameraSensitivity").value=graphics.sensitivity;
+    $("resolutionValue").textContent=Math.round(graphics.resolution*100)+"%";
+    $("sensitivityValue").textContent=Math.round(graphics.sensitivity*100)+"%";
+    $("shadowToggle").checked=graphics.shadows;
+    $("effectsToggle").checked=graphics.effects;
+  }
+  function saveGraphics(){
+    world3d?.setGraphicsSettings(graphics);
+    safeStore.setGraphics(graphicsProfile());
+    syncGraphicsPanel();
+  }
+  $("graphicsButton").addEventListener("click",()=>{
+    graphicsPanel.hidden=!graphicsPanel.hidden;
+    if(!graphicsPanel.hidden)syncGraphicsPanel();
+  });
+  $("graphicsClose").addEventListener("click",()=>{graphicsPanel.hidden=true;});
+  qualityPreset.addEventListener("change",()=>{
+    graphicsPreset=qualityPreset.value;
+    Object.assign(graphics,graphicsPresets[graphicsPreset]);
+    saveGraphics();
+  });
+  $("resolutionScale").addEventListener("input",event=>{
+    graphicsPreset="medium";graphics.resolution=Number(event.target.value);saveGraphics();
+  });
+  $("cameraSensitivity").addEventListener("input",event=>{
+    graphicsPreset="medium";graphics.sensitivity=Number(event.target.value);saveGraphics();
+  });
+  $("shadowToggle").addEventListener("change",event=>{
+    graphicsPreset="medium";graphics.shadows=event.target.checked;saveGraphics();
+  });
+  $("effectsToggle").addEventListener("change",event=>{
+    graphicsPreset="medium";graphics.effects=event.target.checked;saveGraphics();
+  });
+  syncGraphicsPanel();
   $("highScoreStart").textContent=safeStore.get()?safeStore.get().toLocaleString():"—";
   populateSidebar();updateUI();refreshChapters();requestAnimationFrame(loop);
   // In development tests, the read-only state snapshot can be inspected without changing gameplay.
@@ -1039,21 +1098,41 @@
     ];
     const scene = new THREE.Scene();
     scene.background = new THREE.Color(0xb9dfdf);
+    const skyDay=new THREE.Color(0x9bcfd6),skyGolden=new THREE.Color(0xd79a78),
+      skyNight=new THREE.Color(0x142c4a),skyColor=new THREE.Color();
+    const sunDay=new THREE.Color(0xffe7b1),sunGolden=new THREE.Color(0xffa66f),
+      sunNight=new THREE.Color(0x7895c7),sunColor=new THREE.Color();
     // Moderate distance fog provides atmosphere without washing out nearby terrain.
     scene.fog = new THREE.FogExp2(0x9bc9d1, .009);
     const camera = new THREE.PerspectiveCamera(46, 1, .1, 180);
     const renderer = new THREE.WebGLRenderer({antialias:true, alpha:false, powerPreference:"high-performance"});
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.7));
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, graphics.resolution * 1.7));
     renderer.outputColorSpace = THREE.SRGBColorSpace;
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
     renderer.toneMappingExposure = 1.12;
-    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.enabled = graphics.shadows;
     renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     const view = renderer.domElement;
+    let effectsEnabled=graphics.effects;
+    let cameraSensitivity=graphics.sensitivity;
+    function applyGraphicsSettings(next){
+      effectsEnabled=!!next.effects;
+      cameraSensitivity=Math.max(.5,Math.min(1.8,Number(next.sensitivity)||1));
+      const scale=Math.max(.65,Math.min(1.5,Number(next.resolution)||1));
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,scale*1.7));
+      renderer.shadowMap.enabled=!!next.shadows;
+      sun.castShadow=!!next.shadows;
+      const quality=graphicsPreset==="ultra"?2048:graphicsPreset==="high"?1536:graphicsPreset==="medium"?1024:512;
+      sun.shadow.mapSize.set(quality,quality);
+      renderer.toneMappingExposure=graphicsPreset==="low"?1.08:graphicsPreset==="ultra"?1.16:1.2;
+      scene.fog.density=graphicsPreset==="low"?.012:graphicsPreset==="ultra"?.0075:.009;
+    }
     view.id = "world3dCanvas";
     view.tabIndex = 0;
     view.setAttribute("aria-label","Three-dimensional Thirst Trail adventure world. Use WASD to walk, E to interact, or click the landscape.");
-    view.style.touchAction = "manipulation";
+    // Pointer gestures belong to the renderer. "manipulation" lets the browser
+    // cancel a drag as a scroll gesture before pointer capture can take effect.
+    view.style.touchAction = "none";
     view.style.cursor = "grab";
     view.style.display = "block";
     const host = originalCanvas.parentElement;
@@ -1079,8 +1158,19 @@
     sun.shadow.normalBias = .019;
     sun.shadow.radius = 2.1;
     scene.add(sun, sun.target);
+    applyGraphicsSettings(graphics);
     const fill = new THREE.DirectionalLight(0x8bcad6, .42);
     fill.position.set(19,14,12); scene.add(fill);
+    const rim = new THREE.DirectionalLight(0xa7dfff,.34);
+    rim.position.set(-8,10,24);scene.add(rim);
+    const contactShadows=[];
+    function contactShadow(x,z,sx,sz,opacity=.22){
+      const shadow=mesh(new THREE.CircleGeometry(1,24),
+        new THREE.MeshBasicMaterial({color:0x18352e,transparent:true,opacity,
+          depthWrite:false}),scene,false);
+      shadow.rotation.x=-Math.PI/2;shadow.position.set(x,.012,z);
+      shadow.scale.set(sx,sz,1);contactShadows.push(shadow);return shadow;
+    }
     const makeMat = (color, roughness=1, metalness=0) => new THREE.MeshStandardMaterial({color,roughness,metalness,flatShading:true});
     const mats = {
       grass:makeMat(0x87b96a), grass2:makeMat(0x6ea45d), grass3:makeMat(0xa4cb74),
@@ -1383,6 +1473,16 @@
       const size=.7+rng()*1.3;shine.scale.set(size,size,1);
       glints.push({mesh:shine,baseZ:z,phase:rng()*6.283,offset:drift});
     }
+    const waterEdgeMat=new THREE.MeshBasicMaterial({
+      color:0xb7fff3,transparent:true,opacity:.18,depthWrite:false,
+      blending:THREE.AdditiveBlending,side:THREE.DoubleSide
+    });
+    const waterEdges=[];
+    for(const side of [-1,1]){
+      const edgePoints=riverPoints.map(([x,z])=>[x+side*2.17,z]);
+      const edge=ribbon(edgePoints,.055,.094,waterEdgeMat,scene);
+      waterEdges.push({edge,side});
+    }
     // Instanced meadow wildflowers: colorful detail without expensive draw calls.
     // Leave the main route, riverbank and all quest interaction areas clear.
     const flowerStemGeo=new THREE.CylinderGeometry(.013,.019,.28,5);
@@ -1502,6 +1602,36 @@
     road([[970,580],[1170,415],[1460,265]],.65);
     road([[1100,440],[1120,315],[1160,200]],.65);
     road([[455,765],[510,870],[560,970]],.67);
+    // Hand-set path shoulders and courtyard cobbles break up the broad grass
+    // plane while staying decorative and outside the navigation collision map.
+    const cobbleGeo=new THREE.IcosahedronGeometry(1,1);
+    const cobbleMat=makeMat(0x9eaa91,.92);
+    const cobbles=new THREE.InstancedMesh(cobbleGeo,cobbleMat,180);
+    const cobbleDummy=new THREE.Object3D();
+    const cobbleLines=[
+      [[285,490],[370,630],[455,765]],
+      [[455,765],[610,708],[730,580]],
+      [[970,580],[1180,825],[1540,690]],
+      [[280,490],[420,435],[540,350]]
+    ];
+    let cobbleIndex=0;
+    for(const line of cobbleLines){
+      const curve=new THREE.CatmullRomCurve3(line.map(p=>new THREE.Vector3(wx(p[0]),.10,wz(p[1]))));
+      const samples=curve.getPoints(43);
+      for(let i=0;i<samples.length&&cobbleIndex<180;i++){
+        const p=samples[i],t=i/samples.length,side=i%2?-1:1;
+        const tangent=samples[Math.min(samples.length-1,i+1)].clone().sub(
+          samples[Math.max(0,i-1)]).normalize();
+        const offset=new THREE.Vector3(-tangent.z,0,tangent.x).multiplyScalar(.66+(i%3)*.13);
+        cobbleDummy.position.copy(p).add(offset);cobbleDummy.position.y=.10;
+        const size=.10+(i%4)*.025;
+        cobbleDummy.scale.set(size*1.45,size*.62,size);
+        cobbleDummy.rotation.set(0,Math.atan2(tangent.x,tangent.z)+side*.18,0);
+        cobbleDummy.updateMatrix();cobbles.setMatrixAt(cobbleIndex++,cobbleDummy.matrix);
+      }
+    }
+    cobbles.count=cobbleIndex;cobbles.instanceMatrix.needsUpdate=true;
+    cobbles.castShadow=false;cobbles.receiveShadow=true;scene.add(cobbles);
     // Discreet trail lights provide readable depth cues after sunset without
     // adding expensive point lights to each marker.
     const lanternGlow=new THREE.MeshBasicMaterial({color:0xffe7a2});
@@ -1548,15 +1678,26 @@
     const canopySparkleLocations=[];
     function tree(x,z,s=1){
       const g=new THREE.Group();g.position.set(x,0,z);g.scale.setScalar(s);scene.add(g);
-      cyl(g,mats.trunks,0,.76,0,.22,.33,1.57);
+      const trunk=cyl(g,mats.trunks,0,.76,0,.22,.33,1.57,9);
+      trunk.rotation.z=(rng()-.5)*.08;
       ball(g,mats.trunks,-.22,.14,.12,.36,.17,.34);
-      const offsets=[[0,2.2,0,.95],[-.65,1.86,.15,.73],[.58,2.08,.25,.79],[.16,2.58,-.41,.83],[-.25,2.47,.43,.65]];
-      const treeHue=Math.floor(rng()*treeMaterials.length);
-      g.rotation.y=rng()*6.283;
+      // Forked limbs create a readable tree silhouette instead of a single
+      // trunk hidden by spherical foliage.
+      for(const branch of [[-.34,1.18,.02,-.34],[.34,1.30,.08,.30],[-.08,1.55,-.18,-.12]]){
+        const limb=cyl(g,mats.trunks,branch[0],branch[1],branch[2],.09,.13,.72,7);
+        limb.rotation.z=branch[3];
+        limb.rotation.x=(rng()-.5)*.18;
+      }
+      const offsets=[
+        [0,2.18,0,.96],[-.67,1.86,.15,.75],[.61,2.06,.25,.82],
+        [.16,2.63,-.41,.86],[-.31,2.50,.43,.69],[.02,2.92,.02,.57]
+      ];
       for(let j=0;j<offsets.length;j++){
-        const v=offsets[j],scale=.88+rng()*.22;
-        ball(g,treeMaterials[(j+treeHue)%treeMaterials.length],
-          v[0]*scale,v[1],v[2]*scale,v[3]*scale,v[3]*.89*scale,v[3]*scale);
+        const v=offsets[j];
+        const crown=mesh(new THREE.IcosahedronGeometry(1,1),treeMaterials[j%4],g);
+        crown.position.set(v[0],v[1],v[2]);
+        crown.scale.set(v[3],v[3]*.89,v[3]);
+        crown.rotation.set(rng()*.18,rng()*Math.PI,rng()*.18);
       }
       if(windTrees.length<23 && rng()<.27)windTrees.push({group:g,phase:rng()*Math.PI*2});
       // Collect clustered leaf highlights for a single instanced detail pass.
@@ -1657,6 +1798,25 @@
       if(Math.abs(x-riverX)<3.8 || objectivePositions.some(p=>Math.hypot(x-p[0],z-p[1])<3.3))continue;
       pine(x,z,.72+rng()*.44);
     }
+    // Low understory planting gives the clearings a natural transition from
+    // lawn to woodland without placing blockers on the established routes.
+    const shrubGeo=new THREE.IcosahedronGeometry(1,1);
+    const shrubBatch=new THREE.InstancedMesh(shrubGeo,mats.leaf3,110);
+    const shrubDummy=new THREE.Object3D();
+    for(let i=0;i<110;i++){
+      const x=(rng()-.5)*44,z=(rng()-.5)*26;
+      const px=x*SCALE+900,py=z*SCALE+550;
+      if(Math.abs(x-wx(riverCenter(py)))<3.4||
+        objectivePositions.some(p=>Math.hypot(x-p[0],z-p[1])<2.8))continue;
+      const size=.16+rng()*.26;
+      shrubDummy.position.set(x,size*.52,z);
+      shrubDummy.scale.set(size*1.25,size,size*.92);
+      shrubDummy.rotation.set(rng()*.2,rng()*Math.PI,rng()*.2);
+      shrubDummy.updateMatrix();shrubBatch.setMatrixAt(i,shrubDummy.matrix);
+    }
+    shrubBatch.instanceMatrix.needsUpdate=true;
+    shrubBatch.castShadow=false;shrubBatch.receiveShadow=true;
+    scene.add(shrubBatch);
     // A slim foothill band replaces the old 360-degree ring of mountain
     // cones, which previously appeared directly in front of the village.
     const foothillMat=[makeMat(0x759d89),makeMat(0x86aa98),makeMat(0x678b83)];
@@ -1836,6 +1996,7 @@
       {name:"Workshop",x:460,y:760,size:.87,tint:0xe0bc8c}
     ];
     const villageFallbacks=villagePlacements.map(p=>cottage(p.x,p.y,p.size,p.tint));
+    for(const p of villagePlacements)contactShadow(wx(p.x),wz(p.y),1.65*p.size,1.35*p.size,.18);
     const upgradedVillageObjects=[];
     let villageAssetDisposed=false;
     const villageAssetState={status:"fallback",loaded:0,total:villagePlacements.length};
@@ -1866,7 +2027,22 @@
           asset.scale.setScalar(p.size);
           asset.traverse(node=>{
             if(node.isMesh){
-              node.castShadow=true;node.receiveShadow=true;
+              node.castShadow=true;node.receiveShadow=true;node.frustumCulled=true;
+              const materials=Array.isArray(node.material)?node.material:[node.material];
+              for(const material of materials){
+                if(!material)continue;
+                material.flatShading=false;
+                material.needsUpdate=true;
+                const name=(material.name||"").toLowerCase();
+                if(name.includes("metal")||name.includes("hardware")){
+                  material.metalness=Math.max(material.metalness||0,.55);
+                  material.roughness=Math.min(material.roughness??.86,.34);
+                }else if(name.includes("skin")||name.includes("hair")){
+                  material.roughness=Math.min(material.roughness??.86,.72);
+                }else{
+                  material.roughness=Math.max(.48,Math.min(material.roughness??.86,.9));
+                }
+              }
             }
           });
           scene.add(asset);
@@ -1933,9 +2109,25 @@
       box(supply,mats.wood,x,.39,z,.9,.78,.86);
       box(supply,mats.lightWood,x,.81,z,.93,.09,.91);
       box(supply,mats.dark,x,.39,z,.08,.75,.9);
+      box(supply,mats.gold,x-.31,.43,z+.45,.10,.42,.07);
+      box(supply,mats.gold,x+.31,.43,z+.45,.10,.42,.07);
     }
+    // Workshop frontage: an awning, workbench and stacked timber make the
+    // depot read as a working place rather than an isolated crate marker.
+    const workshopFront=new THREE.Group();
+    workshopFront.position.set(wx(455),0,wz(765)+1.55);scene.add(workshopFront);
+    for(const x of [-1.25,1.25])box(workshopFront,mats.wood,x,1.15,0,.13,2.3,.13);
+    const awning=box(workshopFront,mats.roofDark,0,2.25,0,2.9,.13,1.55);
+    awning.rotation.z=-.08;
+    box(workshopFront,mats.lightWood,0,.78,.42,2.35,.16,.74);
+    for(let i=0;i<3;i++){
+      const log=cyl(workshopFront,mats.wood,-.78+i*.58,.42,.54,.16,.18,1.25,8);
+      log.rotation.z=Math.PI/2;
+    }
+    for(let i=0;i<4;i++)box(workshopFront,mats.rock2,-1.35+i*.9,.14,.44,.28,.22,.44);
     // Campsite: pitched tent, logs and warm firelight.
     const camp=new THREE.Group();camp.position.set(wx(540),0,wz(350));scene.add(camp);
+    contactShadow(wx(540),wz(350),2.45,2.0,.24);
     const tentMat=makeMat(0xf2b464),tentSide=makeMat(0xd7814c);
     const t1=mesh(new THREE.ConeGeometry(2.0,2.8,4),tentMat,camp);
     t1.rotation.y=Math.PI/4;t1.position.y=1.39;t1.scale.z=.68;
@@ -1951,6 +2143,7 @@
     for(const z of [-1.65,1.65])box(camp,mats.wood,2.5,.27,z,1.8,.42,.48);
     // Polished metallic pump, crank, spout and basin.
     const pump=new THREE.Group();pump.position.set(wx(1540),0,wz(690));scene.add(pump);
+    contactShadow(wx(1540),wz(690),1.8,1.45,.28);
     const metal=makeMat(0x6aa9ac,.35,.6),lightMetal=makeMat(0xd2e2d7,.28,.5);
     cyl(pump,mats.rock,0,.19,0,1.12,1.2,.4,12);
     cyl(pump,metal,0,1.52,0,.47,.57,2.5,12);
@@ -1961,6 +2154,14 @@
     box(pump,mats.dark,.65,3.45,0,1.45,.14,.16);
     ball(pump,mats.gold,1.4,3.45,0,.20);
     cyl(pump,mats.rock2,0,.23,1.45,.89,1.03,.45,12);
+    // Broad stone apron grounds the pump landmark and keeps its silhouette
+    // legible against the surrounding meadow.
+    for(let i=0;i<11;i++){
+      const a=i/11*Math.PI*2;
+      const stone=ball(pump,mats.rock2,Math.cos(a)*1.28,.12,1.0+Math.sin(a)*.88,
+        .34,.16,.28,false);
+      stone.rotation.y=a;
+    }
     cyl(pump,makeMat(0x2899a7,.18),0,.47,1.45,.68,.68,.035,14);
     // Pressure gauge and water droplets visually distinguish the repair objective.
     const gauge=new THREE.Group();gauge.position.set(.38,2.49,.32);pump.add(gauge);
@@ -2300,6 +2501,9 @@
     // Slightly larger stylized explorer, visible even at the standard isometric zoom.
     const explorer=new THREE.Group();scene.add(explorer);
     explorer.scale.setScalar(1.19);
+    const characterFill=new THREE.PointLight(0x9fe8e0,.42,6.5,2);
+    characterFill.position.set(-1.2,3.6,2.2);
+    explorer.add(characterFill);
     const skin=makeMat(0xce9169),shirt=makeMat(0x29a6a0),pants=makeMat(0x335772),
           boots=makeMat(0x3d3035),bag=makeMat(0xdc814e),hat=makeMat(0xf9c768),hair=makeMat(0x47342d);
     const shadow=mesh(new THREE.CircleGeometry(.56,22),new THREE.MeshBasicMaterial({color:0x203d34,transparent:true,opacity:.26,depthWrite:false}),explorer,false);
@@ -2371,6 +2575,7 @@
     const characterAssetState={status:"fallback",loaded:0,total:1};
     let characterAssetDisposed=false,characterRig=null;
     let characterModel=null;
+    const characterMotion={locomotion:0,running:0,greeting:0,celebration:0,phase:0,lastTime:0};
     const rigJointNames=[
       "ExplorerBody","ExplorerHead","ExplorerEyes","ExplorerScarfTail",
       "ExplorerArmLeft","ExplorerArmRight","ExplorerElbowLeft","ExplorerElbowRight",
@@ -2490,56 +2695,53 @@
       star.visible=false;stars.push(star);
     }
     const camTarget=new THREE.Vector3(),camPos=new THREE.Vector3();
-    // Independent survey camera: drag the scene to look across the valley without moving.
-    const exploreOffset=new THREE.Vector3();
-    const exploreDrag={id:null,x:0,y:0,startX:0,startY:0,moved:false,suppress:false};
-    const recenterCamera=()=>exploreOffset.set(0,0,0);
-    function finishExploreDrag(event){
-      if(exploreDrag.id!==event.pointerId)return;
-      if(exploreDrag.moved)exploreDrag.suppress=true;
-      exploreDrag.id=null;
-      view.style.cursor="grab";
-      if(view.hasPointerCapture?.(event.pointerId))view.releasePointerCapture(event.pointerId);
+    const freeTarget=new THREE.Vector3();
+    let freeCamera=false;
+    let cameraYaw=Math.atan2(10.2,20);
+    let cameraPitch=Math.atan2(16.3,Math.hypot(10.2,20));
+    let cameraGesture=null;
+    let suppressNextClick=false;
+    const cameraUp=new THREE.Vector3(0,1,0);
+    const cameraForward=new THREE.Vector3();
+    const cameraRight=new THREE.Vector3();
+    const cameraDistanceForWorld=29;
+    function beginFreeCamera(){
+      if(freeCamera)return;
+      freeCamera=true;
+      freeTarget.copy(explorer.position);
+      freeTarget.y+=.8;
+      const offset=camera.position.clone().sub(freeTarget);
+      const horizontal=Math.max(.001,Math.hypot(offset.x,offset.z));
+      cameraYaw=Math.atan2(offset.x,offset.z);
+      cameraPitch=Math.atan2(offset.y,horizontal);
     }
-    view.addEventListener("pointerdown",event=>{
-      if(event.button!==0||event.pointerType==="touch"||state.screen!=="playing"||state.modalOpen)return;
-      exploreDrag.id=event.pointerId;
-      exploreDrag.startX=exploreDrag.x=event.clientX;
-      exploreDrag.startY=exploreDrag.y=event.clientY;
-      exploreDrag.moved=false;exploreDrag.suppress=false;
-      view.setPointerCapture?.(event.pointerId);
-    });
-    view.addEventListener("pointermove",event=>{
-      if(exploreDrag.id!==event.pointerId||state.screen!=="playing"||state.modalOpen)return;
-      const dx=event.clientX-exploreDrag.x,dy=event.clientY-exploreDrag.y;
-      exploreDrag.x=event.clientX;exploreDrag.y=event.clientY;
-      if(!exploreDrag.moved&&Math.hypot(event.clientX-exploreDrag.startX,event.clientY-exploreDrag.startY)<7)return;
-      exploreDrag.moved=true;event.preventDefault();
-      view.style.cursor="grabbing";
-      const height=Math.max(1,view.getBoundingClientRect().height);
-      const meters=2*Math.tan(camera.fov*Math.PI/360)*Math.max(8,camera.position.distanceTo(camTarget))/height*1.35;
-      const right=new THREE.Vector3().setFromMatrixColumn(camera.matrixWorld,0).setY(0).normalize();
-      const forward=new THREE.Vector3(camTarget.x-camera.position.x,0,camTarget.z-camera.position.z).normalize();
-      exploreOffset.addScaledVector(right,-dx*meters);
-      exploreOffset.addScaledVector(forward,dy*meters);
-    });
-    view.addEventListener("pointerup",finishExploreDrag);
-    view.addEventListener("pointercancel",finishExploreDrag);
-    view.addEventListener("lostpointercapture",event=>{
-      if(exploreDrag.id===event.pointerId)finishExploreDrag(event);
-    });
-    view.addEventListener("contextmenu",event=>event.preventDefault());
+    function recenterCamera(){
+      freeCamera=false;
+      cameraGesture=null;
+      freeTarget.copy(explorer.position);
+      freeTarget.y+=.8;
+      cameraYaw=Math.atan2(10.2,20);
+      cameraPitch=Math.atan2(16.3,Math.hypot(10.2,20));
+      cameraDistanceTarget=.82;
+      firstFrame=true;
+    }
+    function clampFreeTarget(){
+      freeTarget.x=Math.max(-20,Math.min(20,freeTarget.x));
+      freeTarget.z=Math.max(-13,Math.min(13,freeTarget.z));
+    }
     // Gentle camera zoom without changing the existing keyboard movement controls.
-    let cameraDistance=.93;
+    let cameraDistance=.82;
+    let cameraDistanceTarget=.82;
     view.addEventListener("wheel",event=>{
       if(!view.isConnected || view.parentElement===hero)return;
       event.preventDefault();
-      cameraDistance=Math.max(.72,Math.min(1.5,cameraDistance+(event.deltaY>0?.08:-.08)));
+      beginFreeCamera();
+      cameraDistanceTarget=Math.max(.62,Math.min(1.65,cameraDistanceTarget+event.deltaY*.0009));
     },{passive:false});
     const raycaster=new THREE.Raycaster();
     const groundPlane=new THREE.Plane(new THREE.Vector3(0,1,0),0);
     const pointer=new THREE.Vector2(),hit=new THREE.Vector3();
-    view.addEventListener("click",event=>{
+    function selectWorldPosition(event){
       if(exploreDrag.suppress){exploreDrag.suppress=false;return;}
       if(typeof options.onSelect!=="function")return;
       const rect=view.getBoundingClientRect();
@@ -2551,6 +2753,59 @@
       const y=Math.max(45,Math.min(WORLD_H-45,hit.z*SCALE+550));
       options.onSelect(x,y);
       view.focus({preventScroll:true});
+    }
+    view.addEventListener("pointerdown",event=>{
+      if(event.button!==0&&event.button!==2)return;
+      if(!view.isConnected || view.parentElement===hero)return;
+      event.preventDefault();
+      view.setPointerCapture?.(event.pointerId);
+      cameraGesture={
+        button:event.button,startX:event.clientX,startY:event.clientY,
+        lastX:event.clientX,lastY:event.clientY,dragged:false,pointerId:event.pointerId
+      };
+    });
+    view.addEventListener("pointermove",event=>{
+      const gesture=cameraGesture;
+      if(!gesture||event.pointerId!==gesture.pointerId)return;
+      const dx=event.clientX-gesture.lastX,dy=event.clientY-gesture.lastY;
+      const totalX=event.clientX-gesture.startX,totalY=event.clientY-gesture.startY;
+      gesture.lastX=event.clientX;gesture.lastY=event.clientY;
+      if(!gesture.dragged&&Math.hypot(totalX,totalY)>5){
+        gesture.dragged=true;
+        beginFreeCamera();
+      }
+      if(!gesture.dragged)return;
+      event.preventDefault();
+      if(gesture.button===2){
+          cameraYaw-=dx*.008*cameraSensitivity;
+          cameraPitch=Math.max(.22,Math.min(1.18,cameraPitch+dy*.006*cameraSensitivity));
+        return;
+      }
+      camera.getWorldDirection(cameraForward);
+      cameraForward.y=0;cameraForward.normalize();
+      cameraRight.crossVectors(cameraForward,cameraUp).normalize();
+      const scale=(cameraDistanceForWorld*cameraDistance*cameraSensitivity)/Math.max(240,view.clientHeight);
+      freeTarget.addScaledVector(cameraRight,-dx*scale);
+      freeTarget.addScaledVector(cameraForward,dy*scale);
+      clampFreeTarget();
+    });
+    function finishCameraGesture(event){
+      const gesture=cameraGesture;
+      if(!gesture)return;
+      cameraGesture=null;
+      view.releasePointerCapture?.(event.pointerId);
+      if(gesture.dragged){
+        suppressNextClick=true;
+        event.preventDefault();
+      }else if(gesture.button===0){
+        selectWorldPosition(event);
+      }
+    }
+    view.addEventListener("pointerup",finishCameraGesture);
+    view.addEventListener("pointercancel",event=>{cameraGesture=null;view.releasePointerCapture?.(event.pointerId);});
+    view.addEventListener("contextmenu",event=>event.preventDefault());
+    view.addEventListener("click",event=>{
+      if(suppressNextClick){suppressNextClick=false;event.preventDefault();}
     });
     const reduceMotion=typeof window.matchMedia==="function"
       &&window.matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -2586,15 +2841,21 @@
       // Lighting is based on expedition time, never on frame rate.
       const cycle=timeOfDay(state.elapsed||0), night=cycle.evening;
       if(flowTexture)flowTexture.offset.y=reduceMotion?0:-(time*.019%1);
+      const golden=Math.pow(Math.max(0,1-Math.abs(night*2-1)),1.35);
       // Intentional cinematic grading: blue atmospheric distance, golden sun,
       // and deeper under-canopy shade. Preserve enough light for nighttime play.
-      scene.background.setRGB(.61-.38*night,.78-.47*night,.89-.42*night);
+      skyColor.copy(night>.48?skyNight:skyDay).lerp(skyGolden,golden*.72);
+      scene.background.copy(skyColor);
       scene.fog.color.copy(scene.background);
-      ambient.intensity=1.32-.49*night;
-      sun.intensity=2.90-2.06*night;
-      fill.intensity=.42+.17*night;
-      renderer.toneMappingExposure=1.12+.14*night;
+      ambient.intensity=1.04+.28*(1-night)+.08*golden;
+      sun.intensity=.72+2.18*(1-night)+.22*golden;
+      sunColor.copy(night>.62?sunNight:sunDay).lerp(sunGolden,golden);
+      sun.color.copy(sunColor);
+      fill.intensity=.34+.20*night+.12*golden;
+      rim.intensity=.20+.22*(1-night)+.10*golden;
+      renderer.toneMappingExposure=1.02+.10*(1-night)+.04*golden;
       for(const light of lanternLights)light.intensity=night*2.6;
+      warmWindow.emissiveIntensity=.22+night*.42+golden*.12;
       const darkSky=night>.55;
       const solarVisible=night<.80;
       sunDisc.visible=solarVisible;
@@ -2610,7 +2871,7 @@
       moonHalo.quaternion.copy(camera.quaternion);
       for(let i=0;i<stars.length;i++)stars[i].visible=darkSky;
       for(const firefly of fireflies){
-        firefly.glow.visible=night>.4;
+        firefly.glow.visible=effectsEnabled&&night>.4;
         if(firefly.glow.visible&&!reduceMotion){
           firefly.glow.position.set(
             firefly.baseX+Math.sin(time*.73+firefly.phase)*.34,
@@ -2620,42 +2881,43 @@
       }
       const playerX=wx(state.x),playerZ=wz(state.y);
       const crossing=state.y>530&&state.y<635&&state.x>735&&state.x<967;
-      const playerY=crossing?.58:0;
+      const playerY=crossing?.58:terrainElevation(playerX,playerZ);
       explorer.position.set(playerX,playerY,playerZ);
       const isMoving=!!state.moving&&state.screen==="playing";
       const effect=state.effect;
       const effectAge=effect?Math.max(0,time-effect.at):99;
       const celebrating=effect&&effectAge<1.5;
-      // Ease into and out of walking instead of snapping rigidly between
-      // poses. The game movement speed is unchanged; this affects visuals only.
-      const priorTime=explorer.userData.lastAnimationTime??(time-.016);
-      const frameSeconds=Math.max(0,Math.min(.075,time-priorTime));
-      explorer.userData.lastAnimationTime=time;
-      const priorBlend=explorer.userData.walkBlend??0;
-      const walkBlend=reduceMotion?(isMoving?1:0):priorBlend+
-        ((isMoving?1:0)-priorBlend)*(1-Math.exp(-frameSeconds*11));
-      explorer.userData.walkBlend=walkBlend;
-      const stride=Math.sin(time*(state.keys?.has("shift")?13:10));
-      const pace=walkBlend*stride*.48;
-      legs[0].rotation.x=pace;legs[1].rotation.x=-pace;
-      knees[0].rotation.x=-Math.max(0,-pace)*.54;
-      knees[1].rotation.x=-Math.max(0,pace)*.54;
-      arms[0].rotation.x=-pace*.72;arms[1].rotation.x=pace*.72;
-      elbows[0].rotation.x=-Math.max(0,pace)*.31;
-      elbows[1].rotation.x=-Math.max(0,-pace)*.31;
+      const frameDelta=characterMotion.lastTime?Math.min(.05,Math.max(0,time-characterMotion.lastTime)):.016;
+      characterMotion.lastTime=time;
+      const smooth=(current,target,rate)=>current+(target-current)*(1-Math.exp(-rate*frameDelta));
+      const running=!!state.keys?.has("shift");
+      characterMotion.locomotion=smooth(characterMotion.locomotion,isMoving?1:0,11);
+      characterMotion.running=smooth(characterMotion.running,isMoving&&running?1:0,8);
+      characterMotion.greeting=smooth(characterMotion.greeting,!isMoving&&state.nearby&&state.screen==="playing"?1:0,9);
+      characterMotion.celebration=smooth(characterMotion.celebration,celebrating?1:0,10);
+      characterMotion.phase+=frameDelta*(1.7+characterMotion.locomotion*(9.5+characterMotion.running*4.5));
+      const stride=Math.sin(characterMotion.phase)*characterMotion.locomotion*(.52+characterMotion.running*.12);
+      const strideOpp=Math.sin(characterMotion.phase+Math.PI)*characterMotion.locomotion*(.52+characterMotion.running*.12);
+      legs[0].rotation.x=stride;legs[1].rotation.x=strideOpp;
+      knees[0].rotation.x=Math.max(0,stride)*-.34;
+      knees[1].rotation.x=Math.max(0,strideOpp)*-.34;
+      arms[0].rotation.x=-stride*.72;arms[1].rotation.x=-strideOpp*.72;
+      elbows[0].rotation.x=Math.max(0,stride)*-.24;
+      elbows[1].rotation.x=Math.max(0,strideOpp)*-.24;
       arms[0].rotation.z=0;arms[1].rotation.z=0;
-      if(celebrating){
-        arms[0].rotation.z=-2.12;arms[1].rotation.z=2.12;
-        elbows[0].rotation.x=-.26;elbows[1].rotation.x=-.26;
-      }else if(!isMoving&&state.nearby&&state.screen==="playing"){
-        arms[1].rotation.z=reduceMotion?.85:1.04+Math.sin(time*4)*.13;
-      }
-      body.position.y=reduceMotion?0:(celebrating?Math.abs(Math.sin(time*9))*.13:
-        Math.abs(Math.sin(time*10))*walkBlend*.060+Math.sin(time*1.9)*.018*(1-walkBlend));
-      body.rotation.z=reduceMotion?0:(Math.sin(time*5)*.023*walkBlend+Math.sin(time*.85)*.008*(1-walkBlend));
-      body.rotation.x=reduceMotion?0:(-.038*walkBlend+Math.sin(time*1.5)*.008*(1-walkBlend));
-      scarfTail.rotation.z=-.25+(reduceMotion?0:(Math.sin(time*10)*.13*walkBlend+
-        Math.sin(time*1.5)*.03*(1-walkBlend)));
+      const celebrationWeight=characterMotion.celebration;
+      const greetingWeight=characterMotion.greeting*(1-celebrationWeight);
+      arms[0].rotation.z=-2.12*celebrationWeight;
+      arms[1].rotation.z=2.12*celebrationWeight+greetingWeight*(reduceMotion?.78:.93+Math.sin(time*4)*.12);
+      elbows[0].rotation.x-=.26*celebrationWeight;
+      elbows[1].rotation.x-=.26*celebrationWeight;
+      body.position.y=reduceMotion?0:(characterMotion.locomotion*Math.abs(Math.sin(characterMotion.phase))*.08+
+        celebrationWeight*Math.abs(Math.sin(time*9))*.13+(1-characterMotion.locomotion)*Math.sin(time*1.9)*.027);
+      body.rotation.z=reduceMotion?0:characterMotion.locomotion*Math.sin(characterMotion.phase*.5)*.028+
+        (1-characterMotion.locomotion)*Math.sin(time*.85)*.011;
+      body.rotation.x=reduceMotion?0:-.045*characterMotion.locomotion+(1-characterMotion.locomotion)*Math.sin(time*1.5)*.012;
+      scarfTail.rotation.z=-.25+(reduceMotion?0:characterMotion.locomotion*Math.sin(characterMotion.phase)*.15+
+        (1-characterMotion.locomotion)*Math.sin(time*1.5)*.03);
       // Mirror gameplay animation onto independently authored glTF joints.
       // Locomotion, greeting and the victory pose still share one state source.
       if(characterRig){
@@ -2669,8 +2931,8 @@
           rig.knees[i].rotation.copy(knees[i].rotation);
         }
         rig.scarf.rotation.z=scarfTail.rotation.z;
-        rig.flap.rotation.x=reduceMotion?0:(-.05*walkBlend+
-          Math.sin(time*10)*.052*walkBlend+Math.sin(time*1.8)*.018*(1-walkBlend));
+        rig.flap.rotation.x=reduceMotion?0:-.08*characterMotion.locomotion+
+          (characterMotion.locomotion?Math.sin(characterMotion.phase)*.06:Math.sin(time*1.8)*.024);
         rig.head.rotation.y=reduceMotion?0:Math.sin(time*.58)*.065;
         rig.head.rotation.x=celebrating?-.12:(reduceMotion?0:Math.sin(time*1.4)*.025);
         // Short natural blink: visible only near the explorer, with no timers.
@@ -2682,11 +2944,11 @@
         if(Number.isFinite(dx)&&Number.isFinite(dz)&&Math.hypot(dx,dz)>.003){
           const heading=Math.atan2(dx,dz);
           let diff=((heading-explorer.rotation.y+Math.PI*3)%(Math.PI*2))-Math.PI;
-          explorer.rotation.y+=diff*.2;
+          explorer.rotation.y+=diff*(1-Math.exp(-10*frameDelta));
         }
       }
       explorer.userData.lastX=playerX;explorer.userData.lastZ=playerZ;
-      if(!reduceMotion){
+      if(!reduceMotion&&effectsEnabled){
         // Time-based displacement stays consistent across refresh rates.
         for(let i=0;i<ripples.length;i++){
           const wave=ripples[i];
@@ -2699,6 +2961,10 @@
           shine.mesh.position.z=z;
           shine.mesh.position.x=wx(riverCenter(z*SCALE+550))+shine.offset;
           shine.mesh.scale.y=.65+Math.abs(Math.sin(time*1.6+shine.phase))*.9;
+        }
+        for(const {edge,side} of waterEdges){
+          edge.position.y=Math.sin(time*1.7+side)*.012;
+          edge.material.opacity=.13+Math.abs(Math.sin(time*1.25+side))*.08;
         }
         for(const item of butterflies){
           const t=time*1.25+item.phase;
@@ -2757,7 +3023,7 @@
             wing.pivot.rotation.z=wing.side*(Math.sin(time*6+bird.phase)*.36);
           }
         }
-      }else for(const bird of birds)bird.group.visible=false;
+      }else for(const bird of birds)bird.group.visible=effectsEnabled;
       for(let i=0;i<supplyModels.length;i++){
         const entry=supplyModels[i];
         entry.g.visible=!state.supplies?.has(entry.id);
@@ -2819,7 +3085,7 @@
           :Math.sin(time*1.3+i)*.027);
       }
       // Waterwheel and raincatch station respond to the valley wind.
-      if(!reduceMotion){
+      if(!reduceMotion&&effectsEnabled){
         rainVane.rotation.y=Math.sin(time*.35)*1.1;
         for(let i=0;i<stationDroplets.length;i++){
           const drop=stationDroplets[i],p=(i/10+time*.27)%1;
@@ -2827,7 +3093,7 @@
           drop.scale.y=.75+(1-p)*.55;
         }
       }
-      if(!reduceMotion){
+      if(!reduceMotion&&effectsEnabled){
         for(let i=0;i<cascadeStrips.length;i++){
           const strip=cascadeStrips[i];
           strip.scale.y=.96+Math.sin(time*5+i*1.7)*.06;
@@ -2842,7 +3108,7 @@
         }
         sprayRing.scale.setScalar(.94+Math.sin(time*2.4)*.12);
       }
-      if(!reduceMotion)waterwheel.rotation.z=-time*(state.done?.has("pump")?0.63:0.28);
+      if(!reduceMotion&&effectsEnabled)waterwheel.rotation.z=-time*(state.done?.has("pump")?0.63:0.28);
       const restored=!!state.done?.has("pump");
       pumpFlow.visible=restored;
       if(restored){
@@ -2860,7 +3126,9 @@
         springRings[i].material.opacity=.34*(1-f);
       }
       fire.scale.y=reduceMotion?1:.84+Math.sin(time*13)*.15;
-      fireLight.intensity=reduceMotion?12:11+Math.sin(time*9)*3;
+      fireLight.intensity=effectsEnabled?(2.4+night*8.6+(reduceMotion?0:Math.sin(time*9)*1.2)):1.2;
+      const cameraFrameDelta=characterMotion.lastTime?Math.min(.05,Math.max(0,time-characterMotion.lastTime)):.016;
+      cameraDistance+=(cameraDistanceTarget-cameraDistance)*(1-Math.exp(-10*cameraFrameDelta));
       let aim;
       if(playing){
         // Scenic overview deliberately frames the whole explorable island;
@@ -2868,8 +3136,16 @@
         if(state.scenic){
           aim=new THREE.Vector3(-.8,.5,-.1);
           camPos.copy(aim).add(new THREE.Vector3(13,30,37));
+        }else if(freeCamera){
+          aim=freeTarget;
+          const horizontal=Math.cos(cameraPitch)*cameraDistanceForWorld*cameraDistance;
+          camPos.copy(aim).add(new THREE.Vector3(
+            Math.sin(cameraYaw)*horizontal,
+            Math.sin(cameraPitch)*cameraDistanceForWorld*cameraDistance,
+            Math.cos(cameraYaw)*horizontal
+          ));
         }else{
-          aim=new THREE.Vector3(playerX,.8,playerZ);
+          aim=new THREE.Vector3(playerX,playerY+.8,playerZ);
           // After victory, briefly reveal more of the restored valley.
           const finaleZoom=effect?.kind==="victory"&&effectAge<4.5&&!reduceMotion?1.17:1;
           camPos.copy(aim).add(new THREE.Vector3(10.2,16.3,20).multiplyScalar(cameraDistance*finaleZoom));
@@ -2881,13 +3157,9 @@
         camPos.copy(aim).add(new THREE.Vector3(
           16+drift*2.4,22+Math.sin(time*.08)*.8,27+Math.cos(time*.105)*2.0));
       }
-      if(playing){
-        // Camera target can move independently, clamped to the actual walkable map.
-        const baseX=aim.x,baseZ=aim.z;
-        aim.x=Math.max((45-900)/SCALE,Math.min((WORLD_W-45-900)/SCALE,baseX+exploreOffset.x));
-        aim.z=Math.max((45-550)/SCALE,Math.min((WORLD_H-45-550)/SCALE,baseZ+exploreOffset.z));
-        exploreOffset.x=aim.x-baseX;exploreOffset.z=aim.z-baseZ;
-        camPos.add(new THREE.Vector3(exploreOffset.x,0,exploreOffset.z));
+      if(!state.scenic){
+        const floor=terrainElevation(camPos.x,camPos.z)+1.15;
+        if(camPos.y<floor)camPos.y=floor;
       }
       if(firstFrame){
         camera.position.copy(camPos);camTarget.copy(aim);firstFrame=false;
@@ -2915,7 +3187,7 @@
               if(material&&!seenMat.has(material)){
                 seenMat.add(material);material.dispose();
               }
-            }
+            };
           });
         }
         // Geometry is shared by cloned models; clean up only once per pack.
@@ -2933,6 +3205,9 @@
         renderer.dispose();view.remove();
         hero?.classList.remove("is-3d");originalCanvas.style.display="";
       },
+      recenter(){recenterCamera();},
+      recenterCamera(){recenterCamera();},
+      setGraphicsSettings(next){applyGraphicsSettings(next);},
       getCanvas(){return view;},
       recenterCamera,
       getAssetStatus(){return {...villageAssetState};},

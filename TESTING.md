@@ -77,6 +77,22 @@ Automated-integration simulation checks run in the development connection cover 
 - [ ] On mobile: world header controls do not overflow, hero overlays fit, and both camera modes work without layout shifts
 - [ ] Reduced-motion preferences stop the flyover and other decorative camera movements
 - [ ] Framerate stays acceptable on an integrated-graphics laptop and there are no WebGL or console errors
+- [ ] The authored explorer glTF appears with face, hat, jacket, pack, scarf, flask, gloves, trousers and boots
+- [ ] Explorer idle, walk, sprint, turn, greeting and victory poses blend without visible snapping
+- [ ] Explorer remains readable at the normal third-person follow distance in daylight and night
+- [ ] River shader movement, edge glints, waterfall strips, mist, pump flow and spring ripples render without shader errors
+- [ ] Dawn, golden hour, daylight, night, lanterns, windows and campfire remain balanced rather than overexposed
+- [ ] Contact-shadow accents sit beneath cottages, camp and pump without z-fighting or blocking navigation
+- [ ] Short left click walks, while left drag pans without walking and right drag orbits without triggering navigation
+- [ ] Wheel zoom eases smoothly; C recenters on the explorer; the camera remains above terrain during orbit and follow
+- [ ] WASD/sprint movement, turn blending, scenic view, missions and click-to-walk remain functional after camera changes
+- [ ] Valley trees show forked trunks and layered canopies; understory shrubs and trail cobbles do not block routes
+- [ ] Workshop, supply depot, village square, campsite, bridge and pump remain recognizable at their existing mission coordinates
+- [ ] Graphics gear menu applies Low, Medium, High and Ultra presets without restarting
+- [ ] Loading overlay appears while the 3D renderer is preparing and disappears after either WebGL or the Canvas fallback is ready
+- [ ] Low/Medium/High/Ultra visibly change renderer resolution, shadow-map budget, atmospheric density and exposure while preserving gameplay
+- [ ] HUD, quest cards, inventory, mission markers, dialogue, pause and victory presentation remain readable at desktop and narrow viewport widths
+- [ ] Resolution scale, dynamic shadows, effects and camera sensitivity persist after refresh
 
 Testing caveat: Source, mocked 3D construction and gameplay checks are useful but do not replace a real browser GPU/WebGL rendering test.
 

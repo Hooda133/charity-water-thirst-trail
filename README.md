@@ -24,6 +24,7 @@
 - Showcase visual pass: layered alpine backdrop, vertex-colored valley terrain, densely scattered instanced meadow flowers, and a translucent animated waterfall
 - **Environment graphics pass:** focused sunlight and soft shadows, layered meadow color variation, three-layer softened trails, a locally generated scrolling river texture with shallow-water edges, and 270 instanced woodland shrubs
 - Quality-focused changes are applied to the **real playable scene**; original gameplay, GLTF character/village models and camera zoom are preserved
+- Greenwater Valley environment rebuild: forked low-poly trees with layered canopies, instanced understory shrubs, stone-edged trails, a workshop frontage, detailed supply crates, and a stone pump apron
 - Real in-engine art upgrades: procedural shingle, wood-grain, stone, plaster, footpath and grass textures generated locally at startup (no external asset requests)
 - Screenshot-driven visual cleanup: quieter distant mountain silhouette, clearer village sightlines, feathered chimney smoke, matte teal water, fewer river rocks and small pale birds
 - Bridge route fix: destinations reached from the bridge center now correctly choose the safe bank before leaving the crossing
@@ -44,6 +45,10 @@
 - Optional Raincatch Ridge destination with a 3D collection station, roof gutter, covered tank and interactive collection-planning activity (+220 impact points)
 - Animated articulated explorer (walking, greeting, and celebratory poses), cinematic quest rewards with 3D sparkles, and a distinctive victory presentation
 - Reduced-motion support for the newer environment and achievement animations
+- Saved graphics profiles: Low, Medium, High and Ultra presets with live resolution, shadow, effects and camera-sensitivity controls
+- Cinematic lighting and water pass: time-of-day sky grading, balanced key/fill/rim lights, landmark contact shadows, animated shader-driven river highlights, water-edge glints, and tuned lantern/window/campfire illumination
+- Modern third-person camera pass: eased zoom targets, terrain-aware follow framing, orbit/pan boundaries, practical ground clearance, smooth recentering, and drag-safe click-to-walk gestures
+- Final presentation pass: loading-state transition, clearer mission/HUD hierarchy, polished inventory and quest states, and quality presets that tune resolution, shadow cost, atmospheric density and exposure
 - Energy management, sprinting, obstacles, rest stops, impact scoring, and a timed expedition
 - Story quests, water-safety quizzes, a bonus spring route, and progressive mission feedback
 - Start, pause, resume, restart, replay, win, and out-of-energy flows
@@ -58,6 +63,8 @@ Both 3D chapters support **hold left mouse button and drag** to pan the camera a
 ## How to play
 
 Run a local static web server (recommended because glTF models load over HTTP) and open `index.html`. Use **WASD** or **arrow keys** to move, **E** or **Space** to interact, **Shift** to sprint, **P** to pause, and the **mouse wheel** to zoom the 3D camera, and **M** to hide or show the mini-map, and **V** to toggle the scenic camera. The mini-map also lets you click destination markers to plan a route. On mobile, use the directional controls. In Chapter 1, meet the elder, gather the toolkit and gasket, rotate all nine pipeline sections to form a leak-free network, then complete the water-safety questions. Chapter 2 unlocks automatically; choose it from the new chapter selection panel. In Forgotten Canyon use WASD/arrows, E to interact, the fast-travel list, and P to pause. Optionally travel to Raincatch Ridge for a rainwater collection challenge or visit Wetland Sanctuary to remove litter while protecting nests and plants. Look for four sealed drinking-water caches to restore energy. Water collected from roofs still requires testing and appropriate treatment before drinking.
+
+**Camera and graphics:** In 3D Valley, left-click to walk, left-drag to pan, right-drag to orbit, and press **C** to recenter. Use ⚙ for Low, Medium, High, and Ultra graphics settings.
 
 ## Run locally
 
