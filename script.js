@@ -945,6 +945,7 @@
   });
   window.addEventListener("keyup",e=>state.keys.delete(e.key.toLowerCase()));
   window.addEventListener("blur",()=>{state.keys.clear();state.touch.clear();});
+  window.addEventListener("pagehide",()=>saveValley());
   document.addEventListener("visibilitychange",()=>{
     state.keys.clear();state.touch.clear();
     if(document.hidden&&state.screen==="playing"&&!state.modalOpen)pause();
