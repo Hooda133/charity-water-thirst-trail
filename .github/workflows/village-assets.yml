@@ -1,4 +1,4 @@
-name: Validate 3D Assets
+name: Validate 3D Assets and Pipe Logic
 on:
   push:
     branches: [main]
@@ -7,6 +7,7 @@ on:
       - 'assets/characters/**'
       - 'tools/validate-village.mjs'
       - 'tools/validate-explorer.mjs'
+      - 'tools/test-pipes.mjs'
       - 'script.js'
       - 'index.html'
       - '.github/workflows/village-assets.yml'
@@ -16,6 +17,7 @@ on:
       - 'assets/characters/**'
       - 'tools/validate-village.mjs'
       - 'tools/validate-explorer.mjs'
+      - 'tools/test-pipes.mjs'
       - 'script.js'
       - 'index.html'
       - '.github/workflows/village-assets.yml'
@@ -34,3 +36,5 @@ jobs:
         run: node tools/validate-village.mjs
       - name: Validate explorer rig and character geometry
         run: node tools/validate-explorer.mjs
+      - name: Exhaustively test all 262144 pipeline orientations
+        run: node tools/test-pipes.mjs
