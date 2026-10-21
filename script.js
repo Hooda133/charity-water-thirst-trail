@@ -1237,12 +1237,47 @@
       foamDummy.updateMatrix();foam.setMatrixAt(i,foamDummy.matrix);
     }
     foam.instanceMatrix.needsUpdate=true;scene.add(foam);
+    // Sculpt a rugged-looking river channel with shallow boulders and mossy
+    // shore stones. Instancing gives hundreds of facets in just two draw calls.
+    const riverStoneGeo=new THREE.IcosahedronGeometry(1,1);
+    const channelBoulders=new THREE.InstancedMesh(riverStoneGeo,mats.rock,108);
+    const brightBoulders=new THREE.InstancedMesh(riverStoneGeo,mats.rock2,48);
+    const pebbleDummy=new THREE.Object3D();
+    for(let i=0;i<108;i++){
+      const z=-13.1+(i/108)*26.2;
+      if(Math.abs(z-wz(580))<1.45){ // clear the bridge's center crossing
+        pebbleDummy.position.set(0,-20,0);pebbleDummy.scale.setScalar(.001);
+      }else{
+        const mid=wx(riverCenter(z*SCALE+550));
+        const shore=i%2?-1:1;
+        const x=mid+shore*(2.48+rng()*1.45);
+        const scale=.20+rng()*.56;
+        pebbleDummy.position.set(x,scale*.23-.08,z);
+        pebbleDummy.scale.set(scale*1.3,scale*.52,scale*.95);
+      }
+      pebbleDummy.rotation.set(rng()*.25,rng()*6.28,rng()*.20);
+      pebbleDummy.updateMatrix();channelBoulders.setMatrixAt(i,pebbleDummy.matrix);
+    }
+    for(let i=0;i<48;i++){
+      const z=-13.1+(i/48)*26.2,mid=wx(riverCenter(z*SCALE+550));
+      const sc=.20+rng()*.41;
+      pebbleDummy.position.set(mid+(i%2?-1:1)*(1.75+rng()*.85),sc*.24,z);
+      pebbleDummy.scale.set(sc*1.2,sc*.35,sc*.82);
+      pebbleDummy.rotation.set(rng()*.4,rng()*6.28,rng()*.25);
+      pebbleDummy.updateMatrix();brightBoulders.setMatrixAt(i,pebbleDummy.matrix);
+    }
+    channelBoulders.instanceMatrix.needsUpdate=true;
+    brightBoulders.instanceMatrix.needsUpdate=true;
+    channelBoulders.castShadow=false;brightBoulders.castShadow=false;
+    scene.add(channelBoulders,brightBoulders);
     // Paths are curves integrated into the meadow rather than straight flat UI lines.
+    const mainTrailMat=makeMat(0xd4a971);
+    if(art.trail)mainTrailMat.map=art.trail;
     function road(raw,width=.95){
       const curve=new THREE.CatmullRomCurve3(raw.map(p=>new THREE.Vector3(wx(p[0]),.075,wz(p[1]))));
       const pts=curve.getPoints(85).map(p=>[p.x,p.z]);
       ribbon(pts,width,.077,mats.sand);
-      ribbon(pts,width*.74,.083,makeMat(0xd4a971),scene);
+      ribbon(pts,width*.74,.083,mainTrailMat,scene);
     }
     road([[285,490],[370,630],[455,765],[610,708],[730,580],[970,580],[1180,825],[1540,690]]);
     road([[280,490],[420,435],[540,350]],.65);
