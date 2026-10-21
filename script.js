@@ -294,15 +294,29 @@
   }
   function navToPosition(target,spotKey=null){
     if(state.screen!=="playing"||state.modalOpen)return;
-    state.keys.clear();state.touch.clear();
-    const path=[],leftBank=x=>x<riverCenter(570)-92,rightBank=x=>x>riverCenter(570)+92;
-    const curLeft=leftBank(state.x),curRight=rightBank(state.x),endLeft=leftBank(target.x),endRight=rightBank(target.x);
-    if((curLeft&&endRight)||(curRight&&endLeft)){
-      const departing=curLeft?{x:730,y:580}:{x:975,y:580};
-      const arriving=curLeft?{x:975,y:580}:{x:730,y:580};
-      path.push(departing,arriving);
+    if(blocked(target.x,target.y)){
+      notify("That spot is across the water or outside the safe trail. Select a land destination.");
+      return;
     }
-    path.push({x:target.x,y:target.y});state.path=path;state.goal={x:target.x,y:target.y};state.destination=spotKey;
+    state.keys.clear();state.touch.clear();
+    const leftBridge={x:730,y:580},rightBridge={x:975,y:580};
+    // At the bridge's center the old route planner treated the player as being
+    // on neither bank, causing it to walk diagonally into a blocked river edge.
+    // Determine both banks using the river's actual curve, not a fixed x value.
+    const side=(x,y)=>{
+      const center=riverCenter(y);
+      return x<center-92?-1:x>center+92?1:0;
+    };
+    const start=side(state.x,state.y),end=side(target.x,target.y);
+    const path=[];
+    if(start!==end){
+      if(start===-1)path.push(leftBridge,rightBridge);
+      else if(start===1)path.push(rightBridge,leftBridge);
+      else if(end===-1)path.push(leftBridge);
+      else if(end===1)path.push(rightBridge);
+    }
+    path.push({x:target.x,y:target.y});
+    state.path=path;state.goal={x:target.x,y:target.y};state.destination=spotKey;
     if(spotKey)notify(`Walking to ${spots[spotKey].name}…`);
     tone(500,.06);
   }
