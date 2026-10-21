@@ -1129,15 +1129,23 @@
     // Vertex colors give the whole valley broad patches of warm grass, forest
     // greens, and sunlit meadows rather than a single uniform green surface.
     const colors=new Float32Array(positions.count*3);
-    const meadowA=new THREE.Color(0x82b768),meadowB=new THREE.Color(0xa8c87c);
-    const meadowC=new THREE.Color(0x679f70);
+    const meadowA=new THREE.Color(0x86b574),meadowB=new THREE.Color(0xb6cb88);
+    const meadowC=new THREE.Color(0x5b986f);
     const vertexColor=new THREE.Color();
     for(let i=0;i<positions.count;i++){
       const x=positions.getX(i),z=positions.getZ(i);
-      const pattern=Math.sin(x*.24+z*.31)*Math.cos(z*.35-x*.17);
-      const contrast=Math.sin(x*.67)*Math.cos(z*.42)*.14;
-      vertexColor.copy(meadowA).lerp(pattern>0?meadowB:meadowC,Math.min(.82,Math.abs(pattern)*.58+.15));
-      vertexColor.multiplyScalar(.95+contrast);
+      // Multi-scale meadow patches: broad groundcover, shaded tree groves,
+      // and fine irregular flecks. Everything stays deterministic per vertex.
+      const broad=Math.sin(x*.19+Math.cos(z*.14)*1.7)*
+        Math.cos(z*.22-x*.075);
+      const medium=Math.sin(x*.57+z*.36)*Math.cos(z*.39-x*.28);
+      const flecks=Math.sin(x*1.71+z*1.23)*Math.sin(z*1.59-x*.87);
+      const sunlit=Math.max(0,broad*.76+medium*.24);
+      const shadow=Math.max(0,-broad*.67+medium*.33);
+      vertexColor.copy(meadowA);
+      vertexColor.lerp(meadowB,Math.min(.75,sunlit*.59));
+      vertexColor.lerp(meadowC,Math.min(.58,shadow*.49));
+      vertexColor.multiplyScalar(.96+medium*.048+flecks*.022);
       colors[i*3]=vertexColor.r;colors[i*3+1]=vertexColor.g;colors[i*3+2]=vertexColor.b;
     }
     terrainGeometry.setAttribute("color",new THREE.BufferAttribute(colors,3));
@@ -1333,13 +1341,21 @@
     channelBoulders.castShadow=false;brightBoulders.castShadow=false;
     scene.add(channelBoulders,brightBoulders);
     // Paths are curves integrated into the meadow rather than straight flat UI lines.
-    const mainTrailMat=makeMat(0xd4a971);
+    const mainTrailMat=makeMat(0xb99467);
     if(art.trail)mainTrailMat.map=art.trail;
+    const featheredTrailMat=new THREE.MeshStandardMaterial({
+      color:0xbba978,roughness:1,transparent:true,opacity:.19,
+      polygonOffset:true,polygonOffsetFactor:-1,depthWrite:false,
+      side:THREE.DoubleSide
+    });
     function road(raw,width=.95){
       const curve=new THREE.CatmullRomCurve3(raw.map(p=>new THREE.Vector3(wx(p[0]),.075,wz(p[1]))));
       const pts=curve.getPoints(85).map(p=>[p.x,p.z]);
-      ribbon(pts,width,.077,mats.sand);
-      ribbon(pts,width*.74,.083,mainTrailMat,scene);
+      // Three layers make the track settle into the grass instead of
+      // appearing as a single solid-colored stripe.
+      ribbon(pts,width*1.53,.067,featheredTrailMat);
+      ribbon(pts,width*1.11,.077,mats.sand);
+      ribbon(pts,width*.69,.087,mainTrailMat);
     }
     road([[285,490],[370,630],[455,765],[610,708],[730,580],[970,580],[1180,825],[1540,690]]);
     road([[280,490],[420,435],[540,350]],.65);
