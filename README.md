@@ -6,6 +6,9 @@
 
 - Genuine Three.js/WebGL 3D exploration with terrain, 3D buildings, a modeled explorer, lighting, shadows, camera follow, and click-to-walk
 - Showcase visual pass: layered alpine backdrop, vertex-colored valley terrain, densely scattered instanced meadow flowers, and a translucent animated waterfall
+- Real in-engine art upgrades: procedural shingle, wood-grain, stone, plaster, footpath and grass textures generated locally at startup (no external asset requests)
+- New pitched gable roofs, timber-framed cottages, amber windows, masonry chimneys and animated smoke
+- Instanced riverbank boulders and faceted sunlit canopy accents, plus lower-exposure cinematic daylight
 - Cinematic title flyover and illustrated sun/moon sky with golden daylight halos
 - Scenic camera overview: select **SCENIC VIEW** or press **V** to switch from follow camera to the whole-valley panorama; works in both 3D and the 2D fallback
 - Live interactive valley map with player location, quest destinations and walking routes; click a map marker to navigate or press M to collapse the map
