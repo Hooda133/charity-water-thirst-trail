@@ -169,3 +169,16 @@ These modifications passed JavaScript syntax and simulated 3D scene construction
 - [ ] Resize browser with puzzle open (including 740px breakpoint) to ensure cards and labels don't overlap
 
 The pipe challenge passed scripted gameplay and modal-class switching checks; real browser layout still needs a visual review.
+
+
+## Full 9-tile pipeline logic fix (October 21)
+- [ ] Confirm the board shows **two T-junctions** (three pipe arms each), **two end caps** (one arm each), plus bends and straight pipes
+- [ ] Confirm the inlet enters the left side of middle-left tile (4), and the outlet exits the right side of middle-right tile (6)
+- [ ] From the scrambled starting state, Test the flow costs two energy and does not pass
+- [ ] Connect only the direct path to the outlet; the game **must reject** that partial solution if either capped branch is missing
+- [ ] Align all pieces so water reaches all nine with no open joints; the board shows success and Test the flow proceeds to the safety quiz
+- [ ] Switch between the pipe and normal NPC dialogs; only the pipe uses the wide layout
+- [ ] Use keyboard Tab and Enter to rotate and test the tiles, including T-junction and capped pieces
+- [ ] Confirm pipe piece rotations preserve the correct reciprocal connections and cannot leak off any exterior edge except the designated inlet/outlet
+
+**Automated verification:** Run `node tools/test-pipes.mjs`. The script evaluates all 262,144 possible orientations of the actual game solver and expects exactly two complete leak-free solutions. The GitHub Actions validation workflow runs this test automatically.
