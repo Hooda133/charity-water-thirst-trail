@@ -9,6 +9,16 @@ This project is a static HTML/CSS/JavaScript game. Run it from a local HTTP serv
 - [ ] Walking near the spring and the ridge does not hide the player behind oversized foreground clouds.
 - [ ] WASD, arrow keys, clicking destinations, mouse wheel zoom, pause and restart still work.
 
+## Free camera exploration (both chapters)
+- [ ] Hold left mouse button and drag the 3D world: camera pans while the explorer stays at the same coordinates.
+- [ ] Release and drag again: the camera can inspect the opposite edges of the world.
+- [ ] A short click still issues click-to-walk, but releasing a drag does **not** start a walk.
+- [ ] WASD and mission selection still move the player when the camera is panned.
+- [ ] Press **C** or choose **⌖ RECENTER** to restore a character-centered view.
+- [ ] Canyon mouse-wheel zoom works without changing the player's position.
+- [ ] After a save/reload, both chapters remain playable and progress is preserved.
+- [ ] If Three.js is offline, the 2D fallback still supports the existing movement and quests.
+
 ## Phase 2 — Repair
 - [ ] Talk to the elder, collect the toolkit and gasket, and travel to the pump.
 - [ ] The repair opens a **3×3 rotate-the-pipes** board rather than immediately opening the old quiz.
