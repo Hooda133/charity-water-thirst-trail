@@ -67,6 +67,9 @@ Automated-integration simulation checks run in the development connection cover 
 - [ ] On mobile: world header controls do not overflow, hero overlays fit, and both camera modes work without layout shifts
 - [ ] Reduced-motion preferences stop the flyover and other decorative camera movements
 - [ ] Framerate stays acceptable on an integrated-graphics laptop and there are no WebGL or console errors
+- [ ] The authored explorer glTF appears with face, hat, jacket, pack, scarf, flask, gloves, trousers and boots
+- [ ] Explorer idle, walk, sprint, turn, greeting and victory poses blend without visible snapping
+- [ ] Explorer remains readable at the normal third-person follow distance in daylight and night
 - [ ] Graphics gear menu applies Low, Medium, High and Ultra presets without restarting
 - [ ] Resolution scale, dynamic shadows, effects and camera sensitivity persist after refresh
 

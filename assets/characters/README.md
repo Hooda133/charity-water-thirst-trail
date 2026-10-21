@@ -15,6 +15,8 @@ The model uses named transform pivots instead of hard-coded positions baked into
 - `ExplorerScarfTail` — fluttering with movement.
 - `ExplorerPackFlap` — moving with footsteps.
 
+The source asset intentionally contains rig pivots rather than a large animation-library payload. The runtime builds smooth blended poses from the rig: idle breathing, walk/run stride, interaction greeting, celebration, turning lean, blinking, scarf movement and pack motion. Blend weights are frame-time based, so transitions do not snap when movement starts or stops. Materials are promoted to smooth PBR shading at load time, with tuned roughness for skin, hair, fabric, leather and metal equipment, and a small character fill light keeps the explorer readable in both daylight and night scenes.
+
 All animations are driven by the **same game movement and mission state as the original character**, including the reduced-motion setting.
 
 ## Loading and safe fallback
@@ -39,6 +41,6 @@ Thirst Trail: loaded original animated explorer model.
 
 Then test normal walking, greeting an NPC, quest completion and the winning pose. **Zoom the camera in to inspect facial details** — the default camera zoom is intentionally unchanged.
 
-Model validation and simulated rig-animation tests do not verify the actual final WebGL appearance, framing, shader quality or GPU frame rate. Check those in the real browser.
+Model validation and simulated rig-animation tests do not verify the actual final WebGL appearance, framing, shader quality or GPU frame rate. Check those in the real browser. The repository currently contains Greenwater Valley only; no Forgotten Canyon character scene or chapter files are present in this checkout.
 
 See [ASSET_LICENSE.md](ASSET_LICENSE.md) for provenance.

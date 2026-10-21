@@ -1727,7 +1727,22 @@
           asset.scale.setScalar(p.size);
           asset.traverse(node=>{
             if(node.isMesh){
-              node.castShadow=true;node.receiveShadow=true;
+              node.castShadow=true;node.receiveShadow=true;node.frustumCulled=true;
+              const materials=Array.isArray(node.material)?node.material:[node.material];
+              for(const material of materials){
+                if(!material)continue;
+                material.flatShading=false;
+                material.needsUpdate=true;
+                const name=(material.name||"").toLowerCase();
+                if(name.includes("metal")||name.includes("hardware")){
+                  material.metalness=Math.max(material.metalness||0,.55);
+                  material.roughness=Math.min(material.roughness??.86,.34);
+                }else if(name.includes("skin")||name.includes("hair")){
+                  material.roughness=Math.min(material.roughness??.86,.72);
+                }else{
+                  material.roughness=Math.max(.48,Math.min(material.roughness??.86,.9));
+                }
+              }
             }
           });
           scene.add(asset);
@@ -2161,6 +2176,9 @@
     // Slightly larger stylized explorer, visible even at the standard isometric zoom.
     const explorer=new THREE.Group();scene.add(explorer);
     explorer.scale.setScalar(1.19);
+    const characterFill=new THREE.PointLight(0x9fe8e0,.42,6.5,2);
+    characterFill.position.set(-1.2,3.6,2.2);
+    explorer.add(characterFill);
     const skin=makeMat(0xce9169),shirt=makeMat(0x29a6a0),pants=makeMat(0x335772),
           boots=makeMat(0x3d3035),bag=makeMat(0xdc814e),hat=makeMat(0xf9c768),hair=makeMat(0x47342d);
     const shadow=mesh(new THREE.CircleGeometry(.56,22),new THREE.MeshBasicMaterial({color:0x203d34,transparent:true,opacity:.26,depthWrite:false}),explorer,false);
@@ -2232,6 +2250,7 @@
     const characterAssetState={status:"fallback",loaded:0,total:1};
     let characterAssetDisposed=false,characterRig=null;
     let characterModel=null;
+    const characterMotion={locomotion:0,running:0,greeting:0,celebration:0,phase:0,lastTime:0};
     const rigJointNames=[
       "ExplorerBody","ExplorerHead","ExplorerEyes","ExplorerScarfTail",
       "ExplorerArmLeft","ExplorerArmRight","ExplorerElbowLeft","ExplorerElbowRight",
@@ -2385,7 +2404,7 @@
       freeTarget.z=Math.max(-13,Math.min(13,freeTarget.z));
     }
     // Gentle camera zoom without changing the existing keyboard movement controls.
-    let cameraDistance=.93;
+    let cameraDistance=.82;
     view.addEventListener("wheel",event=>{
       if(!view.isConnected || view.parentElement===hero)return;
       event.preventDefault();
@@ -2533,25 +2552,37 @@
       const effect=state.effect;
       const effectAge=effect?Math.max(0,time-effect.at):99;
       const celebrating=effect&&effectAge<1.5;
-      const pace=isMoving?Math.sin(time*(state.keys?.has("shift")?15:11))*.6:0;
-      legs[0].rotation.x=pace;legs[1].rotation.x=-pace;
-      knees[0].rotation.x=isMoving?Math.max(0,pace)*-.37:0;
-      knees[1].rotation.x=isMoving?Math.max(0,-pace)*-.37:0;
-      arms[0].rotation.x=-pace*.82;arms[1].rotation.x=pace*.82;
-      elbows[0].rotation.x=isMoving?Math.max(0,pace)*-.28:0;
-      elbows[1].rotation.x=isMoving?Math.max(0,-pace)*-.28:0;
+      const frameDelta=characterMotion.lastTime?Math.min(.05,Math.max(0,time-characterMotion.lastTime)):.016;
+      characterMotion.lastTime=time;
+      const smooth=(current,target,rate)=>current+(target-current)*(1-Math.exp(-rate*frameDelta));
+      const running=!!state.keys?.has("shift");
+      characterMotion.locomotion=smooth(characterMotion.locomotion,isMoving?1:0,11);
+      characterMotion.running=smooth(characterMotion.running,isMoving&&running?1:0,8);
+      characterMotion.greeting=smooth(characterMotion.greeting,!isMoving&&state.nearby&&state.screen==="playing"?1:0,9);
+      characterMotion.celebration=smooth(characterMotion.celebration,celebrating?1:0,10);
+      characterMotion.phase+=frameDelta*(1.7+characterMotion.locomotion*(9.5+characterMotion.running*4.5));
+      const stride=Math.sin(characterMotion.phase)*characterMotion.locomotion*(.52+characterMotion.running*.12);
+      const strideOpp=Math.sin(characterMotion.phase+Math.PI)*characterMotion.locomotion*(.52+characterMotion.running*.12);
+      legs[0].rotation.x=stride;legs[1].rotation.x=strideOpp;
+      knees[0].rotation.x=Math.max(0,stride)*-.34;
+      knees[1].rotation.x=Math.max(0,strideOpp)*-.34;
+      arms[0].rotation.x=-stride*.72;arms[1].rotation.x=-strideOpp*.72;
+      elbows[0].rotation.x=Math.max(0,stride)*-.24;
+      elbows[1].rotation.x=Math.max(0,strideOpp)*-.24;
       arms[0].rotation.z=0;arms[1].rotation.z=0;
-      if(celebrating){
-        arms[0].rotation.z=-2.12;arms[1].rotation.z=2.12;
-        elbows[0].rotation.x=-.26;elbows[1].rotation.x=-.26;
-      }else if(!isMoving&&state.nearby&&state.screen==="playing"){
-        arms[1].rotation.z=reduceMotion?.85:1.04+Math.sin(time*4)*.13;
-      }
-      body.position.y=reduceMotion?0:(isMoving?Math.abs(Math.sin(time*11))*.08:
-        (celebrating?Math.abs(Math.sin(time*9))*.13:Math.sin(time*1.9)*.027));
-      body.rotation.z=reduceMotion?0:(isMoving?Math.sin(time*5.5)*.028:Math.sin(time*.85)*.011);
-      body.rotation.x=reduceMotion?0:(isMoving?-.045:Math.sin(time*1.5)*.012);
-      scarfTail.rotation.z=-.25+(reduceMotion?0:(isMoving?Math.sin(time*11)*.15:Math.sin(time*1.5)*.03));
+      const celebrationWeight=characterMotion.celebration;
+      const greetingWeight=characterMotion.greeting*(1-celebrationWeight);
+      arms[0].rotation.z=-2.12*celebrationWeight;
+      arms[1].rotation.z=2.12*celebrationWeight+greetingWeight*(reduceMotion?.78:.93+Math.sin(time*4)*.12);
+      elbows[0].rotation.x-=.26*celebrationWeight;
+      elbows[1].rotation.x-=.26*celebrationWeight;
+      body.position.y=reduceMotion?0:(characterMotion.locomotion*Math.abs(Math.sin(characterMotion.phase))*.08+
+        celebrationWeight*Math.abs(Math.sin(time*9))*.13+(1-characterMotion.locomotion)*Math.sin(time*1.9)*.027);
+      body.rotation.z=reduceMotion?0:characterMotion.locomotion*Math.sin(characterMotion.phase*.5)*.028+
+        (1-characterMotion.locomotion)*Math.sin(time*.85)*.011;
+      body.rotation.x=reduceMotion?0:-.045*characterMotion.locomotion+(1-characterMotion.locomotion)*Math.sin(time*1.5)*.012;
+      scarfTail.rotation.z=-.25+(reduceMotion?0:characterMotion.locomotion*Math.sin(characterMotion.phase)*.15+
+        (1-characterMotion.locomotion)*Math.sin(time*1.5)*.03);
       // Mirror gameplay animation onto independently authored glTF joints.
       // Locomotion, greeting and the victory pose still share one state source.
       if(characterRig){
@@ -2565,7 +2596,8 @@
           rig.knees[i].rotation.copy(knees[i].rotation);
         }
         rig.scarf.rotation.z=scarfTail.rotation.z;
-        rig.flap.rotation.x=reduceMotion?0:(isMoving?-.08+Math.sin(time*11)*.06:Math.sin(time*1.8)*.024);
+        rig.flap.rotation.x=reduceMotion?0:-.08*characterMotion.locomotion+
+          (characterMotion.locomotion?Math.sin(characterMotion.phase)*.06:Math.sin(time*1.8)*.024);
         rig.head.rotation.y=reduceMotion?0:Math.sin(time*.58)*.065;
         rig.head.rotation.x=celebrating?-.12:(reduceMotion?0:Math.sin(time*1.4)*.025);
         // Short natural blink: visible only near the explorer, with no timers.
@@ -2577,7 +2609,7 @@
         if(Number.isFinite(dx)&&Number.isFinite(dz)&&Math.hypot(dx,dz)>.003){
           const heading=Math.atan2(dx,dz);
           let diff=((heading-explorer.rotation.y+Math.PI*3)%(Math.PI*2))-Math.PI;
-          explorer.rotation.y+=diff*.2;
+          explorer.rotation.y+=diff*(1-Math.exp(-10*frameDelta));
         }
       }
       explorer.userData.lastX=playerX;explorer.userData.lastZ=playerZ;
