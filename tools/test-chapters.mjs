@@ -68,8 +68,9 @@ const window={
  dispatchEvent(event){for(const fn of events[event.type]||[])fn(event);},
  scrollTo(){}
 };
+const scheduledFrames=[];
 const sandbox={window,document,localStorage:storage,Event,
- performance:{now(){return 1000;}},requestAnimationFrame(){return 1;},console};
+ performance:{now(){return 1000;}},requestAnimationFrame(fn){scheduledFrames.push(fn);return 1;},console};
 runInNewContext(scripts.progress,sandbox);
 const progress=window.TrailProgress;
 assert.ok(progress);
@@ -97,6 +98,16 @@ function go(key){
 }
 canyon.launch();
 assert.equal(canyon.snapshot().active,true);
+// Regression: Level 2 character moves independently of the free-camera state.
+const startX=canyon.snapshot().x;
+test.get().keys.add("d");
+for(let i=1;i<=9;i++){
+ const tick=scheduledFrames.shift();
+ assert.equal(typeof tick,"function","Canyon must keep rendering frames");
+ tick(1000+i*50);
+}
+test.get().keys.delete("d");
+assert.ok(canyon.snapshot().x>startX+15,"Canyon player must move on D key");
 go("surveyor");select()[0].listeners.click();
 assert.ok(canyon.snapshot().done.includes("surveyor"));
 go("kit");select()[0].listeners.click();
