@@ -502,7 +502,7 @@
         raycaster.setFromCamera(pointer,camera);
         const hit=new THREE.Vector3();
         if(raycaster.ray.intersectPlane(new THREE.Plane(new THREE.Vector3(0,1,0),0),hit)){
-          const p={x:hit.x*24+500,y:hit.z*24+305};
+          const p={x:hit.x/worldSpread*24+500,y:hit.z/worldSpread*24+305};
           let best=null,d=65;
           for(const item of [...Object.values(goals),rest]){
             const gap=pointDistance(p,item);if(gap<d){best=item;d=gap;}
