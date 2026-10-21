@@ -1118,22 +1118,21 @@
     // Mountains sit beyond the playable bounds and never affect navigation.
     const mountainDistant=makeMat(0x769c99),mountainNear=makeMat(0x6d887d);
     const mountainLit=makeMat(0xa1b5a0),snowCap=makeMat(0xe9ebd7);
+    // Keep mountains on a distant back ridge, away from the playable camera
+    // and sky. Previous giant cones framed the scene like a wall of triangles.
     const scenicMountains=[];
-    for(let i=0;i<15;i++){
-      const x=-57+i*8.15;
-      const z=-36-(i%3)*5.5;
-      const height=9+(i*7%10);
-      const radius=5.8+(i%4)*1.1;
-      const group=new THREE.Group();group.position.set(x,-.7,z);scene.add(group);
-      const body=mesh(new THREE.ConeGeometry(radius,height,6),i%3?mountainDistant:mountainNear,group,false);
-      body.position.y=height*.45;body.rotation.y=i*.76;
-      const snow=mesh(new THREE.ConeGeometry(radius*.33,height*.23,6),snowCap,group,false);
-      snow.position.y=height*.45+height*.385;
-      snow.rotation.y=i*.76;
-      if(i%3===0){
-        const shoulder=mesh(new THREE.ConeGeometry(radius*.58,height*.64,5),mountainLit,group,false);
-        shoulder.position.set(-radius*.49,height*.33,radius*.1);
-      }
+    for(let i=0;i<12;i++){
+      const x=-49+i*8.8;
+      const z=-49-(i%3)*4.4;
+      const height=7.2+(i*7%9);
+      const radius=4.5+(i%3)*1.25;
+      const group=new THREE.Group();group.position.set(x,-2.2,z);scene.add(group);
+      const peak=mesh(new THREE.ConeGeometry(radius,height,7),
+        i%3?mountainDistant:mountainNear,group,false);
+      peak.position.y=height*.44;peak.rotation.y=i*.76;
+      const snow=mesh(new THREE.ConeGeometry(radius*.24,height*.15,7),
+        snowCap,group,false);
+      snow.position.y=height*.44+height*.424;snow.rotation.y=i*.76;
       scenicMountains.push(group);
     }
     for(let i=0;i<34;i++){
@@ -1349,13 +1348,15 @@
       return g;
     }
     const objectivePositions=spots.map(p=>[wx(p[1]),wz(p[2])]);
-    for(let i=0;i<115;i++){
+    // Thin canopy around interaction hotspots: players should see cabins,
+    // the bridge, and NPCs instead of a solid wall of oversized treetops.
+    for(let i=0;i<100;i++){
       const x=(rng()-.5)*45,z=(rng()-.5)*27;
       const screenY=z*SCALE+550;
-      if(Math.abs(x-wx(riverCenter(screenY)))<3.4)continue;
-      if(objectivePositions.some(p=>Math.hypot(x-p[0],z-p[1])<2.2))continue;
-      if(Math.abs(x+13)<3.2 && z> -5 && z<8)continue;
-      tree(x,z,.52+rng()*.66);
+      if(Math.abs(x-wx(riverCenter(screenY)))<3.8)continue;
+      if(objectivePositions.some(p=>Math.hypot(x-p[0],z-p[1])<3.3))continue;
+      if(Math.abs(x+13)<4.1 && z> -5 && z<8)continue;
+      tree(x,z,.49+rng()*.43);
     }
     const leafHighlightGeo=new THREE.IcosahedronGeometry(1,0);
     const leafHighlightMat=new THREE.MeshStandardMaterial({
@@ -1387,20 +1388,21 @@
       }
       ball(g,mats.pineLight,-.34,.72,.29,.24,.18,.27);
     }
-    for(let i=0;i<31;i++){
+    for(let i=0;i<27;i++){
       const x=(rng()-.5)*44,z=(rng()-.5)*26;
       const riverX=wx(riverCenter(z*SCALE+550));
-      if(Math.abs(x-riverX)<3.5 || objectivePositions.some(p=>Math.hypot(x-p[0],z-p[1])<2.4))continue;
-      pine(x,z,.78+rng()*.7);
+      if(Math.abs(x-riverX)<3.8 || objectivePositions.some(p=>Math.hypot(x-p[0],z-p[1])<3.3))continue;
+      pine(x,z,.72+rng()*.44);
     }
-    // Pastel mountains, boulders and distant vegetation.
-    const mtMat=[makeMat(0x779f8e),makeMat(0x91b39c),makeMat(0x719791)];
-    for(let i=0;i<24;i++){
-      const ang=i/24*Math.PI*2,rx=Math.cos(ang)*31,rz=Math.sin(ang)*22;
-      const h=3+rng()*7;
-      const m=mesh(new THREE.ConeGeometry(2.7+rng()*2.5,h,5),mtMat[i%3],scene);
-      m.position.set(rx,h/2-.4,rz);
-      if(i%3===0)ball(scene,makeMat(0xdae2d0),rx,h*.92-.4,rz,1.25,.45,1.22);
+    // A slim foothill band replaces the old 360-degree ring of mountain
+    // cones, which previously appeared directly in front of the village.
+    const foothillMat=[makeMat(0x759d89),makeMat(0x86aa98),makeMat(0x678b83)];
+    for(let i=0;i<12;i++){
+      const x=-34+i*6.1,z=-26-(i%3)*2.1;
+      const height=2.6+(i*5%5);
+      const hill=mesh(new THREE.ConeGeometry(4.2,height,6),
+        foothillMat[i%3],scene,false);
+      hill.position.set(x,height*.40-1.1,z);
     }
     for(let i=0;i<105;i++){
       const x=(rng()-.5)*43,z=(rng()-.5)*26;
