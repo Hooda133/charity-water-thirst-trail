@@ -316,16 +316,16 @@
     creating=true;
     try{
       const THREE=await import("https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js");
-      const scene=new THREE.Scene();scene.background=new THREE.Color(0xcba992);
+      const scene=new THREE.Scene();scene.background=new THREE.Color(0x93b9c9);
       // Widen the entire traversable 3D valley without changing quest logic or save coordinates.
       const worldSpread=1.42;scene.scale.set(worldSpread,1,worldSpread);
-      scene.fog=new THREE.FogExp2(0xd8bca4,.009);
+      scene.fog=new THREE.FogExp2(0xe0b897,.0068);
       const camera=new THREE.PerspectiveCamera(47,1000/610,.1,300);
       camera.position.set(7.4,10.5,13.6);camera.lookAt(0,0,0);
       const renderer=new THREE.WebGLRenderer({alpha:false,antialias:true,powerPreference:"high-performance"});
       renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,1.6));
       renderer.outputColorSpace=THREE.SRGBColorSpace;
-      renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.3;
+      renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.14;
       renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;
       const dom=renderer.domElement;dom.className="canyon-webgl";
       dom.style.cssText="display:block;width:100%;height:auto;aspect-ratio:1000/610;touch-action:none;outline:none";
@@ -338,7 +338,7 @@
       const water=new THREE.MeshStandardMaterial({color:0x50b1b9,roughness:.31,metalness:.05,transparent:true,opacity:.91});
       const hemi=new THREE.HemisphereLight(0xdff3f5,0x8d6656,1.55);scene.add(hemi);
       const sun=new THREE.DirectionalLight(0xffd6a0,3.2);sun.position.set(-18,29,12);sun.castShadow=true;
-      sun.shadow.mapSize.set(1024,1024);sun.shadow.camera.left=-32;sun.shadow.camera.right=32;
+      sun.shadow.mapSize.set(2048,2048);sun.shadow.camera.left=-36;sun.shadow.camera.right=36;
       sun.shadow.camera.top=29;sun.shadow.camera.bottom=-29;sun.shadow.bias=-.0003;
       scene.add(sun);const fill=new THREE.DirectionalLight(0xa9dadd,.65);fill.position.set(16,12,-9);scene.add(fill);
       const put=(geometry,material,x,y,z,shadow=true)=>{
@@ -457,6 +457,16 @@
         post.castShadow=true;
         box(sandstone,x,1.67,z,.72,.34,.11);
       }
+      // Real scenic geometry/material upgrades are kept separate from collisions.
+      // A failed decorative pass must never prevent the playable 3D game from loading.
+      let canyonArt=null;
+      try{
+        canyonArt=window.ThirstCanyonVisuals?.build(THREE,{
+          scene,camera,worldSpread,getState:()=>state
+        })||null;
+      }catch(error){
+        console.warn("Canyon advanced scenery unavailable; using safe original terrain.",error);
+      }
       // Floating, player-facing world mission labels.
       const marks=[];
       for(const [key,obj] of Object.entries(goals)){
@@ -516,6 +526,47 @@
       }
       const brim=new THREE.Mesh(new THREE.CylinderGeometry(.45,.45,.045,16),hat);
       brim.position.y=2.31;player.add(brim);
+      // Reuse the exact authored explorer asset and joint names used in Chapter 1.
+      // The procedural version stays as a reliable offline/model-load fallback.
+      const fallbackParts=[...player.children];
+      let explorerRig=null,explorerDisposed=false;
+      const explorerStatus={status:"fallback"};
+      async function loadCanyonExplorer(){
+        try{
+          const {GLTFLoader}=await import("three/addons/loaders/GLTFLoader.js");
+          if(explorerDisposed)return;
+          const asset=await new GLTFLoader().loadAsync("./assets/characters/explorer.gltf");
+          if(explorerDisposed)return;
+          const source=asset?.scene?.getObjectByName("ExplorerCharacter");
+          if(!source)throw Error("Authored explorer node was not found");
+          const candidate=source.clone(true);
+          const names=[
+            "ExplorerBody","ExplorerHead","ExplorerEyes","ExplorerArmLeft",
+            "ExplorerArmRight","ExplorerElbowLeft","ExplorerElbowRight",
+            "ExplorerLegLeft","ExplorerLegRight","ExplorerKneeLeft",
+            "ExplorerKneeRight","ExplorerScarfTail","ExplorerPackFlap"
+          ];
+          const rig={};
+          for(const name of names){
+            const part=candidate.getObjectByName(name);
+            if(!part)throw Error("Missing shared explorer joint: "+name);
+            rig[name]=part;
+          }
+          let parts=0;
+          candidate.traverse(o=>{
+            if(o.isMesh){parts++;o.castShadow=true;o.receiveShadow=true;}
+          });
+          if(parts<6)throw Error("Explorer model has too few meshes");
+          player.add(candidate);
+          fallbackParts.forEach(part=>part.visible=false);
+          explorerRig=rig;explorerStatus.status="ready";
+          console.info("Forgotten Canyon: shared animated 3D explorer loaded.");
+        }catch(error){
+          explorerStatus.status="fallback";
+          console.warn("Canyon explorer model unavailable; keeping playable character.",error);
+        }
+      }
+      void loadCanyonExplorer();
       // Drag-to-explore is independent of character movement and mission progression.
       const pan=new THREE.Vector3(),drag={id:null,x:0,y:0,startX:0,startY:0,moved:false,suppress:false};
       let zoom=1;
@@ -593,7 +644,27 @@
           if(state.path.length){
             const p=state.path[0];player.rotation.y=Math.atan2(wX(p.x)-px,wZ(p.y)-pz);
           }
-          for(let i=0;i<limbs.length;i++)limbs[i].rotation.x=Math.sin(time*9+Math.floor(i/2)*Math.PI+(i%2)*Math.PI)*(state.path.length||state.keys.size ? .35 : .07);
+          const moving=!!(state.path.length||state.keys.size);
+          const gait=Math.sin(time*9)*(moving?.52:.04);
+          for(let i=0;i<limbs.length;i++)
+            limbs[i].rotation.x=(i%2?-1:1)*Math.sin(time*9+Math.floor(i/2)*Math.PI)*(moving?.35:.025);
+          if(explorerRig){
+            const rig=explorerRig;
+            rig.ExplorerLegLeft.rotation.x=gait;
+            rig.ExplorerLegRight.rotation.x=-gait;
+            rig.ExplorerArmLeft.rotation.x=-gait*.8;
+            rig.ExplorerArmRight.rotation.x=gait*.8;
+            rig.ExplorerKneeLeft.rotation.x=Math.max(0,gait)*-.35;
+            rig.ExplorerKneeRight.rotation.x=Math.max(0,-gait)*-.35;
+            rig.ExplorerElbowLeft.rotation.x=Math.max(0,-gait)*-.22;
+            rig.ExplorerElbowRight.rotation.x=Math.max(0,gait)*-.22;
+            rig.ExplorerBody.position.y=moving?Math.abs(Math.sin(time*9))*.06:Math.sin(time*1.4)*.012;
+            rig.ExplorerBody.rotation.x=moving?-.035:0;
+            rig.ExplorerScarfTail.rotation.z=-.24+Math.sin(time*(moving?9:1.4))*.07;
+            rig.ExplorerPackFlap.rotation.x=moving?Math.sin(time*9)*.045:0;
+            rig.ExplorerHead.rotation.y=Math.sin(time*.6)*.035;
+            rig.ExplorerEyes.scale.y=time%5.3<.12?.15:1;
+          }
           // Once travel resumes, follow the explorer so walking never appears frozen offscreen.
           if(state.path.length||state.keys.size)pan.set(0,0,0);
           // Clamp the free camera within the entire expanded canyon; player stays put.
@@ -609,9 +680,15 @@
           }
           broken.visible=!state.done.has("span");
           water.color.set(state.done.has("cistern")?0x55c4cb:0x50b1b9);
+          canyonArt?.update(time);
           renderer.render(scene,camera);
         },
-        dispose(){dom.remove();renderer.dispose();canvas.style.display="";}
+        getExplorerAssetStatus(){return {...explorerStatus};},
+        dispose(){
+          explorerDisposed=true;
+          canyonArt?.dispose();
+          dom.remove();renderer.dispose();canvas.style.display="";
+        }
       };
       if(!state.active)world.draw(performance.now()/1000);
     }catch(error){console.warn("Canyon WebGL unavailable, continuing with playable 2D.",error);canvas.style.display=""; }
