@@ -85,6 +85,7 @@
     state.energy=Math.max(1,Math.min(100,Number(saved.energy)||100));
     state.score=Math.max(0,Number(saved.score)||0);
     state.elapsed=Math.max(0,Number(saved.elapsed)||0);
+    lastValleySaveTime=state.elapsed;
     state.done=new Set((saved.done||[]).filter(k=>spots[k]));
     state.inventory=new Set((saved.inventory||[]).filter(x=>typeof x==="string"));
     state.supplies=new Set((saved.supplies||[]).filter(x=>supplyCaches.some(s=>s.id===x)));
@@ -318,6 +319,7 @@
     }
   }
   function start(){
+    lastValleySaveTime=0;
     Object.assign(state,{screen:"playing",energy:100,score:0,elapsed:0,x:310,y:620,walkT:0,
       path:[],goal:null,destination:null,nearby:null,campUses:0,ended:false,lastStatus:"",cameraX:0,cameraY:0,effect:null,scenic:false});
     $("scenicViewButton").setAttribute("aria-pressed","false");
