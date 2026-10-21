@@ -357,6 +357,9 @@
   function openModal({tag="FIELD NOTES",icon="💧",title,description,choices=[],progress=0,total=0,tip="",kind="dialog",allowClose=true,celebrateWin=false}){
     state.modalOpen=true;state.modalKind=kind;
     $("dialog").classList.toggle("is-victory",celebrateWin);
+    // The pipe challenge uses a wider two-column workshop layout, while
+    // dialogue, rain, wetland and victory screens keep their original design.
+    $("dialog").classList.toggle("is-pipe",kind==="pipe");
     $("pipePuzzle").hidden=true;$("rainPanel").hidden=true;$("marshPanel").hidden=true;
     $("modalTag").textContent=tag;$("modalIllustration").textContent=icon;
     $("modalTitle").textContent=title;$("modalDescription").textContent=description;
@@ -372,6 +375,9 @@
       b.addEventListener("click",c.action);list.append(b);
     }
     $("modalBackdrop").hidden=false;
+    // Reopening a puzzle should start at the top even after scrolling another
+    // dialog; otherwise its title and controls can appear cut off.
+    $("dialog").scrollTop=0;
     $("dialog").focus({preventScroll:true});
     tone(550,.07);
   }
