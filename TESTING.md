@@ -140,3 +140,19 @@ The static CI validator checks glTF geometry and rig names but cannot certify ac
 - [ ] Compare FPS and image quality to the previous version, especially on integrated graphics
 
 Automated validation checks geometry and simulated animation state; actual WebGL shading still needs a browser visual check.
+
+
+## October 21 — Environment graphics pass
+- [ ] With the explorer standing on the bridge, confirm more defined morning shadows under roofs, trees, and railings
+- [ ] The grass should show mixed natural meadow tones instead of a single uniform green
+- [ ] Paths should have soft dusty shoulders, not one flat hard-edged ribbon
+- [ ] River should show subtle flowing turquoise markings; verify animated texture is moving and not stretched
+- [ ] Check shallow edges near both sides of the river (including where the bridge crosses)
+- [ ] Trees should have varying leaf palettes; new low shrub clusters should not hide quest markers or block gameplay
+- [ ] Navigate to the elder, workshop, and pump to confirm access and bridge routing
+- [ ] Complete the pipe repair, Raincatch Ridge, and Wetland Sanctuary activities as regression checks
+- [ ] Toggle Scenic View and examine performance in daytime and at night; compare to older backup if frame rate drops
+- [ ] Check mobile and reduced-motion settings, especially for water movement
+- [ ] If graphics are too busy or slower on your laptop, compare with `backup-before-environment-overhaul-2026-10-21`
+
+These modifications passed JavaScript syntax and simulated 3D scene construction/render checks. The final GPU rendering, animations, and frame rate must still be verified in the actual browser.
