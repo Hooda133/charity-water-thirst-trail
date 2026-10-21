@@ -9,6 +9,7 @@ on:
       - 'tools/validate-explorer.mjs'
       - 'tools/test-pipes.mjs'
       - 'tools/test-chapters.mjs'
+      - 'tools/test-valley-movement.mjs'
       - 'canyon.js'
       - 'canyon.css'
       - 'progression.js'
@@ -23,6 +24,7 @@ on:
       - 'tools/validate-explorer.mjs'
       - 'tools/test-pipes.mjs'
       - 'tools/test-chapters.mjs'
+      - 'tools/test-valley-movement.mjs'
       - 'canyon.js'
       - 'canyon.css'
       - 'progression.js'
@@ -48,3 +50,5 @@ jobs:
         run: node tools/test-pipes.mjs
       - name: Test Valley unlock and Forgotten Canyon quest progression
         run: node tools/test-chapters.mjs
+      - name: Verify character movement controls after graphics merges
+        run: node tools/test-valley-movement.mjs
