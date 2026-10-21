@@ -219,6 +219,57 @@
     scrub.instanceMatrix.needsUpdate=true;scene.add(scrub);props.push(scrub);
     const block=(material,x,y,z,w,h,d,shadow=true)=>add(new THREE.BoxGeometry(w,h,d),material,x,y,z,shadow);
     const world=(x,y)=>[(x-500)/24,(y-305)/24];
+    // Broad trail inlays make the original collision-safe route read as a
+    // connected expedition path instead of an untextured floor.
+    const trailMat=new THREE.MeshStandardMaterial({map:terrainMap,color:0xb88769,roughness:.98});
+    const trailEdgeMat=new THREE.MeshStandardMaterial({color:0x8f6258,roughness:1,flatShading:true});
+    const trailRoutes=[
+      [[165,270],[250,315],[305,455],[390,365],[390,165]],
+      [[305,455],[430,470],[570,430],[700,365],[820,175]],
+      [[390,365],[520,330],[700,365]],
+      [[305,455],[290,520]]
+    ];
+    const trailDust=[];
+    for(const route of trailRoutes){
+      for(let i=0;i<route.length-1;i++){
+        const [ax,az]=world(route[i][0],route[i][1]);
+        const [bx,bz]=world(route[i+1][0],route[i+1][1]);
+        const dx=bx-ax,dz=bz-az,length=Math.hypot(dx,dz);
+        const angle=Math.atan2(dx,dz),midX=(ax+bx)/2,midZ=(az+bz)/2;
+        const path=add(new THREE.PlaneGeometry(1.22,length,1,8),trailMat,midX,-.015,midZ);
+        path.rotation.x=-Math.PI/2;path.rotation.z=angle;
+        for(const side of [-1,1]){
+          const edge=add(new THREE.BoxGeometry(.055,length,.055),trailEdgeMat,
+            midX+Math.cos(angle)*side*.63,-.005,midZ+Math.sin(angle)*side*.63);
+          edge.rotation.y=angle;
+        }
+        for(let j=0;j<3;j++){
+          const mote=add(new THREE.Mesh(new THREE.IcosahedronGeometry(.035,0),
+            new THREE.MeshBasicMaterial({color:0xe7c39b,transparent:true,opacity:.22,depthWrite:false}),
+            midX+(rand()-.5)*.8,.08+rand()*.18,midZ+(rand()-.5)*length*.7));
+          trailDust.push({mesh:mote,material:mote.material,baseX:mote.position.x,baseY:mote.position.y,
+            baseZ:mote.position.z,phase:rand()*6.28});
+        }
+      }
+    }
+    // Foreground shelves and eroded pillars improve depth and landmark scale
+    // while remaining outside the established walkable corridor.
+    const shelfMat=new THREE.MeshStandardMaterial({color:0xc28168,map:stoneMap,roughness:1,flatShading:true});
+    for(let i=0;i<18;i++){
+      const side=i%2?-1:1,z=-20+i*2.25+(rand()-.5)*.5;
+      const shelf=add(new THREE.BoxGeometry(1.2+rand()*2.2,.10+rand()*.22,.62+rand()*.55),
+        shelfMat,side*(4.35+rand()*1.6),.12,z,true);
+      shelf.rotation.y=(rand()-.5)*.35;
+    }
+    const ruinMat=new THREE.MeshStandardMaterial({color:0xb98970,map:blockMap,roughness:.97,flatShading:true});
+    for(let i=0;i<10;i++){
+      const side=i%2?-1:1,z=-17+i*3.9+(rand()-.5)*.7;
+      const height=1.4+rand()*2.5,x=side*(5.1+rand()*2);
+      add(new THREE.CylinderGeometry(.25+rand()*.2,.42+rand()*.25,height,7),
+        ruinMat,x,.65+height*.5,z,true);
+      add(new THREE.CylinderGeometry(.48+rand()*.18,.38,.18,7),
+        deepStone,x,.65+height+.16,z,true);
+    }
     // Art-directed aqueduct masonry: voussoir arch stones, capstones, lateral
     // beam, aging buttresses and rusted mechanical clamps around original pipe.
     {
@@ -352,6 +403,14 @@
       color:0xffe2ba,size:.085,transparent:true,opacity:.32,
       depthWrite:false,depthTest:true,sizeAttenuation:true
     }));scene.add(dust);props.push(dust);
+    const dustMotes=[];
+    for(let i=0;i<38;i++){
+      const mote=add(new THREE.Mesh(new THREE.IcosahedronGeometry(.035+rand()*.035,0),
+        new THREE.MeshBasicMaterial({color:0xf0c89e,transparent:true,opacity:.18,depthWrite:false}),
+        (rand()-.5)*18,.5+rand()*3.2,-15+rand()*30));
+      dustMotes.push({mesh:mote,material:mote.material,phase:rand()*6.28,baseX:mote.position.x,
+        baseY:mote.position.y,baseZ:mote.position.z});
+    }
     const reduced=typeof window.matchMedia==="function"&&
       window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     const finiteTime=t=>Number.isFinite(t)?t:0;
@@ -371,6 +430,13 @@
             xyz.setXY(i,x,y);
           }
           xyz.needsUpdate=true;
+          for(const mote of trailDust.concat(dustMotes)){
+            const drift=(t*.16+mote.phase)%1;
+            mote.mesh.position.x=mote.baseX+Math.sin(t*.32+mote.phase)*.12+drift*.22;
+            mote.mesh.position.y=mote.baseY+Math.sin(t*.8+mote.phase)*.06;
+            mote.mesh.position.z=mote.baseZ+Math.cos(t*.27+mote.phase)*.16;
+            if(mote.material)mote.material.opacity=.10+.12*(.5+.5*Math.sin(t*.7+mote.phase));
+          }
         }
       },
       dispose(){
@@ -384,8 +450,8 @@
           for(const child of object.children||[])collect(child);
         };
         for(const object of props)collect(object);
-        for(const g of geometries)g.dispose();
-        for(const m of materials)m.dispose();
+        for(const g of geometries)g.dispose?.();
+        for(const m of materials)m.dispose?.();
         for(const map of [terrainMap,stoneMap,blockMap,waterMap])map?.dispose();
         for(const object of props)if(object.parent)object.parent.remove(object);
       }
