@@ -109,7 +109,7 @@ const THREE={
 };
 const ctx={
  fillStyle:"",globalAlpha:1,lineWidth:1,strokeStyle:"",
- fillRect(){},beginPath(){},moveTo(){},bezierCurveTo(){},stroke(){}
+ fillRect(){},beginPath(){},moveTo(){},lineTo(){},bezierCurveTo(){},stroke(){}
 };
 const document={createElement(tag){assert.equal(tag,"canvas");return {width:0,height:0,getContext(){return ctx}}}};
 const window={matchMedia:()=>({matches:false})};
