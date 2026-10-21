@@ -1213,9 +1213,51 @@
     // Matte turquoise river avoids the white, mirror-like blowouts from the
     // former clearcoat-heavy physical material at strong sunlight angles.
     const waterMat=new THREE.MeshStandardMaterial({
-      color:0x36aabb,metalness:0,roughness:.52,side:THREE.DoubleSide
+      color:0x329fb3,metalness:.025,roughness:.38,side:THREE.DoubleSide
     });
-    ribbon(riverPoints,4.55,.038,waterMat);
+    // Create a reusable, hand-painted flow pattern entirely in the browser.
+    // Animated texture coordinates evoke moving water without a costly shader
+    // pipeline or a network dependency for water assets.
+    const flowCanvas=document.createElement("canvas");
+    flowCanvas.width=256;flowCanvas.height=512;
+    const flowCtx=flowCanvas.getContext("2d");
+    let flowTexture=null;
+    if(flowCtx){
+      flowCtx.fillStyle="#e7f9f2";
+      flowCtx.fillRect(0,0,256,512);
+      let waterSeed=93281;
+      const waterRng=()=>{
+        waterSeed=(Math.imul(waterSeed,1664525)+1013904223)>>>0;
+        return waterSeed/4294967296;
+      };
+      for(let i=0;i<270;i++){
+        const x=waterRng()*255,y=waterRng()*512,w=8+waterRng()*48;
+        flowCtx.strokeStyle=i%5===0?"rgba(53,154,171,.24)":
+          i%3===0?"rgba(255,255,255,.43)":"rgba(86,182,183,.18)";
+        flowCtx.lineWidth=.65+waterRng()*2.0;
+        flowCtx.lineCap="round";
+        flowCtx.beginPath();
+        flowCtx.moveTo(x,y);
+        flowCtx.bezierCurveTo(x+w*.15,y-2-waterRng()*8,
+          x+w*.7,y-2-waterRng()*8,x+w,y+waterRng()*4);
+        flowCtx.stroke();
+      }
+      flowTexture=new THREE.CanvasTexture(flowCanvas);
+      flowTexture.colorSpace=THREE.SRGBColorSpace;
+      flowTexture.wrapS=THREE.RepeatWrapping;
+      flowTexture.wrapT=THREE.RepeatWrapping;
+      flowTexture.repeat.set(1,4.5);
+      flowTexture.anisotropy=Math.min(4,renderer.capabilities.getMaxAnisotropy());
+    }
+    const riverWaterMat=waterMat.clone();
+    if(flowTexture)riverWaterMat.map=flowTexture;
+    riverWaterMat.needsUpdate=true;
+    const shallowWaterMat=new THREE.MeshBasicMaterial({
+      color:0x8cd7cb,transparent:true,opacity:.27,depthWrite:false,
+      side:THREE.DoubleSide
+    });
+    ribbon(riverPoints,5.28,.032,shallowWaterMat);
+    ribbon(riverPoints,4.55,.038,riverWaterMat);
     const ripples=[];
     const rippleMat=new THREE.MeshBasicMaterial({color:0xc5fff4,transparent:true,opacity:.27,depthWrite:false});
     for(let i=0;i<42;i++){
@@ -2361,6 +2403,7 @@
       }
       // Lighting is based on expedition time, never on frame rate.
       const cycle=timeOfDay(state.elapsed||0), night=cycle.evening;
+      if(flowTexture)flowTexture.offset.y=reduceMotion?0:-(time*.019%1);
       // Intentional cinematic grading: blue atmospheric distance, golden sun,
       // and deeper under-canopy shade. Preserve enough light for nighttime play.
       scene.background.setRGB(.61-.38*night,.78-.47*night,.89-.42*night);
