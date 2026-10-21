@@ -11,6 +11,8 @@
 - **Safe asset swapping:** 3D asset pack is loaded asynchronously with GLTFLoader; built-in cottages stay in place if CDN access or model loading fails
 - Asset provenance and instructions in [assets/village/README.md](assets/village/README.md); validate with `node tools/validate-village.mjs`; automatic GitHub Action checks assets on updates
 - Showcase visual pass: layered alpine backdrop, vertex-colored valley terrain, densely scattered instanced meadow flowers, and a translucent animated waterfall
+- **Environment graphics pass:** focused sunlight and soft shadows, layered meadow color variation, three-layer softened trails, a locally generated scrolling river texture with shallow-water edges, and 270 instanced woodland shrubs
+- Quality-focused changes are applied to the **real playable scene**; original gameplay, GLTF character/village models and camera zoom are preserved
 - Real in-engine art upgrades: procedural shingle, wood-grain, stone, plaster, footpath and grass textures generated locally at startup (no external asset requests)
 - Screenshot-driven visual cleanup: quieter distant mountain silhouette, clearer village sightlines, feathered chimney smoke, matte teal water, fewer river rocks and small pale birds
 - Bridge route fix: destinations reached from the bridge center now correctly choose the safe bank before leaving the crossing
