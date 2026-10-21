@@ -1599,8 +1599,8 @@
       if(options.skipExternalAssets||(!usePinnedThree&&!options.assetLoaderFactory))return;
       villageAssetState.status="loading";
       try{
-        const assetUrl=new URL("./assets/village/village-kit.gltf",
-          document.baseURI||window.location?.href||"http://localhost/").href;
+        // Relative to the HTML page: works in Codespaces and GitHub Pages.
+        const assetUrl="./assets/village/village-kit.gltf";
         let pack;
         if(options.assetLoaderFactory){
           // Allows tests to verify model replacement without a CDN or WebGL.
