@@ -1453,7 +1453,13 @@
       cyl(g,mats.trunks,0,.76,0,.22,.33,1.57);
       ball(g,mats.trunks,-.22,.14,.12,.36,.17,.34);
       const offsets=[[0,2.2,0,.95],[-.65,1.86,.15,.73],[.58,2.08,.25,.79],[.16,2.58,-.41,.83],[-.25,2.47,.43,.65]];
-      for(let j=0;j<offsets.length;j++){const v=offsets[j];ball(g,treeMaterials[j%4],v[0],v[1],v[2],v[3],v[3]*.89,v[3]);}
+      const treeHue=Math.floor(rng()*treeMaterials.length);
+      g.rotation.y=rng()*6.283;
+      for(let j=0;j<offsets.length;j++){
+        const v=offsets[j],scale=.88+rng()*.22;
+        ball(g,treeMaterials[(j+treeHue)%treeMaterials.length],
+          v[0]*scale,v[1],v[2]*scale,v[3]*scale,v[3]*.89*scale,v[3]*scale);
+      }
       if(windTrees.length<23 && rng()<.27)windTrees.push({group:g,phase:rng()*Math.PI*2});
       // Collect clustered leaf highlights for a single instanced detail pass.
       // Creating one mesh per leaf would substantially hurt integrated GPUs.
@@ -1499,6 +1505,44 @@
     leafHighlights.castShadow=false;
     leafHighlights.receiveShadow=false;
     scene.add(leafHighlights);
+    // Small understory clusters give the grass a lived-in, layered look.
+    // Instancing keeps these hundreds of leafy forms to only three draw calls.
+    const undergrowthGeo=new THREE.IcosahedronGeometry(.35,0);
+    const undergrowthColors=[
+      new THREE.MeshStandardMaterial({color:0x377e58,roughness:1,flatShading:true}),
+      new THREE.MeshStandardMaterial({color:0x65a96a,roughness:1,flatShading:true}),
+      new THREE.MeshStandardMaterial({color:0xa2c579,roughness:1,flatShading:true})
+    ];
+    const undergrowthDummy=new THREE.Object3D();
+    for(let group=0;group<undergrowthColors.length;group++){
+      const shrubCount=90;
+      const shrubs=new THREE.InstancedMesh(
+        undergrowthGeo,undergrowthColors[group],shrubCount);
+      shrubs.castShadow=false;
+      shrubs.receiveShadow=false;
+      let placed=0,attempts=0;
+      while(placed<shrubCount && attempts++<2200){
+        const x=(rng()-.5)*45,z=(rng()-.5)*27;
+        const sy=z*SCALE+550,sx=x*SCALE+900;
+        if(Math.abs(x-wx(riverCenter(sy)))<4.15)continue;
+        if(spots.some(([key,px,py])=>Math.hypot(px-sx,py-sy)<120))continue;
+        if(z>-.6&&z<2.9&&x>-7&&x<4)continue;
+        const factor=.45+rng()*1.05;
+        undergrowthDummy.position.set(x,.12+factor*.1,z);
+        undergrowthDummy.rotation.set(0,rng()*6.283,0);
+        undergrowthDummy.scale.set(factor,.5*factor,.85*factor);
+        undergrowthDummy.updateMatrix();
+        shrubs.setMatrixAt(placed++,undergrowthDummy.matrix);
+      }
+      // All instances must be initialized, even if a future map adds obstacles.
+      for(let i=placed;i<shrubCount;i++){
+        undergrowthDummy.position.set(0,-100,0);
+        undergrowthDummy.scale.setScalar(.001);
+        undergrowthDummy.updateMatrix();
+        shrubs.setMatrixAt(i,undergrowthDummy.matrix);
+      }
+      shrubs.instanceMatrix.needsUpdate=true;scene.add(shrubs);
+    }
     // Tall cedar and pine trees break up the repeated round canopies.
     function pine(x,z,s=1){
       const g=new THREE.Group();g.position.set(x,0,z);g.scale.setScalar(s);scene.add(g);
