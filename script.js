@@ -327,6 +327,7 @@
     state.keys.clear();state.touch.clear();state.done.clear();state.inventory.clear();state.supplies.clear();
     if(state.impactTimer)clearTimeout(state.impactTimer);
     state.impactTimer=null;$("impactBurst").hidden=true;
+    world3d?.recenterCamera?.();
     chapters?.clearSave("valley");
     $("startScreen").hidden=true;$("gameScreen").hidden=false;$("toast").hidden=true;
     closeModal(true);updateUI();
@@ -371,6 +372,14 @@
     tone(500,.06);
   }
   function navigateTo(key){const sp=spots[key];if(sp)navToPosition(sp,key);}
+  function recenterValleyCamera(){
+    if(state.screen!=="playing"||state.modalOpen)return;
+    world3d?.recenterCamera?.();
+    state.scenic=false;
+    $("scenicViewButton").setAttribute("aria-pressed","false");
+    $("scenicViewButton").textContent="◈ SCENIC VIEW";
+    notify("Camera returned to your explorer.");
+  }
   function toggleScenicView(){
     if(state.screen!=="playing"||state.modalOpen)return;
     state.scenic=!state.scenic;
@@ -942,6 +951,7 @@
     if(k==="p"&&state.screen==="playing")pause();
     if(k==="m"&&state.screen==="playing"&&!e.repeat)toggleNavigator();
     if(k==="v"&&state.screen==="playing"&&!e.repeat)toggleScenicView();
+    if(k==="c"&&state.screen==="playing"&&!e.repeat)recenterValleyCamera();
   });
   window.addEventListener("keyup",e=>state.keys.delete(e.key.toLowerCase()));
   window.addEventListener("blur",()=>{state.keys.clear();state.touch.clear();});
@@ -953,6 +963,7 @@
   canvas.addEventListener("click",moveFromCanvas);
   $("mapToggle").addEventListener("click",toggleNavigator);
   $("scenicViewButton").addEventListener("click",toggleScenicView);
+  $("valleyCameraReset").addEventListener("click",recenterValleyCamera);
   miniMap.addEventListener("click",event=>{
     if(state.screen!=="playing"||state.modalOpen)return;
     const rect=miniMap.getBoundingClientRect();
@@ -1043,6 +1054,7 @@
     view.tabIndex = 0;
     view.setAttribute("aria-label","Three-dimensional Thirst Trail adventure world. Use WASD to walk, E to interact, or click the landscape.");
     view.style.touchAction = "manipulation";
+    view.style.cursor = "grab";
     view.style.display = "block";
     const host = originalCanvas.parentElement;
     const hero = document.querySelector(".hero-scene");
@@ -2478,6 +2490,45 @@
       star.visible=false;stars.push(star);
     }
     const camTarget=new THREE.Vector3(),camPos=new THREE.Vector3();
+    // Independent survey camera: drag the scene to look across the valley without moving.
+    const exploreOffset=new THREE.Vector3();
+    const exploreDrag={id:null,x:0,y:0,startX:0,startY:0,moved:false,suppress:false};
+    const recenterCamera=()=>exploreOffset.set(0,0,0);
+    function finishExploreDrag(event){
+      if(exploreDrag.id!==event.pointerId)return;
+      if(exploreDrag.moved)exploreDrag.suppress=true;
+      exploreDrag.id=null;
+      view.style.cursor="grab";
+      if(view.hasPointerCapture?.(event.pointerId))view.releasePointerCapture(event.pointerId);
+    }
+    view.addEventListener("pointerdown",event=>{
+      if(event.button!==0||event.pointerType==="touch"||state.screen!=="playing"||state.modalOpen)return;
+      exploreDrag.id=event.pointerId;
+      exploreDrag.startX=exploreDrag.x=event.clientX;
+      exploreDrag.startY=exploreDrag.y=event.clientY;
+      exploreDrag.moved=false;exploreDrag.suppress=false;
+      view.setPointerCapture?.(event.pointerId);
+    });
+    view.addEventListener("pointermove",event=>{
+      if(exploreDrag.id!==event.pointerId||state.screen!=="playing"||state.modalOpen)return;
+      const dx=event.clientX-exploreDrag.x,dy=event.clientY-exploreDrag.y;
+      exploreDrag.x=event.clientX;exploreDrag.y=event.clientY;
+      if(!exploreDrag.moved&&Math.hypot(event.clientX-exploreDrag.startX,event.clientY-exploreDrag.startY)<7)return;
+      exploreDrag.moved=true;event.preventDefault();
+      view.style.cursor="grabbing";
+      const height=Math.max(1,view.getBoundingClientRect().height);
+      const meters=2*Math.tan(camera.fov*Math.PI/360)*Math.max(8,camera.position.distanceTo(camTarget))/height*1.35;
+      const right=new THREE.Vector3().setFromMatrixColumn(camera.matrixWorld,0).setY(0).normalize();
+      const forward=new THREE.Vector3(camTarget.x-camera.position.x,0,camTarget.z-camera.position.z).normalize();
+      exploreOffset.addScaledVector(right,-dx*meters);
+      exploreOffset.addScaledVector(forward,dy*meters);
+    });
+    view.addEventListener("pointerup",finishExploreDrag);
+    view.addEventListener("pointercancel",finishExploreDrag);
+    view.addEventListener("lostpointercapture",event=>{
+      if(exploreDrag.id===event.pointerId)finishExploreDrag(event);
+    });
+    view.addEventListener("contextmenu",event=>event.preventDefault());
     // Gentle camera zoom without changing the existing keyboard movement controls.
     let cameraDistance=.93;
     view.addEventListener("wheel",event=>{
@@ -2489,6 +2540,7 @@
     const groundPlane=new THREE.Plane(new THREE.Vector3(0,1,0),0);
     const pointer=new THREE.Vector2(),hit=new THREE.Vector3();
     view.addEventListener("click",event=>{
+      if(exploreDrag.suppress){exploreDrag.suppress=false;return;}
       if(typeof options.onSelect!=="function")return;
       const rect=view.getBoundingClientRect();
       pointer.x=(event.clientX-rect.left)/rect.width*2-1;
@@ -2829,6 +2881,14 @@
         camPos.copy(aim).add(new THREE.Vector3(
           16+drift*2.4,22+Math.sin(time*.08)*.8,27+Math.cos(time*.105)*2.0));
       }
+      if(playing){
+        // Camera target can move independently, clamped to the actual walkable map.
+        const baseX=aim.x,baseZ=aim.z;
+        aim.x=Math.max((45-900)/SCALE,Math.min((WORLD_W-45-900)/SCALE,baseX+exploreOffset.x));
+        aim.z=Math.max((45-550)/SCALE,Math.min((WORLD_H-45-550)/SCALE,baseZ+exploreOffset.z));
+        exploreOffset.x=aim.x-baseX;exploreOffset.z=aim.z-baseZ;
+        camPos.add(new THREE.Vector3(exploreOffset.x,0,exploreOffset.z));
+      }
       if(firstFrame){
         camera.position.copy(camPos);camTarget.copy(aim);firstFrame=false;
       }else{
@@ -2874,6 +2934,7 @@
         hero?.classList.remove("is-3d");originalCanvas.style.display="";
       },
       getCanvas(){return view;},
+      recenterCamera,
       getAssetStatus(){return {...villageAssetState};},
       getCharacterAssetStatus(){return {...characterAssetState};}
     };
