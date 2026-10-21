@@ -17,6 +17,26 @@ for(const js of Object.values(scripts))new Function(js);
 assert.ok(html.indexOf('src="progression.js"')<html.indexOf('src="script.js"'));
 assert.ok(html.indexOf('src="script.js"')<html.indexOf('src="canyon.js"'));
 assert.ok(css.includes(".canyon-stage") && css.includes(".chapter-select-grid"));
+assert.ok(idsPlaceholder());
+function idsPlaceholder(){
+  // New camera exploration controls must remain wired in both chapters.
+  assert.match(html, /id="valleyCameraReset"/);
+  assert.match(html, /id="canyonCameraReset"/);
+  assert.match(html, /DRAG TO EXPLORE/);
+  assert.match(html, /DRAG TO LOOK AROUND/);
+  for(const source of [scripts.valley,scripts.canyon]){
+    assert.match(source,/pointerdown/);
+    assert.match(source,/pointermove/);
+    assert.match(source,/pointerup/);
+    assert.match(source,/setPointerCapture/);
+    assert.match(source,/suppress/);
+    assert.match(source,/recenterCamera/);
+    assert.match(source,/key==="c"/);
+  }
+  assert.match(scripts.valley,/camPos\.add\(new THREE\.Vector3\(exploreOffset/);
+  assert.match(scripts.canyon,/cameraTarget\.set\(clamp\(baseX\+pan\.x/);
+  return true;
+}
 const ids=new Set([...html.matchAll(/\bid="([^"]+)"/g)].map(m=>m[1]));
 for(const source of [scripts.canyon,scripts.valley]){
  const refs=[...new Set([...source.matchAll(/\$\("([^"]+)"\)/g)].map(m=>m[1]))];
