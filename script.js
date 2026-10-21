@@ -2159,6 +2159,68 @@
       legs.push(leg);knees.push(knee);
     }
     explorer.position.set(wx(310),0,wz(620));
+
+    // Authored glTF adventurer: articulated named joints drive the SAME gameplay
+    // motion as the original character. Keep the procedural body until validated.
+    const characterAssetState={status:"fallback",loaded:0,total:1};
+    let characterAssetDisposed=false,characterRig=null;
+    let characterModel=null;
+    const rigJointNames=[
+      "ExplorerBody","ExplorerHead","ExplorerEyes","ExplorerScarfTail",
+      "ExplorerArmLeft","ExplorerArmRight","ExplorerElbowLeft","ExplorerElbowRight",
+      "ExplorerLegLeft","ExplorerLegRight","ExplorerKneeLeft","ExplorerKneeRight",
+      "ExplorerPackFlap"
+    ];
+    async function loadExplorerModel(){
+      if(options.skipExternalAssets||(!usePinnedThree&&!options.characterLoaderFactory))return;
+      characterAssetState.status="loading";
+      try{
+        let asset;
+        const assetUrl="./assets/characters/explorer.gltf";
+        if(options.characterLoaderFactory){
+          asset=await options.characterLoaderFactory(assetUrl,THREE);
+        }else{
+          const {GLTFLoader}=await import("three/addons/loaders/GLTFLoader.js");
+          if(characterAssetDisposed)return;
+          asset=await new GLTFLoader().loadAsync(assetUrl);
+        }
+        if(characterAssetDisposed)return;
+        const source=asset?.scene?.getObjectByName("ExplorerCharacter");
+        if(!source)throw Error("ExplorerCharacter node missing");
+        const candidate=source.clone(true);
+        const joints={};
+        for(const name of rigJointNames){
+          const part=candidate.getObjectByName(name);
+          if(!part)throw Error("Missing character rig joint: "+name);
+          joints[name]=part;
+        }
+        let triangleMeshes=0;
+        candidate.traverse(part=>{
+          if(part.isMesh){part.castShadow=true;part.receiveShadow=true;triangleMeshes++;}
+        });
+        if(triangleMeshes<6)throw Error("Character asset has insufficient geometry");
+        characterModel=candidate;
+        explorer.add(candidate);
+        characterRig={
+          body:joints.ExplorerBody,head:joints.ExplorerHead,eyes:joints.ExplorerEyes,
+          scarf:joints.ExplorerScarfTail,flap:joints.ExplorerPackFlap,
+          arms:[joints.ExplorerArmLeft,joints.ExplorerArmRight],
+          elbows:[joints.ExplorerElbowLeft,joints.ExplorerElbowRight],
+          legs:[joints.ExplorerLegLeft,joints.ExplorerLegRight],
+          knees:[joints.ExplorerKneeLeft,joints.ExplorerKneeRight]
+        };
+        body.visible=false;
+        characterAssetState.loaded=1;
+        characterAssetState.status="ready";
+        if(typeof console!=="undefined"&&typeof console.info==="function")
+          console.info("Thirst Trail: loaded original animated explorer model.");
+      }catch(error){
+        characterAssetState.status="fallback";
+        if(typeof console!=="undefined"&&typeof console.warn==="function")
+          console.warn("Thirst Trail: keeping procedural explorer (3D asset unavailable)",error);
+      }
+    }
+    void loadExplorerModel();
     // Keep clouds distant and above the horizon. Placing volumetric clouds near
     // the follow camera used to obscure half of the playable valley.
     const cloudMat=new THREE.MeshBasicMaterial({
@@ -2336,6 +2398,26 @@
       body.rotation.z=reduceMotion?0:(isMoving?Math.sin(time*5.5)*.028:Math.sin(time*.85)*.011);
       body.rotation.x=reduceMotion?0:(isMoving?-.045:Math.sin(time*1.5)*.012);
       scarfTail.rotation.z=-.25+(reduceMotion?0:(isMoving?Math.sin(time*11)*.15:Math.sin(time*1.5)*.03));
+      // Mirror gameplay animation onto independently authored glTF joints.
+      // Locomotion, greeting and the victory pose still share one state source.
+      if(characterRig){
+        const rig=characterRig;
+        rig.body.position.y=body.position.y;
+        rig.body.rotation.copy(body.rotation);
+        for(let i=0;i<2;i++){
+          rig.arms[i].rotation.copy(arms[i].rotation);
+          rig.elbows[i].rotation.copy(elbows[i].rotation);
+          rig.legs[i].rotation.copy(legs[i].rotation);
+          rig.knees[i].rotation.copy(knees[i].rotation);
+        }
+        rig.scarf.rotation.z=scarfTail.rotation.z;
+        rig.flap.rotation.x=reduceMotion?0:(isMoving?-.08+Math.sin(time*11)*.06:Math.sin(time*1.8)*.024);
+        rig.head.rotation.y=reduceMotion?0:Math.sin(time*.58)*.065;
+        rig.head.rotation.x=celebrating?-.12:(reduceMotion?0:Math.sin(time*1.4)*.025);
+        // Short natural blink: visible only near the explorer, with no timers.
+        const blinkTime=time%5.3;
+        rig.eyes.scale.y=reduceMotion?1:(blinkTime<.13?.15:1);
+      }
       if(isMoving){
         const dx=playerX-explorer.userData.lastX, dz=playerZ-explorer.userData.lastZ;
         if(Number.isFinite(dx)&&Number.isFinite(dz)&&Math.hypot(dx,dz)>.003){
@@ -2554,6 +2636,21 @@
       focus(){view.focus({preventScroll:true});},
       dispose(){
         villageAssetDisposed=true;
+        characterAssetDisposed=true;
+        if(characterModel){
+          const seenGeo=new Set(),seenMat=new Set();
+          characterModel.traverse(node=>{
+            if(!node.isMesh)return;
+            if(node.geometry&&!seenGeo.has(node.geometry)){
+              seenGeo.add(node.geometry);node.geometry.dispose();
+            }
+            for(const material of (Array.isArray(node.material)?node.material:[node.material])){
+              if(material&&!seenMat.has(material)){
+                seenMat.add(material);material.dispose();
+              }
+            }
+          });
+        }
         // Geometry is shared by cloned models; clean up only once per pack.
         const seenGeometries=new Set(),seenMaterials=new Set();
         for(const root of upgradedVillageObjects)root.traverse(object=>{
@@ -2570,7 +2667,8 @@
         hero?.classList.remove("is-3d");originalCanvas.style.display="";
       },
       getCanvas(){return view;},
-      getAssetStatus(){return {...villageAssetState};}
+      getAssetStatus(){return {...villageAssetState};},
+      getCharacterAssetStatus(){return {...characterAssetState};}
     };
   }
   
