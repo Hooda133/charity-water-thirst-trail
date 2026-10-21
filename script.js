@@ -2379,13 +2379,23 @@
       const effect=state.effect;
       const effectAge=effect?Math.max(0,time-effect.at):99;
       const celebrating=effect&&effectAge<1.5;
-      const pace=isMoving?Math.sin(time*(state.keys?.has("shift")?15:11))*.6:0;
+      // Ease into and out of walking instead of snapping rigidly between
+      // poses. The game movement speed is unchanged; this affects visuals only.
+      const priorTime=explorer.userData.lastAnimationTime??(time-.016);
+      const frameSeconds=Math.max(0,Math.min(.075,time-priorTime));
+      explorer.userData.lastAnimationTime=time;
+      const priorBlend=explorer.userData.walkBlend??0;
+      const walkBlend=reduceMotion?(isMoving?1:0):priorBlend+
+        ((isMoving?1:0)-priorBlend)*(1-Math.exp(-frameSeconds*11));
+      explorer.userData.walkBlend=walkBlend;
+      const stride=Math.sin(time*(state.keys?.has("shift")?13:10));
+      const pace=walkBlend*stride*.48;
       legs[0].rotation.x=pace;legs[1].rotation.x=-pace;
-      knees[0].rotation.x=isMoving?Math.max(0,pace)*-.37:0;
-      knees[1].rotation.x=isMoving?Math.max(0,-pace)*-.37:0;
-      arms[0].rotation.x=-pace*.82;arms[1].rotation.x=pace*.82;
-      elbows[0].rotation.x=isMoving?Math.max(0,pace)*-.28:0;
-      elbows[1].rotation.x=isMoving?Math.max(0,-pace)*-.28:0;
+      knees[0].rotation.x=-Math.max(0,-pace)*.54;
+      knees[1].rotation.x=-Math.max(0,pace)*.54;
+      arms[0].rotation.x=-pace*.72;arms[1].rotation.x=pace*.72;
+      elbows[0].rotation.x=-Math.max(0,pace)*.31;
+      elbows[1].rotation.x=-Math.max(0,-pace)*.31;
       arms[0].rotation.z=0;arms[1].rotation.z=0;
       if(celebrating){
         arms[0].rotation.z=-2.12;arms[1].rotation.z=2.12;
@@ -2393,11 +2403,12 @@
       }else if(!isMoving&&state.nearby&&state.screen==="playing"){
         arms[1].rotation.z=reduceMotion?.85:1.04+Math.sin(time*4)*.13;
       }
-      body.position.y=reduceMotion?0:(isMoving?Math.abs(Math.sin(time*11))*.08:
-        (celebrating?Math.abs(Math.sin(time*9))*.13:Math.sin(time*1.9)*.027));
-      body.rotation.z=reduceMotion?0:(isMoving?Math.sin(time*5.5)*.028:Math.sin(time*.85)*.011);
-      body.rotation.x=reduceMotion?0:(isMoving?-.045:Math.sin(time*1.5)*.012);
-      scarfTail.rotation.z=-.25+(reduceMotion?0:(isMoving?Math.sin(time*11)*.15:Math.sin(time*1.5)*.03));
+      body.position.y=reduceMotion?0:(celebrating?Math.abs(Math.sin(time*9))*.13:
+        Math.abs(Math.sin(time*10))*walkBlend*.060+Math.sin(time*1.9)*.018*(1-walkBlend));
+      body.rotation.z=reduceMotion?0:(Math.sin(time*5)*.023*walkBlend+Math.sin(time*.85)*.008*(1-walkBlend));
+      body.rotation.x=reduceMotion?0:(-.038*walkBlend+Math.sin(time*1.5)*.008*(1-walkBlend));
+      scarfTail.rotation.z=-.25+(reduceMotion?0:(Math.sin(time*10)*.13*walkBlend+
+        Math.sin(time*1.5)*.03*(1-walkBlend)));
       // Mirror gameplay animation onto independently authored glTF joints.
       // Locomotion, greeting and the victory pose still share one state source.
       if(characterRig){
@@ -2411,7 +2422,8 @@
           rig.knees[i].rotation.copy(knees[i].rotation);
         }
         rig.scarf.rotation.z=scarfTail.rotation.z;
-        rig.flap.rotation.x=reduceMotion?0:(isMoving?-.08+Math.sin(time*11)*.06:Math.sin(time*1.8)*.024);
+        rig.flap.rotation.x=reduceMotion?0:(-.05*walkBlend+
+          Math.sin(time*10)*.052*walkBlend+Math.sin(time*1.8)*.018*(1-walkBlend));
         rig.head.rotation.y=reduceMotion?0:Math.sin(time*.58)*.065;
         rig.head.rotation.x=celebrating?-.12:(reduceMotion?0:Math.sin(time*1.4)*.025);
         // Short natural blink: visible only near the explorer, with no timers.
