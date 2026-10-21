@@ -11,6 +11,7 @@
 - **Safe asset swapping:** 3D asset pack is loaded asynchronously with GLTFLoader; built-in cottages stay in place if CDN access or model loading fails
 - Asset provenance and instructions in [assets/village/README.md](assets/village/README.md); validate with `node tools/validate-village.mjs`; automatic GitHub Action checks assets on updates
 - Showcase visual pass: layered alpine backdrop, vertex-colored valley terrain, densely scattered instanced meadow flowers, and a translucent animated waterfall
+- Greenwater Valley environment rebuild: forked low-poly trees with layered canopies, instanced understory shrubs, stone-edged trails, a workshop frontage, detailed supply crates, and a stone pump apron
 - Real in-engine art upgrades: procedural shingle, wood-grain, stone, plaster, footpath and grass textures generated locally at startup (no external asset requests)
 - Screenshot-driven visual cleanup: quieter distant mountain silhouette, clearer village sightlines, feathered chimney smoke, matte teal water, fewer river rocks and small pale birds
 - Bridge route fix: destinations reached from the bridge center now correctly choose the safe bank before leaving the crossing

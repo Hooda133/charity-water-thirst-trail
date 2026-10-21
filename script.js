@@ -1407,6 +1407,36 @@
     road([[970,580],[1170,415],[1460,265]],.65);
     road([[1100,440],[1120,315],[1160,200]],.65);
     road([[455,765],[510,870],[560,970]],.67);
+    // Hand-set path shoulders and courtyard cobbles break up the broad grass
+    // plane while staying decorative and outside the navigation collision map.
+    const cobbleGeo=new THREE.IcosahedronGeometry(1,1);
+    const cobbleMat=makeMat(0x9eaa91,.92);
+    const cobbles=new THREE.InstancedMesh(cobbleGeo,cobbleMat,180);
+    const cobbleDummy=new THREE.Object3D();
+    const cobbleLines=[
+      [[285,490],[370,630],[455,765]],
+      [[455,765],[610,708],[730,580]],
+      [[970,580],[1180,825],[1540,690]],
+      [[280,490],[420,435],[540,350]]
+    ];
+    let cobbleIndex=0;
+    for(const line of cobbleLines){
+      const curve=new THREE.CatmullRomCurve3(line.map(p=>new THREE.Vector3(wx(p[0]),.10,wz(p[1]))));
+      const samples=curve.getPoints(43);
+      for(let i=0;i<samples.length&&cobbleIndex<180;i++){
+        const p=samples[i],t=i/samples.length,side=i%2?-1:1;
+        const tangent=samples[Math.min(samples.length-1,i+1)].clone().sub(
+          samples[Math.max(0,i-1)]).normalize();
+        const offset=new THREE.Vector3(-tangent.z,0,tangent.x).multiplyScalar(.66+(i%3)*.13);
+        cobbleDummy.position.copy(p).add(offset);cobbleDummy.position.y=.10;
+        const size=.10+(i%4)*.025;
+        cobbleDummy.scale.set(size*1.45,size*.62,size);
+        cobbleDummy.rotation.set(0,Math.atan2(tangent.x,tangent.z)+side*.18,0);
+        cobbleDummy.updateMatrix();cobbles.setMatrixAt(cobbleIndex++,cobbleDummy.matrix);
+      }
+    }
+    cobbles.count=cobbleIndex;cobbles.instanceMatrix.needsUpdate=true;
+    cobbles.castShadow=false;cobbles.receiveShadow=true;scene.add(cobbles);
     // Discreet trail lights provide readable depth cues after sunset without
     // adding expensive point lights to each marker.
     const lanternGlow=new THREE.MeshBasicMaterial({color:0xffe7a2});
@@ -1453,10 +1483,27 @@
     const canopySparkleLocations=[];
     function tree(x,z,s=1){
       const g=new THREE.Group();g.position.set(x,0,z);g.scale.setScalar(s);scene.add(g);
-      cyl(g,mats.trunks,0,.76,0,.22,.33,1.57);
+      const trunk=cyl(g,mats.trunks,0,.76,0,.22,.33,1.57,9);
+      trunk.rotation.z=(rng()-.5)*.08;
       ball(g,mats.trunks,-.22,.14,.12,.36,.17,.34);
-      const offsets=[[0,2.2,0,.95],[-.65,1.86,.15,.73],[.58,2.08,.25,.79],[.16,2.58,-.41,.83],[-.25,2.47,.43,.65]];
-      for(let j=0;j<offsets.length;j++){const v=offsets[j];ball(g,treeMaterials[j%4],v[0],v[1],v[2],v[3],v[3]*.89,v[3]);}
+      // Forked limbs create a readable tree silhouette instead of a single
+      // trunk hidden by spherical foliage.
+      for(const branch of [[-.34,1.18,.02,-.34],[.34,1.30,.08,.30],[-.08,1.55,-.18,-.12]]){
+        const limb=cyl(g,mats.trunks,branch[0],branch[1],branch[2],.09,.13,.72,7);
+        limb.rotation.z=branch[3];
+        limb.rotation.x=(rng()-.5)*.18;
+      }
+      const offsets=[
+        [0,2.18,0,.96],[-.67,1.86,.15,.75],[.61,2.06,.25,.82],
+        [.16,2.63,-.41,.86],[-.31,2.50,.43,.69],[.02,2.92,.02,.57]
+      ];
+      for(let j=0;j<offsets.length;j++){
+        const v=offsets[j];
+        const crown=mesh(new THREE.IcosahedronGeometry(1,1),treeMaterials[j%4],g);
+        crown.position.set(v[0],v[1],v[2]);
+        crown.scale.set(v[3],v[3]*.89,v[3]);
+        crown.rotation.set(rng()*.18,rng()*Math.PI,rng()*.18);
+      }
       if(windTrees.length<23 && rng()<.27)windTrees.push({group:g,phase:rng()*Math.PI*2});
       // Collect clustered leaf highlights for a single instanced detail pass.
       // Creating one mesh per leaf would substantially hurt integrated GPUs.
@@ -1518,6 +1565,25 @@
       if(Math.abs(x-riverX)<3.8 || objectivePositions.some(p=>Math.hypot(x-p[0],z-p[1])<3.3))continue;
       pine(x,z,.72+rng()*.44);
     }
+    // Low understory planting gives the clearings a natural transition from
+    // lawn to woodland without placing blockers on the established routes.
+    const shrubGeo=new THREE.IcosahedronGeometry(1,1);
+    const shrubBatch=new THREE.InstancedMesh(shrubGeo,mats.leaf3,110);
+    const shrubDummy=new THREE.Object3D();
+    for(let i=0;i<110;i++){
+      const x=(rng()-.5)*44,z=(rng()-.5)*26;
+      const px=x*SCALE+900,py=z*SCALE+550;
+      if(Math.abs(x-wx(riverCenter(py)))<3.4||
+        objectivePositions.some(p=>Math.hypot(x-p[0],z-p[1])<2.8))continue;
+      const size=.16+rng()*.26;
+      shrubDummy.position.set(x,size*.52,z);
+      shrubDummy.scale.set(size*1.25,size,size*.92);
+      shrubDummy.rotation.set(rng()*.2,rng()*Math.PI,rng()*.2);
+      shrubDummy.updateMatrix();shrubBatch.setMatrixAt(i,shrubDummy.matrix);
+    }
+    shrubBatch.instanceMatrix.needsUpdate=true;
+    shrubBatch.castShadow=false;shrubBatch.receiveShadow=true;
+    scene.add(shrubBatch);
     // A slim foothill band replaces the old 360-degree ring of mountain
     // cones, which previously appeared directly in front of the village.
     const foothillMat=[makeMat(0x759d89),makeMat(0x86aa98),makeMat(0x678b83)];
@@ -1809,7 +1875,22 @@
       box(supply,mats.wood,x,.39,z,.9,.78,.86);
       box(supply,mats.lightWood,x,.81,z,.93,.09,.91);
       box(supply,mats.dark,x,.39,z,.08,.75,.9);
+      box(supply,mats.gold,x-.31,.43,z+.45,.10,.42,.07);
+      box(supply,mats.gold,x+.31,.43,z+.45,.10,.42,.07);
     }
+    // Workshop frontage: an awning, workbench and stacked timber make the
+    // depot read as a working place rather than an isolated crate marker.
+    const workshopFront=new THREE.Group();
+    workshopFront.position.set(wx(455),0,wz(765)+1.55);scene.add(workshopFront);
+    for(const x of [-1.25,1.25])box(workshopFront,mats.wood,x,1.15,0,.13,2.3,.13);
+    const awning=box(workshopFront,mats.roofDark,0,2.25,0,2.9,.13,1.55);
+    awning.rotation.z=-.08;
+    box(workshopFront,mats.lightWood,0,.78,.42,2.35,.16,.74);
+    for(let i=0;i<3;i++){
+      const log=cyl(workshopFront,mats.wood,-.78+i*.58,.42,.54,.16,.18,1.25,8);
+      log.rotation.z=Math.PI/2;
+    }
+    for(let i=0;i<4;i++)box(workshopFront,mats.rock2,-1.35+i*.9,.14,.44,.28,.22,.44);
     // Campsite: pitched tent, logs and warm firelight.
     const camp=new THREE.Group();camp.position.set(wx(540),0,wz(350));scene.add(camp);
     const tentMat=makeMat(0xf2b464),tentSide=makeMat(0xd7814c);
@@ -1837,6 +1918,14 @@
     box(pump,mats.dark,.65,3.45,0,1.45,.14,.16);
     ball(pump,mats.gold,1.4,3.45,0,.20);
     cyl(pump,mats.rock2,0,.23,1.45,.89,1.03,.45,12);
+    // Broad stone apron grounds the pump landmark and keeps its silhouette
+    // legible against the surrounding meadow.
+    for(let i=0;i<11;i++){
+      const a=i/11*Math.PI*2;
+      const stone=ball(pump,mats.rock2,Math.cos(a)*1.28,.12,1.0+Math.sin(a)*.88,
+        .34,.16,.28,false);
+      stone.rotation.y=a;
+    }
     cyl(pump,makeMat(0x2899a7,.18),0,.47,1.45,.68,.68,.035,14);
     // Pressure gauge and water droplets visually distinguish the repair objective.
     const gauge=new THREE.Group();gauge.position.set(.38,2.49,.32);pump.add(gauge);

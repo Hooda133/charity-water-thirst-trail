@@ -70,6 +70,8 @@ Automated-integration simulation checks run in the development connection cover 
 - [ ] The authored explorer glTF appears with face, hat, jacket, pack, scarf, flask, gloves, trousers and boots
 - [ ] Explorer idle, walk, sprint, turn, greeting and victory poses blend without visible snapping
 - [ ] Explorer remains readable at the normal third-person follow distance in daylight and night
+- [ ] Valley trees show forked trunks and layered canopies; understory shrubs and trail cobbles do not block routes
+- [ ] Workshop, supply depot, village square, campsite, bridge and pump remain recognizable at their existing mission coordinates
 - [ ] Graphics gear menu applies Low, Medium, High and Ultra presets without restarting
 - [ ] Resolution scale, dynamic shadows, effects and camera sensitivity persist after refresh
 
