@@ -997,6 +997,10 @@
     ];
     const scene = new THREE.Scene();
     scene.background = new THREE.Color(0xb9dfdf);
+    const skyDay=new THREE.Color(0x9bcfd6),skyGolden=new THREE.Color(0xd79a78),
+      skyNight=new THREE.Color(0x142c4a),skyColor=new THREE.Color();
+    const sunDay=new THREE.Color(0xffe7b1),sunGolden=new THREE.Color(0xffa66f),
+      sunNight=new THREE.Color(0x7895c7),sunColor=new THREE.Color();
     // Moderate distance fog provides atmosphere without washing out nearby terrain.
     scene.fog = new THREE.FogExp2(0x9bc9d1, .009);
     const camera = new THREE.PerspectiveCamera(46, 1, .1, 180);
@@ -1044,6 +1048,16 @@
     applyGraphicsSettings(graphics);
     const fill = new THREE.DirectionalLight(0x8ae5eb, .58);
     fill.position.set(18,12,8); scene.add(fill);
+    const rim = new THREE.DirectionalLight(0xa7dfff,.34);
+    rim.position.set(-8,10,24);scene.add(rim);
+    const contactShadows=[];
+    function contactShadow(x,z,sx,sz,opacity=.22){
+      const shadow=mesh(new THREE.CircleGeometry(1,24),
+        new THREE.MeshBasicMaterial({color:0x18352e,transparent:true,opacity,
+          depthWrite:false}),scene,false);
+      shadow.rotation.x=-Math.PI/2;shadow.position.set(x,.012,z);
+      shadow.scale.set(sx,sz,1);contactShadows.push(shadow);return shadow;
+    }
     const makeMat = (color, roughness=1, metalness=0) => new THREE.MeshStandardMaterial({color,roughness,metalness,flatShading:true});
     const mats = {
       grass:makeMat(0x87b96a), grass2:makeMat(0x6ea45d), grass3:makeMat(0xa4cb74),
@@ -1266,8 +1280,20 @@
     // Matte turquoise river avoids the white, mirror-like blowouts from the
     // former clearcoat-heavy physical material at strong sunlight angles.
     const waterMat=new THREE.MeshStandardMaterial({
-      color:0x36aabb,metalness:0,roughness:.52,side:THREE.DoubleSide
+      color:0x2c9daf,metalness:.04,roughness:.26,transparent:true,opacity:.91,
+      depthWrite:false,side:THREE.DoubleSide
     });
+    const waterShaderState={uniforms:null};
+    waterMat.onBeforeCompile=shader=>{
+      shader.uniforms.uWaterTime={value:0};
+      waterShaderState.uniforms=shader.uniforms;
+      shader.fragmentShader="uniform float uWaterTime;\n"+shader.fragmentShader;
+      shader.fragmentShader=shader.fragmentShader.replace(
+        "#include <output_fragment>",
+        "diffuseColor.rgb *= 0.90 + 0.10 * sin(vUv.y * 42.0 - uWaterTime * 2.2 + sin(vUv.x * 13.0));\n#include <output_fragment>"
+      );
+    };
+    waterMat.customProgramCacheKey=()=>"thirst-trail-water-v2";
     ribbon(riverPoints,4.55,.038,waterMat);
     const ripples=[];
     const rippleMat=new THREE.MeshBasicMaterial({color:0xc5fff4,transparent:true,opacity:.27,depthWrite:false});
@@ -1295,6 +1321,16 @@
       shine.rotation.z=(rng()-.5)*.36;
       const size=.7+rng()*1.3;shine.scale.set(size,size,1);
       glints.push({mesh:shine,baseZ:z,phase:rng()*6.283,offset:drift});
+    }
+    const waterEdgeMat=new THREE.MeshBasicMaterial({
+      color:0xb7fff3,transparent:true,opacity:.18,depthWrite:false,
+      blending:THREE.AdditiveBlending,side:THREE.DoubleSide
+    });
+    const waterEdges=[];
+    for(const side of [-1,1]){
+      const edgePoints=riverPoints.map(([x,z])=>[x+side*2.17,z]);
+      const edge=ribbon(edgePoints,.055,.094,waterEdgeMat,scene);
+      waterEdges.push({edge,side});
     }
     // Instanced meadow wildflowers: colorful detail without expensive draw calls.
     // Leave the main route, riverbank and all quest interaction areas clear.
@@ -1763,6 +1799,7 @@
       {name:"Workshop",x:460,y:760,size:.87,tint:0xe0bc8c}
     ];
     const villageFallbacks=villagePlacements.map(p=>cottage(p.x,p.y,p.size,p.tint));
+    for(const p of villagePlacements)contactShadow(wx(p.x),wz(p.y),1.65*p.size,1.35*p.size,.18);
     const upgradedVillageObjects=[];
     let villageAssetDisposed=false;
     const villageAssetState={status:"fallback",loaded:0,total:villagePlacements.length};
@@ -1893,6 +1930,7 @@
     for(let i=0;i<4;i++)box(workshopFront,mats.rock2,-1.35+i*.9,.14,.44,.28,.22,.44);
     // Campsite: pitched tent, logs and warm firelight.
     const camp=new THREE.Group();camp.position.set(wx(540),0,wz(350));scene.add(camp);
+    contactShadow(wx(540),wz(350),2.45,2.0,.24);
     const tentMat=makeMat(0xf2b464),tentSide=makeMat(0xd7814c);
     const t1=mesh(new THREE.ConeGeometry(2.0,2.8,4),tentMat,camp);
     t1.rotation.y=Math.PI/4;t1.position.y=1.39;t1.scale.z=.68;
@@ -1908,6 +1946,7 @@
     for(const z of [-1.65,1.65])box(camp,mats.wood,2.5,.27,z,1.8,.42,.48);
     // Polished metallic pump, crank, spout and basin.
     const pump=new THREE.Group();pump.position.set(wx(1540),0,wz(690));scene.add(pump);
+    contactShadow(wx(1540),wz(690),1.8,1.45,.28);
     const metal=makeMat(0x6aa9ac,.35,.6),lightMetal=makeMat(0xd2e2d7,.28,.5);
     cyl(pump,mats.rock,0,.19,0,1.12,1.2,.4,12);
     cyl(pump,metal,0,1.52,0,.47,.57,2.5,12);
@@ -2601,15 +2640,23 @@
       }
       // Lighting is based on expedition time, never on frame rate.
       const cycle=timeOfDay(state.elapsed||0), night=cycle.evening;
+      const golden=Math.pow(Math.max(0,1-Math.abs(night*2-1)),1.35);
       // Intentional cinematic grading: blue atmospheric distance, golden sun,
       // and deeper under-canopy shade. Preserve enough light for nighttime play.
-      scene.background.setRGB(.61-.38*night,.78-.47*night,.89-.42*night);
+      skyColor.copy(night>.48?skyNight:skyDay).lerp(skyGolden,golden*.72);
+      scene.background.copy(skyColor);
       scene.fog.color.copy(scene.background);
-      ambient.intensity=1.30-.38*night;
-      sun.intensity=3.05-2.05*night;
-      fill.intensity=.44+.18*night;
-      renderer.toneMappingExposure=1.10+.11*night;
+      ambient.intensity=1.04+.28*(1-night)+.08*golden;
+      sun.intensity=.72+2.18*(1-night)+.22*golden;
+      sunColor.copy(night>.62?sunNight:sunDay).lerp(sunGolden,golden);
+      sun.color.copy(sunColor);
+      fill.intensity=.34+.20*night+.12*golden;
+      rim.intensity=.20+.22*(1-night)+.10*golden;
+      renderer.toneMappingExposure=1.02+.10*(1-night)+.04*golden;
       for(const light of lanternLights)light.intensity=night*2.6;
+      warmWindow.emissiveIntensity=.22+night*.42+golden*.12;
+      if(waterShaderState.uniforms?.uWaterTime)
+        waterShaderState.uniforms.uWaterTime.value=time;
       const darkSky=night>.55;
       const solarVisible=night<.80;
       sunDisc.visible=solarVisible;
@@ -2715,6 +2762,10 @@
           shine.mesh.position.z=z;
           shine.mesh.position.x=wx(riverCenter(z*SCALE+550))+shine.offset;
           shine.mesh.scale.y=.65+Math.abs(Math.sin(time*1.6+shine.phase))*.9;
+        }
+        for(const {edge,side} of waterEdges){
+          edge.position.y=Math.sin(time*1.7+side)*.012;
+          edge.material.opacity=.13+Math.abs(Math.sin(time*1.25+side))*.08;
         }
         for(const item of butterflies){
           const t=time*1.25+item.phase;
@@ -2876,7 +2927,7 @@
         springRings[i].material.opacity=.34*(1-f);
       }
       fire.scale.y=reduceMotion?1:.84+Math.sin(time*13)*.15;
-      fireLight.intensity=reduceMotion?12:11+Math.sin(time*9)*3;
+      fireLight.intensity=effectsEnabled?(2.4+night*8.6+(reduceMotion?0:Math.sin(time*9)*1.2)):1.2;
       let aim;
       if(playing){
         // Scenic overview deliberately frames the whole explorable island;

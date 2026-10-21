@@ -70,6 +70,9 @@ Automated-integration simulation checks run in the development connection cover 
 - [ ] The authored explorer glTF appears with face, hat, jacket, pack, scarf, flask, gloves, trousers and boots
 - [ ] Explorer idle, walk, sprint, turn, greeting and victory poses blend without visible snapping
 - [ ] Explorer remains readable at the normal third-person follow distance in daylight and night
+- [ ] River shader movement, edge glints, waterfall strips, mist, pump flow and spring ripples render without shader errors
+- [ ] Dawn, golden hour, daylight, night, lanterns, windows and campfire remain balanced rather than overexposed
+- [ ] Contact-shadow accents sit beneath cottages, camp and pump without z-fighting or blocking navigation
 - [ ] Valley trees show forked trunks and layered canopies; understory shrubs and trail cobbles do not block routes
 - [ ] Workshop, supply depot, village square, campsite, bridge and pump remain recognizable at their existing mission coordinates
 - [ ] Graphics gear menu applies Low, Medium, High and Ultra presets without restarting
