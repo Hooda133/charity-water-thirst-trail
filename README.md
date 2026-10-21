@@ -51,6 +51,10 @@
 - Premium landing scene and polished HUD, mission panels, modal challenges, pause flow, and reduced-motion support
 - Optional first-run tutorial, mute control, reduced-motion support, and local high-score storage
 
+## Explore freely with the mouse
+
+Both 3D chapters support **hold left mouse button and drag** to pan the camera across the world without moving the explorer. A short **click** still chooses a walking destination. Press **C** or click **⌖ RECENTER** to return the camera to your character. The mouse wheel zooms the 3D view. Dragging does **not** change your saved player location or quest progress. On devices where Three.js cannot load, the original playable 2D fallback remains available (free 3D camera panning requires WebGL).
+
 ## How to play
 
 Run a local static web server (recommended because glTF models load over HTTP) and open `index.html`. Use **WASD** or **arrow keys** to move, **E** or **Space** to interact, **Shift** to sprint, **P** to pause, and the **mouse wheel** to zoom the 3D camera, and **M** to hide or show the mini-map, and **V** to toggle the scenic camera. The mini-map also lets you click destination markers to plan a route. On mobile, use the directional controls. In Chapter 1, meet the elder, gather the toolkit and gasket, rotate all nine pipeline sections to form a leak-free network, then complete the water-safety questions. Chapter 2 unlocks automatically; choose it from the new chapter selection panel. In Forgotten Canyon use WASD/arrows, E to interact, the fast-travel list, and P to pause. Optionally travel to Raincatch Ridge for a rainwater collection challenge or visit Wetland Sanctuary to remove litter while protecting nests and plants. Look for four sealed drinking-water caches to restore energy. Water collected from roofs still requires testing and appropriate treatment before drinking.
