@@ -44,6 +44,53 @@
     sound:safeStore.getSound(), cameraX:0, cameraY:0, nearby:null, ended:false, lastStatus:"",
     toastTimeout:null, effect:null, impactTimer:null, supplies:new Set(), scenic:false
   };
+
+  const chapters=window.TrailProgress;
+  let lastValleySaveTime=0;
+  function saveValley(){
+    if(state.screen!=="playing"||!chapters||state.ended||state.modalOpen)return;
+    chapters.save("valley",{
+      energy:Math.round(state.energy*10)/10,score:state.score,
+      elapsed:Math.round(state.elapsed),x:Math.round(state.x),y:Math.round(state.y),
+      done:[...state.done],inventory:[...state.inventory],
+      supplies:[...state.supplies],campUses:state.campUses
+    });
+  }
+  function refreshChapters(){
+    if(!chapters)return;
+    const data=chapters.snapshot(),valleySave=!!data.saves.valley,
+      canyonSave=!!data.saves.canyon,canyonUnlocked=chapters.unlocked("canyon");
+    $("valleyChapterStatus").textContent=data.completed.includes("valley")?"✓ Chapter complete · Replay":
+      valleySave?"▶ Continue saved journey":"Start chapter →";
+    $("canyonChapter").disabled=!canyonUnlocked;
+    $("canyonChapter").classList.toggle("is-locked",!canyonUnlocked);
+    $("canyonChapter").classList.toggle("is-ready",canyonUnlocked);
+    $("canyonChapterStatus").textContent=data.completed.includes("canyon")?"✓ Chapter complete · Replay":
+      canyonUnlocked?(canyonSave?"▶ Continue saved chapter":"▶ Chapter unlocked"):"🔒 Finish Chapter 1 to unlock";
+  }
+  function showChapters(){
+    closeModal(true);
+    state.screen="start";state.moving=false;state.keys.clear();state.touch.clear();
+    $("gameScreen").hidden=true;$("canyonScreen").hidden=true;$("startScreen").hidden=false;
+    window.TrailCanyon?.suspend?.();refreshChapters();
+    window.scrollTo?.(0,0);
+  }
+  function continueValley(){
+    const saved=chapters?.saved("valley");
+    start();
+    if(!saved)return;
+    closeModal(true);
+    state.x=Math.max(50,Math.min(W-50,Number(saved.x)||310));
+    state.y=Math.max(50,Math.min(H-50,Number(saved.y)||620));
+    state.energy=Math.max(1,Math.min(100,Number(saved.energy)||100));
+    state.score=Math.max(0,Number(saved.score)||0);
+    state.elapsed=Math.max(0,Number(saved.elapsed)||0);
+    state.done=new Set((saved.done||[]).filter(k=>spots[k]));
+    state.inventory=new Set((saved.inventory||[]).filter(x=>typeof x==="string"));
+    state.supplies=new Set((saved.supplies||[]).filter(x=>supplyCaches.some(s=>s.id===x)));
+    state.campUses=Math.max(0,Math.min(2,Number(saved.campUses)||0));
+    state.lastStatus="";updateNearby();updateUI();notify("Welcome back — valley progress restored.");
+  }
   // The 3D world is loaded without blocking startup. If Three.js cannot be reached,
   // the original Canvas 2D renderer remains available as a playable fallback.
   let world3d = null;
@@ -203,7 +250,7 @@
       state.score+=25;
       tone(920,.14);
       notify("🧴 Sealed drinking-water supply found! +"+Math.ceil(gained)+" energy · +25 impact");
-      updateUI();
+      updateUI();saveValley();
     }
   }
   function drain(n){
@@ -278,6 +325,7 @@
     state.keys.clear();state.touch.clear();state.done.clear();state.inventory.clear();state.supplies.clear();
     if(state.impactTimer)clearTimeout(state.impactTimer);
     state.impactTimer=null;$("impactBurst").hidden=true;
+    chapters?.clearSave("valley");
     $("startScreen").hidden=true;$("gameScreen").hidden=false;$("toast").hidden=true;
     closeModal(true);updateUI();
     if(world3d)world3d.focus();else canvas.focus({preventScroll:true});
@@ -392,6 +440,7 @@
   function doneOnce(key,item=null,points=100){
     if(state.done.has(key))return false;
     state.done.add(key);if(item)addItem(item);addScore(points);
+    saveValley();
     // The pump uses the larger finale effect from end() rather than a duplicate reward.
     if(key!=="pump")celebrate(key,points);
     return true;
@@ -733,11 +782,11 @@
       if(state.impactTimer)clearTimeout(state.impactTimer);
       state.impactTimer=null;$("impactBurst").hidden=true;
     }
-    if(won){state.score+=Math.ceil(state.energy)*3;state.score+=Math.max(0,240-Math.floor(state.elapsed))*2;const best=safeStore.get();if(state.score>best)safeStore.set(state.score);}
+    if(won){state.score+=Math.ceil(state.energy)*3;state.score+=Math.max(0,240-Math.floor(state.elapsed))*2;const best=safeStore.get();if(state.score>best)safeStore.set(state.score);chapters?.complete("valley");refreshChapters();}
     const best=safeStore.get();$("highScoreStart").textContent=best?best.toLocaleString():"—";
     updateUI();
     if(won)celebrate(state.done.has("pump")?"pump":"spring",0,true);
-    openModal({tag:won?"✦ MISSION COMPLETE":"MISSION PAUSED FOREVER",icon:won?"🏆":"🌵",title:won?headline:"Out of energy!",description:`${description}  •  FINAL IMPACT: ${state.score.toLocaleString()}  •  TIME: ${fmtTime(state.elapsed)}  •  BEST: ${best.toLocaleString()}`,kind:"end",allowClose:false,celebrateWin:won,choices:[{text:"↻ Play a new expedition",primary:true,action:start},{text:"↩ Back to title",action:()=>{closeModal(true);state.screen="start";$("gameScreen").hidden=true;$("startScreen").hidden=false;}}]});
+    openModal({tag:won?"✦ MISSION COMPLETE":"MISSION PAUSED FOREVER",icon:won?"🏆":"🌵",title:won?headline:"Out of energy!",description:`${description}  •  FINAL IMPACT: ${state.score.toLocaleString()}  •  TIME: ${fmtTime(state.elapsed)}  •  BEST: ${best.toLocaleString()}`,kind:"end",allowClose:false,celebrateWin:won,choices:[...(won?[{text:"🏜️ Enter the Forgotten Canyon",primary:true,action:()=>{showChapters();window.TrailCanyon?.launch();}}]:[]),{text:"↻ Play a new expedition",primary:!won,action:start},{text:"↩ Chapter selection",action:showChapters}]});
     if(won){
       // A short three-note flourish, using the existing optional Web Audio system.
       tone(620,.13);
@@ -860,7 +909,7 @@
       }
       lastMapDraw=t;
     }
-    if(state.screen==="playing"&&!state.modalOpen){state.elapsed+=dt;handleMovement(dt);collectNearbySupplies();updateNearby();uiTimer+=dt;if(uiTimer>.18){updateUI();uiTimer=0;}}
+    if(state.screen==="playing"&&!state.modalOpen){state.elapsed+=dt;handleMovement(dt);collectNearbySupplies();updateNearby();uiTimer+=dt;if(uiTimer>.18){updateUI();uiTimer=0;}if(state.elapsed-lastValleySaveTime>=8){saveValley();lastValleySaveTime=state.elapsed;}}
     if(world3d){
       try { world3d.render(state,t/1000); }
       catch(error){
@@ -925,6 +974,15 @@
   $("interactButton").addEventListener("click",interact);
   $("touchAction").addEventListener("click",interact);
   $("startButton").addEventListener("click",start);
+  $("valleyChapter").addEventListener("click",continueValley);
+  $("canyonChapter").addEventListener("click",()=>{
+    if(!chapters?.unlocked("canyon"))return;
+    state.screen="start";$("gameScreen").hidden=true;
+    window.TrailCanyon?.launch();
+  });
+  $("valleyChapters").addEventListener("click",()=>{saveValley();showChapters();});
+  window.addEventListener("trail:progress",refreshChapters);
+  window.addEventListener("trail:home",showChapters);
   $("instructionsButton").addEventListener("click",help);
   $("helpButton").addEventListener("click",help);
   $("pauseButton").addEventListener("click",pause);
@@ -933,7 +991,7 @@
   $("modalBackdrop").addEventListener("click",e=>{if(e.target===$("modalBackdrop")&&state.modalKind!=="end")closeModal();});
   $("soundButton").addEventListener("click",()=>{state.sound=!state.sound;$("soundButton").setAttribute("aria-pressed",String(state.sound));$("soundButton").textContent=state.sound?"♫":"♪̸";if(state.sound)tone();});
   $("highScoreStart").textContent=safeStore.get()?safeStore.get().toLocaleString():"—";
-  populateSidebar();updateUI();requestAnimationFrame(loop);
+  populateSidebar();updateUI();refreshChapters();requestAnimationFrame(loop);
   // In development tests, the read-only state snapshot can be inspected without changing gameplay.
   window.ThirstTrail={snapshot:()=>({screen:state.screen,energy:state.energy,score:state.score,quests:[...state.done],items:[...state.inventory],x:Math.round(state.x),y:Math.round(state.y),nearby:state.nearby,elapsed:state.elapsed}),version:"2.0"};
 
