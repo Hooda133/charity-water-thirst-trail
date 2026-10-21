@@ -1596,15 +1596,21 @@
     let villageAssetDisposed=false;
     const villageAssetState={status:"fallback",loaded:0,total:villagePlacements.length};
     async function loadVillageModels(){
-      if(options.skipExternalAssets||!usePinnedThree)return;
+      if(options.skipExternalAssets||(!usePinnedThree&&!options.assetLoaderFactory))return;
       villageAssetState.status="loading";
       try{
-        // Import-map pin ensures GLTFLoader shares this exact Three.js runtime.
-        const {GLTFLoader}=await import("three/addons/loaders/GLTFLoader.js");
-        if(villageAssetDisposed)return;
-        const loader=new GLTFLoader();
-        const assetUrl=new URL("./assets/village/village-kit.gltf",document.baseURI).href;
-        const pack=await loader.loadAsync(assetUrl);
+        const assetUrl=new URL("./assets/village/village-kit.gltf",
+          document.baseURI||window.location?.href||"http://localhost/").href;
+        let pack;
+        if(options.assetLoaderFactory){
+          // Allows tests to verify model replacement without a CDN or WebGL.
+          pack=await options.assetLoaderFactory(assetUrl,THREE);
+        }else{
+          // Import-map pin ensures GLTFLoader shares this exact Three.js runtime.
+          const {GLTFLoader}=await import("three/addons/loaders/GLTFLoader.js");
+          if(villageAssetDisposed)return;
+          pack=await new GLTFLoader().loadAsync(assetUrl);
+        }
         if(villageAssetDisposed)return;
         for(let i=0;i<villagePlacements.length;i++){
           const p=villagePlacements[i];
