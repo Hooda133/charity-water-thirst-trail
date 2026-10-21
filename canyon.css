@@ -112,3 +112,18 @@
  .canyon-modal{padding:19px}
 }
 @media(prefers-reduced-motion:reduce){.chapter-select-card,.canyon-progress-track span,.canyon-pressure-meter span{transition:none}}
+
+/* Free camera exploration: visible reset controls in both 3D chapters. */
+.camera-reset{appearance:none;border:1px solid #f0d5969c;border-radius:8px;
+ background:#1b4752e8;color:#ffe3a0;font:800 10px system-ui,sans-serif;
+ letter-spacing:.35px;padding:8px 10px;white-space:nowrap;cursor:pointer}
+.camera-reset:hover{background:#2d6470;border-color:#ffe2a0}
+.camera-reset:focus-visible{outline:3px solid #ffdd81;outline-offset:2px}
+.canyon-stage-heading .camera-reset{margin-left:auto;padding:7px 10px;letter-spacing:.2px}
+#world3dCanvas,.canyon-webgl{cursor:grab;user-select:none}
+#world3dCanvas:active,.canyon-webgl:active{cursor:grabbing}
+@media(max-width:760px){
+ .canyon-stage-heading{flex-wrap:wrap}
+ .canyon-stage-heading .camera-reset{padding:6px 8px}
+ .camera-reset{font-size:9px}
+}
