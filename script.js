@@ -949,7 +949,7 @@
     renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.7));
     renderer.outputColorSpace = THREE.SRGBColorSpace;
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    renderer.toneMappingExposure = 1.22;
+    renderer.toneMappingExposure = 1.12;
     renderer.shadowMap.enabled = true;
     renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     const view = renderer.domElement;
@@ -961,22 +961,28 @@
     const host = originalCanvas.parentElement;
     const hero = document.querySelector(".hero-scene");
   
-    const ambient=new THREE.HemisphereLight(0xe6faff,0x557d51,1.75);
+    // Warm directional sunlight and cool sky bounce build depth without
+    // using an expensive postprocessing pipeline.
+    const ambient=new THREE.HemisphereLight(0xdff5fb,0x526646,1.32);
     scene.add(ambient);
-    const sun = new THREE.DirectionalLight(0xffe7b1, 2.8);
-    sun.position.set(-19, 32, -18);
+    const sun = new THREE.DirectionalLight(0xffdfaa, 2.9);
+    sun.position.set(-24, 37, -17);
     sun.castShadow = true;
     sun.shadow.mapSize.set(2048,2048);
-    sun.shadow.camera.left = -40;
-    sun.shadow.camera.right = 40;
-    sun.shadow.camera.top = 36;
-    sun.shadow.camera.bottom = -36;
+    // Focus shadow resolution on the walkable valley; the giant landscape
+    // beyond it receives terrain light without consuming shadow resolution.
+    sun.shadow.camera.left = -29;
+    sun.shadow.camera.right = 29;
+    sun.shadow.camera.top = 26;
+    sun.shadow.camera.bottom = -26;
     sun.shadow.camera.near = 1;
-    sun.shadow.camera.far = 90;
-    sun.shadow.bias = -.00015;
+    sun.shadow.camera.far = 100;
+    sun.shadow.bias = -.00022;
+    sun.shadow.normalBias = .019;
+    sun.shadow.radius = 2.1;
     scene.add(sun, sun.target);
-    const fill = new THREE.DirectionalLight(0x8ae5eb, .58);
-    fill.position.set(18,12,8); scene.add(fill);
+    const fill = new THREE.DirectionalLight(0x8bcad6, .42);
+    fill.position.set(19,14,12); scene.add(fill);
     const makeMat = (color, roughness=1, metalness=0) => new THREE.MeshStandardMaterial({color,roughness,metalness,flatShading:true});
     const mats = {
       grass:makeMat(0x87b96a), grass2:makeMat(0x6ea45d), grass3:makeMat(0xa4cb74),
@@ -2343,10 +2349,10 @@
       // and deeper under-canopy shade. Preserve enough light for nighttime play.
       scene.background.setRGB(.61-.38*night,.78-.47*night,.89-.42*night);
       scene.fog.color.copy(scene.background);
-      ambient.intensity=1.30-.38*night;
-      sun.intensity=3.05-2.05*night;
-      fill.intensity=.44+.18*night;
-      renderer.toneMappingExposure=1.10+.11*night;
+      ambient.intensity=1.32-.49*night;
+      sun.intensity=2.90-2.06*night;
+      fill.intensity=.42+.17*night;
+      renderer.toneMappingExposure=1.12+.14*night;
       for(const light of lanternLights)light.intensity=night*2.6;
       const darkSky=night>.55;
       const solarVisible=night<.80;
