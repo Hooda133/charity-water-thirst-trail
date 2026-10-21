@@ -530,7 +530,7 @@
           if(state.path.length){
             const p=state.path[0];player.rotation.y=Math.atan2(wX(p.x)-px,wZ(p.y)-pz);
           }
-          for(let i=0;i<limbs.length;i++)limbs[i].rotation.x=Math.sin(time*9+(i%2)*Math.PI)*(state.path.length||state.keys.size?.35:.07);
+          for(let i=0;i<limbs.length;i++)limbs[i].rotation.x=Math.sin(time*9+Math.floor(i/2)*Math.PI+(i%2)*Math.PI)*(state.path.length||state.keys.size ? .35 : .07);
           const target=new THREE.Vector3(px*worldSpread,0,pz*worldSpread);
           camera.position.lerp(new THREE.Vector3(target.x+7.4,10.5,target.z+13.6),.09);
           camera.lookAt(target);
