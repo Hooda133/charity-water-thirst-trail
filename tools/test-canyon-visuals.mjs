@@ -96,7 +96,7 @@ class Points extends Mesh{
 const THREE={
  Color,Mesh,InstancedMesh,Points,Object3D,Group:Object3D,
  PlaneGeometry,SphereGeometry,BufferGeometry:Geometry,
- BoxGeometry:BasicGeometry,CylinderGeometry:BasicGeometry,
+ BoxGeometry:BasicGeometry,CylinderGeometry:BasicGeometry,CapsuleGeometry:BasicGeometry,
  IcosahedronGeometry:BasicGeometry,ConeGeometry:BasicGeometry,TorusGeometry:BasicGeometry,
  Float32BufferAttribute:Attribute,BufferAttribute:Attribute,
  MeshBasicMaterial:Material,MeshStandardMaterial:Material,PointsMaterial:Material,
