@@ -69,3 +69,16 @@ Automated-integration simulation checks run in the development connection cover 
 - [ ] Framerate stays acceptable on an integrated-graphics laptop and there are no WebGL or console errors
 
 Testing caveat: Source, mocked 3D construction and gameplay checks are useful but do not replace a real browser GPU/WebGL rendering test.
+
+
+## Playable art-direction rebuild (October 20)
+- [ ] On starting, verify cottages have pitched gabled roofs, timber details, textured terracotta shingles, amber windows and visible chimney smoke
+- [ ] Ground and paths have subtle texture; river shores have textured stones; tree canopies show faceted leaf glints
+- [ ] Scenic View has warm sunlit color grading without blowing out terrain or losing the sky
+- [ ] Shadows and buildings remain visible at dawn, night, and during victory
+- [ ] No shader compile errors or broken mesh normals on roof sides and triangles
+- [ ] Reduced Motion setting leaves chimney smoke stationary rather than animated
+- [ ] Check a laptop's actual frame rate: the flower, leaf, and river-rock details use instancing but shader and texture performance must be validated on hardware
+- [ ] Run the pipe repair, Raincatch Ridge and Wetland Sanctuary activities end-to-end to confirm unchanged gameplay
+
+The previously generated premium screenshots are **visual direction references**, not screenshots from the game. This rebuild improves the real in-browser rendering; a matching high-fidelity environment would require a dedicated authored-asset pipeline, meshes, materials, and visual validation on a GPU.
