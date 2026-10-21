@@ -28,7 +28,8 @@
 - Gradual morning-to-starlight lighting with glowing lanterns, fireflies, distant stars and dawn transitions
 - Four discoverable sealed-water caches that restore up to 12 energy and award 25 impact points apiece
 - Optional Wetland Sanctuary with a 3D boardwalk, lilies, reeds, wading bird and a habitat cleanup challenge
-- Hands-on 3×3 rotating pipeline puzzle before the original pump safety questions
+- Hands-on **nine-piece** pipeline puzzle before the original pump safety questions: water must reach the village through all nine sections, including two T-junctions and two leak-proof capped branches (the original five-piece shortcut was fixed)
+- Exhaustive puzzle test in `tools/test-pipes.mjs` checks all **262,144 rotation combinations** and runs automatically in GitHub Actions
 - Optional Raincatch Ridge destination with a 3D collection station, roof gutter, covered tank and interactive collection-planning activity (+220 impact points)
 - Animated articulated explorer (walking, greeting, and celebratory poses), cinematic quest rewards with 3D sparkles, and a distinctive victory presentation
 - Reduced-motion support for the newer environment and achievement animations
