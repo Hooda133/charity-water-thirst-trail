@@ -1,0 +1,30 @@
+name: Validate Village Assets
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'assets/village/**'
+      - 'tools/validate-village.mjs'
+      - 'script.js'
+      - 'index.html'
+      - '.github/workflows/village-assets.yml'
+  pull_request:
+    paths:
+      - 'assets/village/**'
+      - 'tools/validate-village.mjs'
+      - 'script.js'
+      - 'index.html'
+      - '.github/workflows/village-assets.yml'
+
+jobs:
+  check-village-gltf:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Validate original glTF pack, loader integration and UI references
+        run: node tools/validate-village.mjs
