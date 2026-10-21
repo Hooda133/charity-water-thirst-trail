@@ -1,23 +1,27 @@
-name: Validate Village Assets
+name: Validate 3D Assets
 on:
   push:
     branches: [main]
     paths:
       - 'assets/village/**'
+      - 'assets/characters/**'
       - 'tools/validate-village.mjs'
+      - 'tools/validate-explorer.mjs'
       - 'script.js'
       - 'index.html'
       - '.github/workflows/village-assets.yml'
   pull_request:
     paths:
       - 'assets/village/**'
+      - 'assets/characters/**'
       - 'tools/validate-village.mjs'
+      - 'tools/validate-explorer.mjs'
       - 'script.js'
       - 'index.html'
       - '.github/workflows/village-assets.yml'
 
 jobs:
-  check-village-gltf:
+  check-gltf-assets:
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -28,3 +32,5 @@ jobs:
           node-version: '22'
       - name: Validate original glTF pack, loader integration and UI references
         run: node tools/validate-village.mjs
+      - name: Validate explorer rig and character geometry
+        run: node tools/validate-explorer.mjs
