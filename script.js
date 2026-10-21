@@ -943,7 +943,7 @@
     const scene = new THREE.Scene();
     scene.background = new THREE.Color(0xb9dfdf);
     // Moderate distance fog provides atmosphere without washing out nearby terrain.
-    scene.fog = new THREE.FogExp2(0xb9dfdf, .013);
+    scene.fog = new THREE.FogExp2(0x9bc9d1, .009);
     const camera = new THREE.PerspectiveCamera(46, 1, .1, 180);
     const renderer = new THREE.WebGLRenderer({antialias:true, alpha:false, powerPreference:"high-performance"});
     renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.7));
@@ -1099,13 +1099,26 @@
     }
   
     // Rolling grass, meadow patches and a raised perimeter give the world actual depth.
-    const terrainGeometry=new THREE.PlaneGeometry(52,33,68,42);
+    // Wrap the original interactive region in a large continuous landscape,
+    // so panoramic views never reveal a rectangular island suspended in sky.
+    // The middle stays nearly level, preserving path, bridge and quest positions.
+    function terrainElevation(x,z){
+      const mx=Math.max(0,(Math.abs(x)-18)/10);
+      const mz=Math.max(0,(Math.abs(z)-10)/10);
+      const rim=Math.max(mx,mz);
+      const shoulder=Math.min(3.6,Math.pow(rim,1.28)*.67);
+      const distantWaves=Math.min(1,rim)*(
+        Math.sin(x*.21+z*.14)*.38+Math.cos(z*.31-x*.11)*.27
+      );
+      return -.21+Math.sin(x*.43)*.07+Math.cos(z*.67)*.06+
+        shoulder+distantWaves;
+    }
+    const terrainGeometry=new THREE.PlaneGeometry(118,112,122,112);
     terrainGeometry.rotateX(-Math.PI/2);
     const positions=terrainGeometry.getAttribute("position");
     for(let i=0;i<positions.count;i++){
       const x=positions.getX(i),z=positions.getZ(i);
-      const edge=Math.max(0,(Math.abs(x)-19)/7,(Math.abs(z)-11)/6);
-      positions.setY(i,-.19+Math.sin(x*.43)*.07+Math.cos(z*.67)*.06+edge*edge*1.4);
+      positions.setY(i,terrainElevation(x,z));
     }
     // Vertex colors give the whole valley broad patches of warm grass, forest
     // greens, and sunlit meadows rather than a single uniform green surface.
@@ -1124,7 +1137,7 @@
     terrainGeometry.setAttribute("color",new THREE.BufferAttribute(colors,3));
     terrainGeometry.computeVertexNormals();
     const groundArt=art.grass;
-    if(groundArt)groundArt.repeat.set(13,9);
+    if(groundArt)groundArt.repeat.set(28,24);
     mesh(terrainGeometry,new THREE.MeshStandardMaterial({
       vertexColors:true,map:groundArt||null,roughness:1,metalness:0,
       side:THREE.DoubleSide
@@ -1137,19 +1150,44 @@
     // and sky. Previous giant cones framed the scene like a wall of triangles.
     const scenicMountains=[];
     for(let i=0;i<12;i++){
-      const x=-49+i*8.8;
-      const z=-49-(i%3)*4.4;
-      const height=7.2+(i*7%9);
-      const radius=4.5+(i%3)*1.25;
-      const group=new THREE.Group();group.position.set(x,-2.2,z);scene.add(group);
+      const x=-46+i*8.25;
+      const z=-39-(i%3)*3.5;
+      const height=5.7+(i*7%7);
+      const radius=5.2+(i%3)*1.25;
+      // Place their bases on the same terrain instead of floating above it.
+      const group=new THREE.Group();
+      group.position.set(x,terrainElevation(x,z)-.28,z);scene.add(group);
       const peak=mesh(new THREE.ConeGeometry(radius,height,7),
         i%3?mountainDistant:mountainNear,group,false);
-      peak.position.y=height*.44;peak.rotation.y=i*.76;
-      const snow=mesh(new THREE.ConeGeometry(radius*.24,height*.15,7),
+      peak.position.y=height*.49;peak.rotation.y=i*.76;
+      const snow=mesh(new THREE.ConeGeometry(radius*.25,height*.14,7),
         snowCap,group,false);
-      snow.position.y=height*.44+height*.424;snow.rotation.y=i*.76;
+      snow.position.y=height*.49+height*.43;snow.rotation.y=i*.76;
       scenicMountains.push(group);
     }
+    // Distant pine stands make a natural transition from valley to mountains.
+    // Instancing adds hundreds of silhouettes with only two draw calls.
+    const ridgeCount=120,farTreeDummy=new THREE.Object3D();
+    const ridgeTrunks=new THREE.InstancedMesh(
+      new THREE.CylinderGeometry(.075,.12,.82,5),mats.trunks,ridgeCount);
+    const ridgeCrowns=new THREE.InstancedMesh(
+      new THREE.ConeGeometry(.64,2.0,6),mats.pine,ridgeCount);
+    for(let i=0;i<ridgeCount;i++){
+      const x=(rng()-.5)*105,z=-19-rng()*17;
+      const yy=terrainElevation(x,z);
+      const scale=.5+rng()*.9;
+      farTreeDummy.position.set(x,yy+.41*scale,z);
+      farTreeDummy.rotation.set(0,rng()*Math.PI*2,0);
+      farTreeDummy.scale.setScalar(scale);farTreeDummy.updateMatrix();
+      ridgeTrunks.setMatrixAt(i,farTreeDummy.matrix);
+      farTreeDummy.position.y=yy+1.64*scale;
+      farTreeDummy.updateMatrix();
+      ridgeCrowns.setMatrixAt(i,farTreeDummy.matrix);
+    }
+    ridgeTrunks.instanceMatrix.needsUpdate=true;
+    ridgeCrowns.instanceMatrix.needsUpdate=true;
+    ridgeTrunks.castShadow=false;ridgeCrowns.castShadow=false;
+    scene.add(ridgeTrunks,ridgeCrowns);
     for(let i=0;i<34;i++){
       const x=(rng()-.5)*43,z=(rng()-.5)*26;
       const patch=mesh(new THREE.CircleGeometry(1,22),i%3===0?mats.grass3:mats.grass2,scene,false);
@@ -1421,7 +1459,7 @@
       const height=2.6+(i*5%5);
       const hill=mesh(new THREE.ConeGeometry(4.2,height,6),
         foothillMat[i%3],scene,false);
-      hill.position.set(x,height*.40-1.1,z);
+      hill.position.set(x,terrainElevation(x,z)+height*.44-.14,z);
     }
     for(let i=0;i<105;i++){
       const x=(rng()-.5)*43,z=(rng()-.5)*26;
