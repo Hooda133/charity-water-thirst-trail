@@ -127,3 +127,16 @@ Actual visual rendering and performance must be verified in a browser using WebG
 - [ ] No errors, giant avatar, inverted feet, or sudden frame-rate drops in the live WebGL browser
 
 The static CI validator checks glTF geometry and rig names but cannot certify actual visual quality or browser GPU performance.
+
+
+## Explorer visual refinement
+- [ ] Examine the explorer near the bridge in daylight: skin and hat read warmer and the face is clearer
+- [ ] Verify the pack does not dominate the silhouette and the arms/legs appear less cylindrical
+- [ ] Walk, stop, turn and walk again: transitions should ease without snapping
+- [ ] Greet a villager and celebrate: both animation states still work
+- [ ] Check the model at night; skin should remain visible without excessive glow
+- [ ] The avatar should remain one character, never doubled
+- [ ] If GLTFLoader is blocked, the procedural explorer must still appear
+- [ ] Compare FPS and image quality to the previous version, especially on integrated graphics
+
+Automated validation checks geometry and simulated animation state; actual WebGL shading still needs a browser visual check.
