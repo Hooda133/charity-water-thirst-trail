@@ -182,3 +182,22 @@ The pipe challenge passed scripted gameplay and modal-class switching checks; re
 - [ ] Confirm pipe piece rotations preserve the correct reciprocal connections and cannot leak off any exterior edge except the designated inlet/outlet
 
 **Automated verification:** Run `node tools/test-pipes.mjs`. The script evaluates all 262,144 possible orientations of the actual game solver and expects exactly two complete leak-free solutions. The GitHub Actions validation workflow runs this test automatically.
+
+
+## Thirst Trail 2.0 — Forgotten Canyon (October 21)
+- [ ] Start with an empty browser profile. Chapter 2 should be locked; Chapter 1 remains playable.
+- [ ] Finish Chapter 1 pump and safety quiz. Confirm Chapter 2 unlocks on victory and appears in the chapter selection screen.
+- [ ] In Chapter 1, complete the first quest, return to chapter selection, and continue — inventory, location, score and quest progress should be restored.
+- [ ] Launch Forgotten Canyon and inspect distinct red mesas, the river gorge, bridge, aqueduct, pressure-control tank and floating destination labels.
+- [ ] Walk with WASD / arrows, click a destination button, cross the central bridge, and use E to interact. Ensure the gorge is impassable outside the bridge.
+- [ ] Meet Surveyor Nia and collect the seal kit before pressure adjustments are allowed.
+- [ ] At the valve station, rotate settings to **2 / 2 / 1** (69 kPa) and confirm pressure passes. Try an unsafe pressure first — it should cost 4 energy.
+- [ ] At the aqueduct, try a repair out of order (rejected), then complete Anchor → Brace → Pipe → Seal.
+- [ ] Leave Canyon after two repair stages, return through Chapter Select, and verify those stages resume from the checkpoint.
+- [ ] At the cistern, pick the unsafe option first (penalty); select test/treatment/monitoring for the correct completion.
+- [ ] Confirm all five objectives complete, Chapter 2 is marked finished, and replay remains possible.
+- [ ] Disconnect the Three.js CDN: Canyon should remain playable via its Canvas 2D fallback.
+- [ ] On mobile, try the on-screen movement controls, mission dialogs and chapter buttons.
+- [ ] Confirm closing or switching chapters does not keep the Valley WebGL scene rendering in the background.
+
+Run `node tools/test-chapters.mjs` for repeatable logic tests. GitHub Actions checks both levels, but live browser rendering and mobile performance must still be verified.
