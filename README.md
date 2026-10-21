@@ -6,6 +6,7 @@
 
 - **Chapter 1: Greenwater Valley** — the complete original adventure is retained, including NPCs, mission puzzles, 3D model packs, mini-map and environmental effects.
 - **Chapter 2: The Forgotten Canyon** — a separate red-rock 3D chapter with cliff mesas, a gorge and bridge, aqueduct, control station, cistern, desert foliage and floating destination signs.
+- **Canyon visual rebuild:** textured, subtly undulating desert ground, sculpted stratified gorge walls, jagged layered mesas, blue-to-gold sky, enhanced aqueduct masonry, detailed valve station/cistern/shelter, drifting dust, moving turquoise water and instanced stones/scrub. Chapter 2 now loads the same animated original explorer glTF used by Chapter 1, with the existing procedural fallback. Art lives in `canyon-visuals.js`; gameplay coordinates, quest puzzles, 2D mode, and saves are unchanged.
 - **Five playable canyon objectives:** Meet Surveyor Nia, recover the seal kit, calibrate three pressure valves, rebuild the aqueduct in four stages, and complete a cistern safety check.
 - **Interactive valve puzzle:** set three regulators to achieve **65–73 kPa**, keep the regulator open, and balance intake/return settings. Incorrect tests cost energy.
 - **Aqueduct assembly puzzle:** place anchors, braces, pipes and sealing material in the right order; repair stages save automatically.
