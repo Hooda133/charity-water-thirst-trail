@@ -156,3 +156,16 @@ Automated validation checks geometry and simulated animation state; actual WebGL
 - [ ] If graphics are too busy or slower on your laptop, compare with `backup-before-environment-overhaul-2026-10-21`
 
 These modifications passed JavaScript syntax and simulated 3D scene construction/render checks. The final GPU rendering, animations, and frame rate must still be verified in the actual browser.
+
+
+## Pipeline repair dialog — responsive layout fix (October 21)
+- [ ] On a wide desktop monitor, open the pump repair puzzle. The instructions and action buttons appear on the **left**, and the entire 3×3 board on the **right**.
+- [ ] Confirm all nine numbered tiles, WATER IN/OUTLET labels, Test the flow, and Back to the valley are visible together without a giant vertical modal
+- [ ] On a narrow browser / phone, the puzzle stacks vertically, tiles stay square, and the modal scrolls normally when the viewport is short
+- [ ] After scrolling a dialog, opening the pipe puzzle starts at the top rather than halfway through
+- [ ] Rotate all nine pipes to connect the outlet; selecting Test the flow proceeds to the safety quiz
+- [ ] Verify ordinary NPC, rain, wetland, pause, and victory dialogs remain their original compact size
+- [ ] Keyboard Tab / Enter can rotate pipes and activate Test the flow
+- [ ] Resize browser with puzzle open (including 740px breakpoint) to ensure cards and labels don't overlap
+
+The pipe challenge passed scripted gameplay and modal-class switching checks; real browser layout still needs a visual review.
