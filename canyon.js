@@ -612,6 +612,7 @@
   });
   window.addEventListener("keyup",event=>state.keys.delete(event.key.toLowerCase()));
   window.addEventListener("blur",()=>state.keys.clear());
+  window.addEventListener("pagehide",()=>{if(state.active&&!state.finished)save();});
   document.addEventListener("visibilitychange",()=>{
     state.keys.clear();
     if(document.hidden&&state.active&&!state.modal)pause();
