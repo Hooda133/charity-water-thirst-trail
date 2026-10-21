@@ -1143,10 +1143,14 @@
     const riverPoints=[];
     for(let i=0;i<=80;i++){const py=-80+i*16;riverPoints.push([wx(riverCenter(py)),wz(py)]);}
     ribbon(riverPoints,5.3,-.015,makeMat(0xd7c49a));
-    const waterMat=new THREE.MeshPhysicalMaterial({color:0x19a9c4,metalness:.18,roughness:.13,transparent:true,opacity:.94,clearcoat:1,clearcoatRoughness:.11,side:THREE.DoubleSide});
+    // Matte turquoise river avoids the white, mirror-like blowouts from the
+    // former clearcoat-heavy physical material at strong sunlight angles.
+    const waterMat=new THREE.MeshStandardMaterial({
+      color:0x36aabb,metalness:0,roughness:.52,side:THREE.DoubleSide
+    });
     ribbon(riverPoints,4.55,.038,waterMat);
     const ripples=[];
-    const rippleMat=new THREE.MeshBasicMaterial({color:0xc5ffff,transparent:true,opacity:.55,depthWrite:false});
+    const rippleMat=new THREE.MeshBasicMaterial({color:0xc5fff4,transparent:true,opacity:.27,depthWrite:false});
     for(let i=0;i<42;i++){
       const z=-15+(i/42)*30,x=wx(riverCenter(z*SCALE+550))+(rng()-.5)*2.8;
       const wave=mesh(new THREE.TorusGeometry(.12+rng()*.21,.015,5,18,Math.PI),rippleMat,scene,false);
@@ -1157,8 +1161,8 @@
     // Floating water glints bring the stream to life without external textures.
     // Small additive highlights are intentionally kept to a low mesh count.
     const glintMat=new THREE.MeshBasicMaterial({
-      color:0xd5fff8,transparent:true,opacity:.56,depthWrite:false,
-      blending:THREE.AdditiveBlending,side:THREE.DoubleSide
+      color:0xd5fff8,transparent:true,opacity:.27,depthWrite:false,
+      blending:THREE.NormalBlending,side:THREE.DoubleSide
     });
     const glints=[];
     const glintGeo=new THREE.PlaneGeometry(.28,.035);
@@ -1227,7 +1231,7 @@
       reedField.setMatrixAt(i,reedDummy.matrix);
     }
     reedField.instanceMatrix.needsUpdate=true;scene.add(reedField);
-    const foamMat=new THREE.MeshBasicMaterial({color:0xdbfff1,transparent:true,opacity:.52,depthWrite:false});
+    const foamMat=new THREE.MeshBasicMaterial({color:0xdbfff1,transparent:true,opacity:.33,depthWrite:false});
     const foam=new THREE.InstancedMesh(new THREE.SphereGeometry(1,6,4),foamMat,90);
     foam.castShadow=false;const foamDummy=new THREE.Object3D();
     for(let i=0;i<90;i++){
@@ -1476,9 +1480,18 @@
       color:0xffc884,emissive:0xffb05c,emissiveIntensity:.49,
       roughness:.36,metalness:0
     });
-    const chimneySmokeMat=new THREE.MeshBasicMaterial({
-      color:0xd7eee1,transparent:true,opacity:.37,depthWrite:false
-    });
+    // Feathered smoke sprites replace distracting solid white geometric balls.
+    const smokeCanvas=document.createElement("canvas");
+    smokeCanvas.width=64;smokeCanvas.height=64;
+    const smokeCtx=smokeCanvas.getContext("2d");
+    if(smokeCtx){
+      const shade=smokeCtx.createRadialGradient(32,32,1,32,32,31);
+      shade.addColorStop(0,"rgba(240,245,235,.55)");
+      shade.addColorStop(.45,"rgba(214,229,220,.24)");
+      shade.addColorStop(1,"rgba(208,222,215,0)");
+      smokeCtx.fillStyle=shade;smokeCtx.fillRect(0,0,64,64);
+    }
+    const smokeTexture=new THREE.CanvasTexture(smokeCanvas);
     const chimneySmokes=[];
     function cottage(px,py,size=1,tint=0xf0d5a3){
       const g=new THREE.Group();g.position.set(wx(px),0,wz(py));g.scale.setScalar(size);scene.add(g);
@@ -1518,10 +1531,14 @@
       // Small translucent chimney smoke puffs, no heavy volumetric effects.
       const smoke=new THREE.Group();smoke.position.set(-.98,4.08,-.42);
       g.add(smoke);
-      for(let i=0;i<5;i++){
-        const puff=ball(smoke,chimneySmokeMat,0,i*.28,0,
-          .17+i*.037,.13+i*.03,.16+i*.032,false);
-        chimneySmokes.push({puff,phase:i*.9+px*.01,source:smoke});
+      for(let i=0;i<3;i++){
+        const puff=new THREE.Sprite(new THREE.SpriteMaterial({
+          map:smokeTexture,transparent:true,opacity:.14,depthWrite:false
+        }));
+        puff.position.set(0,i*.26,0);
+        puff.scale.set(.42+i*.13,.48+i*.14,1);
+        smoke.add(puff);
+        chimneySmokes.push({puff,phase:i*.42+px*.003,source:smoke});
       }
       for(const x of [-1.47,1.47]){
         box(g,mats.wood,x,1.26,1.43,.15,2.5,.13);
@@ -1893,18 +1910,21 @@
     // A few birds high above the fields make the horizon feel inhabited.
     // They are background silhouettes and are never obstacles.
     const birds=[];
-    const birdMaterial=new THREE.MeshStandardMaterial({color:0x436b69,roughness:1,side:THREE.DoubleSide});
-    for(let i=0;i<6;i++){
-      const g=new THREE.Group();scene.add(g);
+    // Birds read as small pale silhouettes in the distance, not enormous
+    // dark triangles flying over the player and river.
+    const birdMaterial=new THREE.MeshBasicMaterial({
+      color:0xe3eee2,side:THREE.DoubleSide
+    });
+    for(let i=0;i<5;i++){
+      const g=new THREE.Group();scene.add(g);g.scale.setScalar(.58);
       const wings=[];
       for(const side of [-1,1]){
-        const pivot=new THREE.Group();pivot.position.x=side*.06;g.add(pivot);
-        const wing=mesh(new THREE.ConeGeometry(.17,.72,3),birdMaterial,pivot,false);
-        wing.rotation.z=side*Math.PI/2;
-        wing.position.x=side*.34;
+        const pivot=new THREE.Group();pivot.position.x=side*.045;g.add(pivot);
+        const wing=mesh(new THREE.ConeGeometry(.085,.43,3),birdMaterial,pivot,false);
+        wing.rotation.z=side*Math.PI/2;wing.position.x=side*.22;
         wings.push({pivot,side});
       }
-      birds.push({group:g,wings,phase:i*1.37,originX:-9+i*3.6,originZ:-5+(i%3)*4});
+      birds.push({group:g,wings,phase:i*1.37,originX:-10+i*4.2,originZ:-21-(i%3)*2.4});
     }
     // World-space achievement bursts: small reusable gems, expanding rings and light.
     // These effects are driven by real quest state and never block player controls.
@@ -2239,9 +2259,10 @@
         }
       }
       if(!reduceMotion)for(const smoke of chimneySmokes){
-        const t=(time*.27+smoke.phase)%1.7;
-        smoke.puff.position.set(Math.sin(time*.7+smoke.phase)*t*.16,t*1.45,0);
-        smoke.puff.scale.setScalar(.72+t*.24);
+        const t=(time*.21+smoke.phase)%1;
+        smoke.puff.position.set(Math.sin(time*.45+smoke.phase)*t*.24,t*1.25,.02);
+        smoke.puff.scale.set(.35+t*.52,.44+t*.70,1);
+        smoke.puff.material.opacity=.16*(1-t)*(.6+.4*Math.sin(t*Math.PI));
       }
       if(!reduceMotion)for(let i=0;i<clouds.length;i++){
         clouds[i].position.x+=.0014;
@@ -2278,8 +2299,8 @@
         }
         for(const bird of birds){
           const t=time*.23+bird.phase;
-          bird.group.position.set(bird.originX+Math.sin(t)*4.2,5.2+Math.cos(t*1.9)*.48,
-            bird.originZ+Math.cos(t*.8)*3.3);
+          bird.group.position.set(bird.originX+Math.sin(t)*1.9,10.5+Math.cos(t*1.9)*.38,
+            bird.originZ+Math.cos(t*.8)*1.2);
           bird.group.rotation.y=-t+.7;
           for(const wing of bird.wings){
             wing.pivot.rotation.z=wing.side*(Math.sin(time*6+bird.phase)*.36);
