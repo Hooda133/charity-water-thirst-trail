@@ -7,6 +7,8 @@
 - Genuine Three.js/WebGL 3D exploration with terrain, 3D buildings, a modeled explorer, lighting, shadows, camera follow, and click-to-walk
 - Showcase visual pass: layered alpine backdrop, vertex-colored valley terrain, densely scattered instanced meadow flowers, and a translucent animated waterfall
 - Real in-engine art upgrades: procedural shingle, wood-grain, stone, plaster, footpath and grass textures generated locally at startup (no external asset requests)
+- Screenshot-driven visual cleanup: quieter distant mountain silhouette, clearer village sightlines, feathered chimney smoke, matte teal water, fewer river rocks and small pale birds
+- Bridge route fix: destinations reached from the bridge center now correctly choose the safe bank before leaving the crossing
 - New pitched gable roofs, timber-framed cottages, amber windows, masonry chimneys and animated smoke
 - Instanced riverbank boulders and faceted sunlit canopy accents, plus lower-exposure cinematic daylight
 - Cinematic title flyover and illustrated sun/moon sky with golden daylight halos
