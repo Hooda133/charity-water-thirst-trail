@@ -62,8 +62,8 @@ assert.ok(html.includes('"three":"https://cdn.jsdelivr.net/npm/three@0.170.0/bui
 assert.ok(script.includes('import("three/addons/loaders/GLTFLoader.js")'),"Missing model loader");
 assert.ok(script.includes("villageFallbacks[i].visible=false"),"Fallback swap missing");
 new Function(script); // Syntax check without executing the browser application
-const ids=new Set([...html.matchAll(/\\bid=["']([^"']+)["']/g)].map(match=>match[1]));
-const missing=[...new Set([...script.matchAll(/\\$\\("([^"]+)"\\)/g)].map(match=>match[1]))]
+const ids=new Set([...html.matchAll(/\bid=["']([^"']+)["']/g)].map(match=>match[1]));
+const missing=[...new Set([...script.matchAll(/\$\("([^"]+)"\)/g)].map(match=>match[1]))]
   .filter(id=>!ids.has(id));
 assert.deepEqual(missing,[],"Missing game UI elements");
 console.log(`✓ glTF 2.0: ${names.length} original building models; ${Math.round(triangles).toLocaleString()} triangles`);
