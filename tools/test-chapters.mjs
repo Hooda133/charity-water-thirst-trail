@@ -33,7 +33,9 @@ function idsPlaceholder(){
     assert.match(source,/recenterCamera/);
     assert.match(source,/(?:key|k)==="c"/);
   }
-  assert.match(scripts.valley,/camPos\.add\(new THREE\.Vector3\(exploreOffset/);
+  assert.match(scripts.valley,/else if\(freeCamera\)/);
+  assert.match(scripts.valley,/freeTarget\.addScaledVector/);
+  assert.match(scripts.valley,/cameraYaw/);
   assert.match(scripts.canyon,/cameraTarget\.set\(clamp\(baseX\+pan\.x/);
   return true;
 }
