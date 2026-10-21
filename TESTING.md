@@ -111,3 +111,19 @@ Actual visual rendering and performance must be verified in a browser using WebG
 - [ ] Verify frame rate and memory on an integrated-graphics laptop; consider simplifying assets or moving assets to GLB + compressed textures later
 
 **Validation scope:** the repository includes static glTF and source checks and a mocked asynchronous loader/fallback test was exercised during integration. These tests are not a substitute for real GPU/WebGL screenshot testing.
+
+
+## Original articulated explorer (October 21)
+- [ ] Run `node tools/validate-explorer.mjs` from the Codespaces repository root
+- [ ] Check DevTools Console for `Thirst Trail: loaded original animated explorer model.`
+- [ ] Verify there is one explorer (no overlapping procedural model and loaded character)
+- [ ] Move with WASD, click-to-walk, and bridge auto-navigation; legs, elbows and backpack move naturally
+- [ ] Zoom in to inspect the face, hat, jacket, compass, scarf, boots, and flask
+- [ ] Stand near an NPC; explorer greets without freezing controls
+- [ ] Finish a quest; explorer briefly raises arms. Confirm the victory pose and reset
+- [ ] Try turning, stopping, reopening the game and restarting an expedition
+- [ ] Enable reduced motion; decorative head movement, blink and idle bounce should stop
+- [ ] Block the character model asset in DevTools Network: the original procedural explorer remains visible
+- [ ] No errors, giant avatar, inverted feet, or sudden frame-rate drops in the live WebGL browser
+
+The static CI validator checks glTF geometry and rig names but cannot certify actual visual quality or browser GPU performance.
