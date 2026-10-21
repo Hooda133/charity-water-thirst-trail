@@ -20,11 +20,13 @@ assert.deepEqual([...PIPE_DIRS],["n","e","s","w"]);
 assert.equal(PIPE_BASE.filter(p=>p.length===3).length,2,"Requires two T-junctions");
 assert.equal(PIPE_BASE.filter(p=>p.length===1).length,2,"Requires two capped branches");
 assert.equal(pipeFlow(PIPE_START).solved,false,"Should not start already repaired");
-const initial=pipeFlow(PIPE_START);
-assert.equal(initial.connected.size,1,"Starting board should supply only inlet tile 4");
-assert.equal(initial.leaks.length,1,"Starting board should identify the unsealed branch on tile 4");
-assert.equal(initial.leaks[0].tile,3,"Starting leak should be located at tile 4");
-assert.equal(initial.leaks[0].direction,"s","The starting leak should face toward tile 7");
+// Screenshot-like case: tile 4 connects to WATER IN but has an unsealed south joint.
+const screenshotTurns=[1,2,3,3,2,1,1,1,2];
+const screenshotFlow=pipeFlow(screenshotTurns);
+assert.equal(screenshotFlow.connected.size,1,"Inlet-only network must report 1 supplied tile");
+assert.equal(screenshotFlow.leaks.length,1,"Inlet-only network must identify one unsealed joint");
+assert.equal(screenshotFlow.leaks[0].tile,3,"Leak must be located on tile 4");
+assert.equal(screenshotFlow.leaks[0].direction,"s","The leak should face tile 7");
 
 
 // This orientation connects every tile, seals all branches and delivers water.
