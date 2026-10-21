@@ -2732,6 +2732,7 @@
     // Gentle camera zoom without changing the existing keyboard movement controls.
     let cameraDistance=.82;
     let cameraDistanceTarget=.82;
+    let lastCameraFrame=0;
     view.addEventListener("wheel",event=>{
       if(!view.isConnected || view.parentElement===hero)return;
       event.preventDefault();
@@ -3127,8 +3128,13 @@
       }
       fire.scale.y=reduceMotion?1:.84+Math.sin(time*13)*.15;
       fireLight.intensity=effectsEnabled?(2.4+night*8.6+(reduceMotion?0:Math.sin(time*9)*1.2)):1.2;
-      const cameraFrameDelta=characterMotion.lastTime?Math.min(.05,Math.max(0,time-characterMotion.lastTime)):.016;
+      // Keep camera interpolation timing independent of the character animation clock.
+      const cameraFrameDelta=lastCameraFrame?Math.min(.05,Math.max(0,time-lastCameraFrame)):.016;
+      lastCameraFrame=time;
       cameraDistance+=(cameraDistanceTarget-cameraDistance)*(1-Math.exp(-10*cameraFrameDelta));
+      // If the player starts walking after exploring, restore visible follow mode.
+      // Free camera is still available whenever the player is stationary and dragging.
+      if(playing&&freeCamera&&state.moving&&!cameraGesture?.dragged)recenterCamera();
       let aim;
       if(playing){
         // Scenic overview deliberately frames the whole explorable island;
