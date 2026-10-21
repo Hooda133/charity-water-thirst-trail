@@ -1631,11 +1631,12 @@
           villageAssetState.loaded++;
         }
         villageAssetState.status=villageAssetState.loaded?"ready":"fallback";
-        if(villageAssetState.loaded)console.info(
-          "Thirst Trail: loaded "+villageAssetState.loaded+" original glTF village models.");
+        if(villageAssetState.loaded&&typeof console!=="undefined"&&typeof console.info==="function")
+          console.info("Thirst Trail: loaded "+villageAssetState.loaded+" original glTF village models.");
       }catch(error){
-        villageAssetState.status="fallback";
-        console.warn("Thirst Trail: keeping procedural village (model pack unavailable)",error);
+        villageAssetState.status=villageAssetState.loaded?"partial":"fallback";
+        if(typeof console!=="undefined"&&typeof console.warn==="function")
+          console.warn("Thirst Trail: keeping procedural village (model pack unavailable)",error);
       }
     }
     void loadVillageModels();
