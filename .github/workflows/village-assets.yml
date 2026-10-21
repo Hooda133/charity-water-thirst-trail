@@ -1,4 +1,4 @@
-name: Validate 3D Assets and Pipe Logic
+name: Validate 3D Assets and Both Chapters
 on:
   push:
     branches: [main]
@@ -8,6 +8,10 @@ on:
       - 'tools/validate-village.mjs'
       - 'tools/validate-explorer.mjs'
       - 'tools/test-pipes.mjs'
+      - 'tools/test-chapters.mjs'
+      - 'canyon.js'
+      - 'canyon.css'
+      - 'progression.js'
       - 'script.js'
       - 'index.html'
       - '.github/workflows/village-assets.yml'
@@ -18,6 +22,10 @@ on:
       - 'tools/validate-village.mjs'
       - 'tools/validate-explorer.mjs'
       - 'tools/test-pipes.mjs'
+      - 'tools/test-chapters.mjs'
+      - 'canyon.js'
+      - 'canyon.css'
+      - 'progression.js'
       - 'script.js'
       - 'index.html'
       - '.github/workflows/village-assets.yml'
@@ -38,3 +46,5 @@ jobs:
         run: node tools/validate-explorer.mjs
       - name: Exhaustively test all 262144 pipeline orientations
         run: node tools/test-pipes.mjs
+      - name: Test Valley unlock and Forgotten Canyon quest progression
+        run: node tools/test-chapters.mjs
