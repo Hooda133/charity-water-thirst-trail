@@ -594,6 +594,8 @@
             const p=state.path[0];player.rotation.y=Math.atan2(wX(p.x)-px,wZ(p.y)-pz);
           }
           for(let i=0;i<limbs.length;i++)limbs[i].rotation.x=Math.sin(time*9+Math.floor(i/2)*Math.PI+(i%2)*Math.PI)*(state.path.length||state.keys.size ? .35 : .07);
+          // Once travel resumes, follow the explorer so walking never appears frozen offscreen.
+          if(state.path.length||state.keys.size)pan.set(0,0,0);
           // Clamp the free camera within the entire expanded canyon; player stays put.
           const baseX=px*worldSpread,baseZ=pz*worldSpread;
           cameraTarget.set(clamp(baseX+pan.x,-31,31),0,clamp(baseZ+pan.z,-23,23));
