@@ -374,13 +374,16 @@
         }
       },
       dispose(){
+        // Descend through authored structure groups too; otherwise geometry
+        // in masonry arches, canopy and NPCs survives when WebGL is recreated.
         const geometries=new Set(),materials=new Set();
-        for(const object of props){
-          if(!object.isMesh&&!object.isPoints&&!object.isInstancedMesh)continue;
+        const collect=object=>{
           if(object.geometry)geometries.add(object.geometry);
-          for(const m of Array.isArray(object.material)?object.material:[object.material])
-            if(m)materials.add(m);
-        }
+          for(const m of (Array.isArray(object.material)?object.material:
+            object.material?[object.material]:[]))materials.add(m);
+          for(const child of object.children||[])collect(child);
+        };
+        for(const object of props)collect(object);
         for(const g of geometries)g.dispose();
         for(const m of materials)m.dispose();
         for(const map of [terrainMap,stoneMap,blockMap,waterMap])map?.dispose();
