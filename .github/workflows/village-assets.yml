@@ -10,6 +10,8 @@ on:
       - 'tools/test-pipes.mjs'
       - 'tools/test-chapters.mjs'
       - 'tools/test-valley-movement.mjs'
+      - 'canyon-visuals.js'
+      - 'tools/test-canyon-visuals.mjs'
       - 'canyon.js'
       - 'canyon.css'
       - 'progression.js'
@@ -25,6 +27,8 @@ on:
       - 'tools/test-pipes.mjs'
       - 'tools/test-chapters.mjs'
       - 'tools/test-valley-movement.mjs'
+      - 'canyon-visuals.js'
+      - 'tools/test-canyon-visuals.mjs'
       - 'canyon.js'
       - 'canyon.css'
       - 'progression.js'
@@ -52,3 +56,5 @@ jobs:
         run: node tools/test-chapters.mjs
       - name: Verify character movement controls after graphics merges
         run: node tools/test-valley-movement.mjs
+      - name: Validate Forgotten Canyon 3D art and character integration
+        run: node tools/test-canyon-visuals.mjs
