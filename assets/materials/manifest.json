@@ -1,0 +1,117 @@
+{
+  "provider": "Poly Haven",
+  "license": "CC0-1.0",
+  "licenseURL": "https://polyhaven.com/license",
+  "retrieved": "2026-10-22",
+  "processing": "1K JPEG maps recompressed at quality 86; OpenGL normal maps, no displacement",
+  "maps": [
+    {
+      "asset": "aerial_grass_rock",
+      "channel": "color",
+      "source": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/aerial_grass_rock/aerial_grass_rock_diff_1k.jpg",
+      "sourceMD5": "e920ce36afd0abff000b8366d3d768d3",
+      "file": "meadow-color.jpg",
+      "license": "CC0-1.0",
+      "sha256": "2c301f503da0dcda0a5ee71be3459ba1bf86652bd2bbc8bdb73e5969e8facf97"
+    },
+    {
+      "asset": "aerial_grass_rock",
+      "channel": "normal",
+      "source": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/aerial_grass_rock/aerial_grass_rock_nor_gl_1k.jpg",
+      "sourceMD5": "c8aa4c4f09b113cc7edef89ddeaccad9",
+      "file": "meadow-normal.jpg",
+      "license": "CC0-1.0",
+      "sha256": "32c30ed31ffd13d8397e9c527e66527bbba133582dde9e1ca480fc27753b8417"
+    },
+    {
+      "asset": "aerial_grass_rock",
+      "channel": "roughness",
+      "source": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/aerial_grass_rock/aerial_grass_rock_rough_1k.jpg",
+      "sourceMD5": "f78c5cdc565f990299ae7c5a81f68cf7",
+      "file": "meadow-roughness.jpg",
+      "license": "CC0-1.0",
+      "sha256": "06d1bd5f0349183772a80d55cac2923843f330226f3c4ac6f159a3a1e79eb020"
+    },
+    {
+      "asset": "sand_01",
+      "channel": "color",
+      "source": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/sand_01/sand_01_diff_1k.jpg",
+      "sourceMD5": "c914c8edb419f040e04224081a3f79a5",
+      "file": "sand-color.jpg",
+      "license": "CC0-1.0",
+      "sha256": "3f942cc006fa9375f545b66e7fef3d599b0ce40f4b54055a0c0be00bc4774b49"
+    },
+    {
+      "asset": "sand_01",
+      "channel": "normal",
+      "source": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/sand_01/sand_01_nor_gl_1k.jpg",
+      "sourceMD5": "369b82aa417c77ec85c4c07c4c7b60a0",
+      "file": "sand-normal.jpg",
+      "license": "CC0-1.0",
+      "sha256": "6931478cc51fe6faf2d201332a6cba17a9631ec691ce28f569c6ec28217240fb"
+    },
+    {
+      "asset": "sand_01",
+      "channel": "roughness",
+      "source": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/sand_01/sand_01_rough_1k.jpg",
+      "sourceMD5": "663d0ddf782a427b7da4e247c939e73b",
+      "file": "sand-roughness.jpg",
+      "license": "CC0-1.0",
+      "sha256": "75d01238ebee04c944a3ec2035596f00b374172088bbda5f68e2e48161ced8e3"
+    },
+    {
+      "asset": "weathered_planks",
+      "channel": "color",
+      "source": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/weathered_planks/weathered_planks_diff_1k.jpg",
+      "sourceMD5": "5d7c9e7088bfa54490ba03ba15b660d8",
+      "file": "wood-color.jpg",
+      "license": "CC0-1.0",
+      "sha256": "5e9eca3220f448b4aa4388ef8f49699811ce618452f1f883790d26949372887e"
+    },
+    {
+      "asset": "weathered_planks",
+      "channel": "normal",
+      "source": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/weathered_planks/weathered_planks_nor_gl_1k.jpg",
+      "sourceMD5": "119541f6b143f21f0a6e9774e9208905",
+      "file": "wood-normal.jpg",
+      "license": "CC0-1.0",
+      "sha256": "cd772240466d0e25fd2650223e614ae43eeb1cff6453e56862c981c8a3a7acfb"
+    },
+    {
+      "asset": "weathered_planks",
+      "channel": "roughness",
+      "source": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/weathered_planks/weathered_planks_rough_1k.jpg",
+      "sourceMD5": "4ca50b076e1fc58f6862a5b039a7d5c9",
+      "file": "wood-roughness.jpg",
+      "license": "CC0-1.0",
+      "sha256": "864dd412d19bd37a57fb414e670c42b27dcf139213d4035c58a655cbf5958d4a"
+    },
+    {
+      "asset": "rocky_terrain_02",
+      "channel": "color",
+      "source": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/rocky_terrain_02/rocky_terrain_02_diff_1k.jpg",
+      "sourceMD5": "cf604d3868398a6a996cb5ba330dd3ab",
+      "file": "rock-color.jpg",
+      "license": "CC0-1.0",
+      "sha256": "c3470cbc1ddfa753f6db9dc9207999c520718ae56324de67b6f3bff5892a0f35"
+    },
+    {
+      "asset": "rocky_terrain_02",
+      "channel": "normal",
+      "source": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/rocky_terrain_02/rocky_terrain_02_nor_gl_1k.jpg",
+      "sourceMD5": "c1636176f0fa8eb9b924ebdecd47ddfd",
+      "file": "rock-normal.jpg",
+      "license": "CC0-1.0",
+      "sha256": "9134763c0bee1f1a1ff0de392129744f4b8980aae9ce150d737c639131705718"
+    },
+    {
+      "asset": "rocky_terrain_02",
+      "channel": "roughness",
+      "source": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/rocky_terrain_02/rocky_terrain_02_rough_1k.jpg",
+      "sourceMD5": "f940e341352cca8bdd2dc4d0c30f3da1",
+      "file": "rock-roughness.jpg",
+      "license": "CC0-1.0",
+      "sha256": "d843f573c92aa48c8208b19a30dfc60a608dab39670ffe0acf06dbf64c25dc05"
+    }
+  ]
+}
