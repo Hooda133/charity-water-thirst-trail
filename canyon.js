@@ -340,6 +340,7 @@
   async function buildWorld(){
     if(world||creating)return;
     creating=true;
+    let missionLabelLayer=null;
     try{
       const THREE=await import("https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js");
       const scene=new THREE.Scene();scene.background=new THREE.Color(0x93b9c9);
@@ -381,6 +382,16 @@
       sun.shadow.mapSize.set(shadowSize,shadowSize);sun.shadow.camera.left=-36;sun.shadow.camera.right=36;
       sun.shadow.camera.top=29;sun.shadow.camera.bottom=-29;sun.shadow.bias=-.0003;
       scene.add(sun);const fill=new THREE.DirectionalLight(0xa9dadd,.65);fill.position.set(16,12,-9);scene.add(fill);
+      // Each large rock owns its fading material, so opening a sightline never
+      // makes every object that shares its original sandstone shader transparent.
+      const sightlineRocks=[],sightlineTargets=[],rockOwner=new Map();
+      const registerSightlineRock=meshes=>{
+        const pieces=meshes.filter(mesh=>mesh?.isMesh&&!mesh.isInstancedMesh);
+        if(!pieces.length)return;
+        const entry={pieces:pieces.map(mesh=>({mesh,original:mesh.material,faded:null})),opacity:1};
+        sightlineRocks.push(entry);
+        for(const mesh of pieces){sightlineTargets.push(mesh);rockOwner.set(mesh,entry);}
+      };
       const put=(geometry,material,x,y,z,shadow=true)=>{
         const o=new THREE.Mesh(geometry,material);o.position.set(x,y,z);
         o.castShadow=shadow;o.receiveShadow=true;scene.add(o);return o;
@@ -397,6 +408,7 @@
           const z=-16+i*1.05,height=.95+(i*7%7)*.2;
           const cliff=box(rock[i%4],side*(2.60+(i%3)*.16),-.45-height/2,z,.58,height,1.13);
           cliff.rotation.y=(i%5-2)*.08;
+          registerSightlineRock([cliff]);
           const ledge=box(rock[(i+1)%4],side*2.95,-.04,z,.71,.11,.97);
         }
       }
@@ -407,9 +419,12 @@
         const radius=1.1+rng()*2.5,height=2.5+rng()*7;
         const column=put(new THREE.CylinderGeometry(radius*.70,radius,height,7,1),rock[i%4],x,height/2-.20,z,false);
         column.rotation.y=rng()*6.28;
+        const columnParts=[column];
         for(let layer=0;layer<3;layer++)
-          put(new THREE.CylinderGeometry(radius*(.82+layer*.065),radius*(.82+layer*.065),.15,7),
-            rock[(i+layer+1)%4],x,layer*height/4+.2,z,false);
+          columnParts.push(put(
+            new THREE.CylinderGeometry(radius*(.82+layer*.065),radius*(.82+layer*.065),.15,7),
+            rock[(i+layer+1)%4],x,layer*height/4+.2,z,false));
+        registerSightlineRock(columnParts);
       }
       // Distinct winding desert roads.
       const roads=[
@@ -505,10 +520,16 @@
           scene,camera,worldSpread,getState:()=>state,
           quality:graphicsQuality,effectsEnabled:graphics.effects!==false
         })||null;
+        for(const meshes of canyonArt?.occluders||[])registerSightlineRock(meshes);
       }catch(error){
         console.warn("Canyon advanced scenery unavailable; using safe original terrain.",error);
       }
-      // Floating, player-facing world mission labels.
+      // HTML nameplates, projected onto the 3D markers, are not depth-tested
+      // against tanks, cliffs or rocks. Text stays crisp like Chapter 1.
+      missionLabelLayer=document.createElement("div");
+      missionLabelLayer.className="canyon-mission-label-layer";
+      missionLabelLayer.setAttribute("aria-hidden","true");
+      parent.append(missionLabelLayer);
       const marks=[];
       for(const [key,obj] of Object.entries(goals)){
         const group=new THREE.Group();group.position.set(wX(obj.x),.16,wZ(obj.y));scene.add(group);
@@ -517,24 +538,12 @@
         ring.rotation.x=-Math.PI/2;ring.position.y=.09;group.add(ring);
         const pillar=new THREE.Mesh(new THREE.CylinderGeometry(.08,.11,1.4,8),gold);
         pillar.position.y=.90;group.add(pillar);
-        // Canvas-backed nameplates remain readable in the distant canyon.
-        const tag=document.createElement("canvas");tag.width=384;tag.height=72;
-        const tc=tag.getContext("2d");
-        if(tc){
-          tc.fillStyle="#153d42e6";
-          tc.beginPath();tc.roundRect(6,7,372,58,15);tc.fill();
-          tc.strokeStyle="#ffe2a8";tc.lineWidth=3;tc.stroke();
-          tc.fillStyle="#fff8df";tc.font="bold 26px sans-serif";
-          tc.textAlign="center";tc.textBaseline="middle";
-          tc.fillText(obj.title,192,36,352);
-          const texture=new THREE.CanvasTexture(tag);
-          texture.colorSpace=THREE.SRGBColorSpace;
-          const sprite=new THREE.Sprite(new THREE.SpriteMaterial({
-            map:texture,transparent:true,depthWrite:false}));
-          sprite.scale.set(3.9,.74,1);
-          sprite.position.y=2.65;group.add(sprite);
-        }
-        marks.push({key,ring,pillar});
+        const label=document.createElement("span");
+        label.className="canyon-world-label";
+        label.textContent=obj.title;
+        missionLabelLayer.append(label);
+        marks.push({key,ring,pillar,label,
+          anchor:new THREE.Vector3(wX(obj.x)*worldSpread,3.45,wZ(obj.y)*worldSpread)});
       }
       // Character: local procedural fallback renders immediately.
       const player=new THREE.Group();scene.add(player);
@@ -693,6 +702,60 @@
       // Smooth locomotion and heading for the shared rig (keyboard and click-to-walk).
       const playerMotion={lastTime:0,lastX:state.x,lastY:state.y,blend:0};
       const heroProjected=new THREE.Vector3(),cameraDesired=new THREE.Vector3();
+      const labelProjected=new THREE.Vector3();
+      const sightRay=new THREE.Raycaster(),sightDirection=new THREE.Vector3(),
+        sightTarget=new THREE.Vector3();
+      let nextSightlineCheck=0;
+      const activeBlockingRocks=new Set();
+      // Keep the sightline clear by fading only the rocks directly between
+      // the real camera and explorer. An always-visible movement ring remains
+      // available for extra wayfinding while the opacity transition runs.
+      const fadeRock=(entry,opacity)=>{
+        for(const part of entry.pieces){
+          if(opacity>=.995){
+            if(part.mesh.material!==part.original)part.mesh.material=part.original;
+            continue;
+          }
+          if(!part.faded){
+            const fadeMaterial=m=>{
+              const copy=m.clone();
+              copy.transparent=true;copy.depthWrite=false;
+              return copy;
+            };
+            part.faded=Array.isArray(part.original)?
+              part.original.map(fadeMaterial):fadeMaterial(part.original);
+          }
+          for(const material of (Array.isArray(part.faded)?part.faded:[part.faded]))
+            material.opacity=opacity;
+          if(part.mesh.material!==part.faded)part.mesh.material=part.faded;
+        }
+      };
+      const keepExplorerVisible=(time,delta,heroX,heroZ)=>{
+        if(time>=nextSightlineCheck&&sightlineTargets.length){
+          nextSightlineCheck=time+.11;activeBlockingRocks.clear();
+          // 3D scene scales horizontal positions, so use actual world-space
+          // coordinates (the camera sees the expanded canyon).
+          sightTarget.set(heroX,1.23,heroZ);
+          sightDirection.subVectors(sightTarget,camera.position);
+          const distance=sightDirection.length();
+          if(distance>.7){
+            sightRay.set(camera.position,sightDirection.multiplyScalar(1/distance));
+            sightRay.near=.15;sightRay.far=distance-.36;
+            scene.updateMatrixWorld(true);
+            for(const hit of sightRay.intersectObjects(sightlineTargets,false)){
+              const rock=rockOwner.get(hit.object);
+              if(rock)activeBlockingRocks.add(rock);
+            }
+          }
+        }
+        for(const rock of sightlineRocks){
+          const target=activeBlockingRocks.has(rock)?.10:1;
+          const eased=rock.opacity+(target-rock.opacity)*
+            (1-Math.exp(-delta*(target<1?23:8)));
+          rock.opacity=Math.abs(eased-target)<.005?target:eased;
+          fadeRock(rock,rock.opacity);
+        }
+      };
       let celebrationStarted=0;
       world={
         dom,renderer,scene,camera,player,limbs,marks,broken,pipeMesh,water,
@@ -778,9 +841,30 @@
             }
           }
           cameraSnap=false;
+          keepExplorerVisible(time,delta,baseX,baseZ);
+          const stageRect=parent.getBoundingClientRect();
+          const viewRect=dom.getBoundingClientRect();
+          const frameX=viewRect.left-stageRect.left,frameY=viewRect.top-stageRect.top;
+          // Mission captions are DOM elements, not world-space sprites. They
+          // remain sharp and cannot be hidden by any 3D geometry.
+          for(const m of marks){
+            labelProjected.copy(m.anchor).project(camera);
+            const onScreen=labelProjected.z>-1&&labelProjected.z<1&&
+              Math.abs(labelProjected.x)<1.10&&Math.abs(labelProjected.y)<1.08;
+            m.label.hidden=!onScreen;
+            if(onScreen){
+              const edge=Math.min(112,Math.max(48,viewRect.width/2-10));
+              const x=clamp((labelProjected.x+1)*viewRect.width/2,edge,viewRect.width-edge);
+              const y=clamp((1-labelProjected.y)*viewRect.height/2,52,viewRect.height-9);
+              m.label.style.left=frameX+x+"px";
+              m.label.style.top=frameY+y+"px";
+            }
+          }
           for(const m of marks){
             const done=state.done.has(m.key);
             m.pillar.visible=!done;m.ring.material.color.set(done?0x70c5a4:0xffd787);
+            m.label.classList.toggle("is-complete",done);
+            m.label.textContent=(done?"✓ ":"◆ ")+goals[m.key].title;
             m.ring.scale.setScalar(1+Math.sin(time*2.2)*.12);
           }
           broken.visible=!state.done.has("span");
@@ -791,12 +875,20 @@
         getExplorerAssetStatus(){return {...explorerStatus};},
         dispose(){
           explorerDisposed=true;
+          for(const rock of sightlineRocks){
+            for(const part of rock.pieces){
+              part.mesh.material=part.original;
+              for(const material of (Array.isArray(part.faded)?part.faded:part.faded?[part.faded]:[]))
+                material.dispose();
+            }
+          }
           canyonArt?.dispose();
+          missionLabelLayer?.remove();
           dom.remove();renderer.dispose();canvas.style.display="";
         }
       };
       if(!state.active)world.draw(performance.now()/1000);
-    }catch(error){console.warn("Canyon WebGL unavailable, continuing with playable 2D.",error);canvas.style.display=""; }
+    }catch(error){console.warn("Canyon WebGL unavailable, continuing with playable 2D.",error);missionLabelLayer?.remove();canvas.style.display=""; }
     finally{creating=false;}
   }
   function frame(time){

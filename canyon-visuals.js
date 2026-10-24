@@ -6,6 +6,8 @@
     let seed=782331;
     const rand=()=>((seed=(Math.imul(seed,1664525)+1013904223)>>>0)/4294967296);
     const props=[];
+    // Scenic meshes that are safe to fade when they obscure the explorer.
+    const occluders=[];
     const add=(geometry,material,x=0,y=0,z=0,shadow=false)=>{
       const mesh=new THREE.Mesh(geometry,material);
       mesh.position.set(x,y,z);mesh.castShadow=shadow;mesh.receiveShadow=true;
@@ -183,7 +185,8 @@
       g.setAttribute("color",new THREE.Float32BufferAttribute(cols,3));g.computeVertexNormals();
       const o=add(g,new THREE.MeshStandardMaterial({
         vertexColors:true,side:THREE.DoubleSide,roughness:1,flatShading:true
-      }),x,0,z);o.rotation.y=rand()*Math.PI*2;return o;
+      }),x,0,z);o.rotation.y=rand()*Math.PI*2;
+      occluders.push([o]);return o;
     }
     for(let i=0;i<36;i++){
       const side=i%2?-1:1,x=side*(22.5+rand()*22);
@@ -433,6 +436,7 @@
           -1.44+j*.94,4.85,0);
         stone.rotation.y=(j-1.5)*.045;
       }
+      occluders.push(group.children.filter(part=>part.isMesh));
     }
     sandstoneArch(-13,-12,1.15,1);
     sandstoneArch(12.5,12,1.32,-1);
@@ -527,6 +531,7 @@
       window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     const finiteTime=t=>Number.isFinite(t)?t:0;
     return {
+      occluders,
       update(time){
         const t=finiteTime(time);
         if(waterMap&&!reduced)waterMap.offset.y=-(t*.018%1);

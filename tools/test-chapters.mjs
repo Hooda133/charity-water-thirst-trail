@@ -155,6 +155,14 @@ assert.ok(document.getElementById("canyonModalBackdrop").classList.contains("can
   "Finishing the water-safety quest must activate the victory celebration");
 assert.ok(document.getElementById("canyonModalExtra").children.length>=2,
   "Victory modal must include a celebratory banner and confetti");
+assert.match(scripts.canyon,/missionLabelLayer\.append\(label\)/,
+  "Mission captions must be screen-space DOM labels, not depth-tested 3D sprites");
+assert.match(scripts.canyon,/labelProjected\.copy\(m\.anchor\)\.project\(camera\)/,
+  "Mission labels must track their 3D world markers");
+assert.match(scripts.canyon,/keepExplorerVisible\(time,delta,baseX,baseZ\)/,
+  "Camera must fade rocks blocking the moving explorer");
+assert.match(css,/\.canyon-world-label\[hidden\]/,
+  "Offscreen mission labels must hide cleanly");
 assert.match(scripts.canyon,/heroProjected\.set\(baseX,1\.40,baseZ\)\.project\(camera\)/,
   "Follow camera must guard against losing the explorer offscreen");
 assert.equal(canyon.snapshot().active,false);
