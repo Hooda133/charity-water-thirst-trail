@@ -463,7 +463,7 @@
     });
     for(let i=0;i<9;i++){
       const ribbon=add(new THREE.PlaneGeometry(.055+i%3*.033,9+i%4*2),
-        currentMaterial.clone?currentMaterial.clone():currentMaterial,
+        currentMaterial,
         -.95+i*.24,-.110,-7+(i%3)*7,false);
       ribbon.rotation.x=-Math.PI/2;ribbon.renderOrder=3;
       currents.push({mesh:ribbon,start:ribbon.position.z,phase:i*.9});
