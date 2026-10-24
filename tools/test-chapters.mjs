@@ -23,8 +23,9 @@ for(const id of ["canyonSound","canyonGraphics","canyonScenic","canyonHelp","can
 }
 assert.match(scripts.valley,/trail:audio/,"Valley sound preferences must sync with Canyon");
 assert.match(scripts.valley,/trail:graphics/,"Valley graphics settings must broadcast updates");
-assert.match(scripts.canyon,/sound\.cue\("quest"\)/,"Quest sound effect missing");
-assert.match(scripts.canyon,/sound\.cue\("victory"\)/,"Victory fanfare missing");
+assert.match(scripts.canyon,/sound\.tap\(\)/,"Canyon must play one sound only for clicks");
+assert.doesNotMatch(scripts.canyon,/startAmbience|createBufferSource|sound\.cue\(/,
+  "Canyon must stay silent without wind, water noise, footsteps or automatic fanfares");
 assert.match(scripts.canyon,/applyCanyonGraphics\(next\)/,"Live graphics update missing");
 assert.match(scripts.canyon,/canyonDaypart\(state\.elapsed\)/,"Canyon day-night cycle missing");
 assert.match(scripts.canyon,/movingNow&&state\.scenic/,"Walking must exit scenic mode to keep hero visible");
@@ -55,7 +56,21 @@ for(const source of [scripts.canyon,scripts.valley]){
  const refs=[...new Set([...source.matchAll(/\$\("([^"]+)"\)/g)].map(m=>m[1]))];
  assert.deepEqual(refs.filter(name=>!ids.has(name)),[],"Missing referenced HTML element");
 }
-const values=new Map(),events={},registry=new Map();
+const values=new Map(),events={},registry=new Map(),documentEvents={};
+let tapCount=0;
+class FakeAudioContext {
+  currentTime=0;state="running";destination={};
+  createOscillator(){
+    const noop=()=>{};
+    return {frequency:{setValueAtTime:noop,exponentialRampToValueAtTime:noop},
+      connect:noop,disconnect:noop,start(){tapCount++;},stop:noop};
+  }
+  createGain(){
+    const noop=()=>{};
+    return {gain:{setValueAtTime:noop,exponentialRampToValueAtTime:noop},
+      connect:noop,disconnect:noop};
+  }
+}
 const Event=class{constructor(type){this.type=type;}};
 const storage={getItem(k){return values.get(k)||null;},setItem(k,v){values.set(k,String(v));}};
 const frameCtx=new Proxy({createLinearGradient(){return {addColorStop(){}};}},{get(obj,k){return obj[k]||(()=>{});}});
@@ -67,15 +82,18 @@ function node(id){
   classList:{add(n){classes.add(n);},remove(n){classes.delete(n);},contains(n){return classes.has(n);},toggle(n,force){const enabled=force??!classes.has(n);if(enabled)classes.add(n);else classes.delete(n);return enabled;}},
   getContext(){return frameCtx;},focus(){},append(...children){this.children.push(...children);},
   replaceChildren(){this.children=[];},setAttribute(){},
+  contains(target){return this===target||this.children.some(child=>child.contains?.(target));},
   addEventListener(name,fn){this.listeners[name]=fn;},
   getBoundingClientRect(){return {width:1000,height:610,left:0,top:0};}
  };
 }
 const document={
  getElementById(id){if(!registry.has(id))registry.set(id,node(id));return registry.get(id);},
- createElement:node,querySelectorAll(){return [];},addEventListener(){}
+ createElement:node,querySelectorAll(){return [];},
+ addEventListener(name,fn){(documentEvents[name]??=[]).push(fn);}
 };
 const window={
+ AudioContext:FakeAudioContext,
  addEventListener(name,fn){(events[name]??=[]).push(fn);},
  dispatchEvent(event){for(const fn of events[event.type]||[])fn(event);},
  scrollTo(){}
@@ -110,6 +128,13 @@ function go(key){
 }
 canyon.launch();
 assert.equal(canyon.snapshot().active,true);
+assert.equal(tapCount,0,"Loading Canyon must not play an ambient sound");
+assert.equal(documentEvents.click?.length,1,"Canyon click feedback should have one listener");
+const tapOnCanyon=()=>{
+  documentEvents.click[0]({target:document.getElementById("canyonScreen")});
+};
+tapOnCanyon();
+assert.equal(tapCount,1,"A gameplay click should create one quiet tap");
 assert.equal(document.getElementById("canyonDaypart").textContent,"☀️ CANYON MORNING");
 document.getElementById("canyonScenic").listeners.click();
 assert.equal(test.get().scenic,true,"Scenic camera should toggle on");
@@ -117,8 +142,12 @@ document.getElementById("canyonScenic").listeners.click();
 assert.equal(test.get().scenic,false,"Scenic camera should toggle off");
 document.getElementById("canyonSound").listeners.click();
 assert.equal(storage.getItem("thirstTrailSound"),"false","Canyon mute must persist across chapters");
+tapOnCanyon();
+assert.equal(tapCount,1,"Muted Canyon clicks must remain silent");
 document.getElementById("canyonSound").listeners.click();
 assert.equal(storage.getItem("thirstTrailSound"),"true","Canyon sound must re-enable");
+tapOnCanyon();
+assert.equal(tapCount,2,"Unmuting restores the single tap sound");
 document.getElementById("canyonHelp").listeners.click();
 assert.equal(document.getElementById("canyonModalTitle").textContent,"Your Canyon expedition guide");
 select()[0].listeners.click();
@@ -133,8 +162,10 @@ for(let i=1;i<=9;i++){
 }
 test.get().keys.delete("d");
 assert.ok(canyon.snapshot().x>startX+15,"Canyon player must move on D key");
+assert.equal(tapCount,2,"Walking and automatic footsteps must be silent");
 go("surveyor");select()[0].listeners.click();
 assert.ok(canyon.snapshot().done.includes("surveyor"));
+assert.equal(tapCount,2,"Completing quests must not trigger automatic melodies");
 assert.equal(document.getElementById("canyonImpactBurst").hidden,false,
   "Canyon quests should show the same impact feedback as Chapter 1");
 go("kit");select()[0].listeners.click();
@@ -177,6 +208,7 @@ select()[1].listeners.click();
 assert.ok(test.get().energy<energyBeforeWrong);
 select()[0].listeners.click();
 assert.equal(canyon.snapshot().finished,true);
+assert.equal(tapCount,2,"The final victory screen must not trigger automatic music");
 assert.ok(document.getElementById("canyonModalBackdrop").classList.contains("canyon-victory-backdrop"),
   "Finishing the water-safety quest must activate the victory celebration");
 assert.ok(document.getElementById("canyonModalExtra").children.length>=2,
