@@ -127,3 +127,36 @@
  .canyon-stage-heading .camera-reset{padding:6px 8px}
  .camera-reset{font-size:9px}
 }
+
+
+/* Chapter finale: accessible celebration integrated with the real quest modal. */
+.canyon-victory-backdrop{background:radial-gradient(ellipse at 50% 20%,#84602aa8,#061824e8 74%); }
+.canyon-victory-backdrop .canyon-modal{border-color:#ffe39f;box-shadow:0 0 0 1px #ffdb7688,0 22px 110px #d9a34f44,0 34px 90px #000b}
+.canyon-victory-banner{position:relative;display:flex;gap:17px;align-items:center;padding:17px 19px;
+ border:1px solid #f9d884a8;background:linear-gradient(110deg,#83622caa,#235e5dc7);
+ border-radius:14px;overflow:hidden;min-height:94px;margin-top:10px}
+.canyon-victory-banner::after{content:"";position:absolute;inset:-30%;pointer-events:none;
+ background:linear-gradient(120deg,transparent 36%,#fff6cb25 50%,transparent 63%);
+ animation:canyon-sheen 3s ease-in-out infinite}
+.canyon-victory-banner strong{display:block;font:900 clamp(17px,3vw,23px)/1.1 system-ui,sans-serif;
+ color:#fff3b9;letter-spacing:1px;text-shadow:0 2px 11px #422914}
+.canyon-victory-banner small{display:block;color:#f0f7e6;font-size:11px;line-height:1.5;margin-top:7px}
+.canyon-victory-emblem{flex:none;font-size:37px;filter:drop-shadow(0 0 13px #ffe49b)}
+.canyon-confetti{position:absolute;inset:0;pointer-events:none;overflow:hidden;border-radius:20px;z-index:1}
+.canyon-confetti i{position:absolute;top:-14px;left:var(--left,50%);
+ width:8px;height:13px;opacity:0;border-radius:2px;background:#ffe17e;
+ animation:canyon-confetti-fall 3.8s linear var(--delay) infinite}
+.canyon-confetti i:nth-child(3n){background:#86e7ca;width:5px;height:11px}
+.canyon-confetti i:nth-child(4n){background:#f4a276;width:10px;height:5px}
+.canyon-confetti i:nth-child(5n){background:#e7f9fa;border-radius:50%}
+@keyframes canyon-confetti-fall{
+  0%{transform:translate3d(0,-12px,0) rotate(0);opacity:0}
+  12%{opacity:.95}
+  85%{opacity:.9}
+  100%{transform:translate3d(calc((var(--i) - 12) * 3px),500px,0) rotate(720deg);opacity:0}
+}
+@keyframes canyon-sheen{0%,65%{transform:translateX(-110%)}100%{transform:translateX(110%)}}
+@media(prefers-reduced-motion:reduce){
+ .canyon-victory-banner::after,.canyon-confetti i{animation:none}
+ .canyon-confetti i{display:none}
+}
