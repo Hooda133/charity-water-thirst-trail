@@ -40,86 +40,30 @@
       phase<.82?"🌅 CANYON DAWN":"☀️ CANYON MORNING";
     return {darkness,label};
   }
-  // Small original Web Audio soundscape: no licensed audio files, and silence
-  // is always a safe fallback for browsers without audio support.
+  // A single soft, Chapter 1-style UI tap. No ambient loops, footsteps,
+  // automatic mission tunes, or background sounds in Forgotten Canyon.
   const sound={
-    context:null,ambience:null,
-    contextForPlayback(){
-      if(!soundEnabled())return null;
-      try{
-        if(!this.context){
-          const AudioClass=window.AudioContext||window.webkitAudioContext;
-          if(!AudioClass)return null;
-          this.context=new AudioClass();
-        }
-        if(this.context.state==="suspended"){
-          const resumed=this.context.resume();
-          resumed?.catch?.(()=>{});
-        }
-        return this.context;
-      }catch{return null;}
-    },
-    note(frequency,duration=.12,wave="sine",level=.025,delay=0){
-      const audio=this.contextForPlayback();if(!audio)return;
-      try{
-        const start=audio.currentTime+delay;
-        const oscillator=audio.createOscillator(),gain=audio.createGain();
-        oscillator.type=wave;oscillator.frequency.setValueAtTime(frequency,start);
-        oscillator.frequency.exponentialRampToValueAtTime(Math.max(65,frequency*.78),start+duration);
-        gain.gain.setValueAtTime(.0001,start);
-        gain.gain.exponentialRampToValueAtTime(Math.max(.001,level),start+.013);
-        gain.gain.exponentialRampToValueAtTime(.0001,start+duration);
-        oscillator.connect(gain);gain.connect(audio.destination);
-        oscillator.start(start);oscillator.stop(start+duration+.02);
-        oscillator.onended=()=>{oscillator.disconnect();gain.disconnect();};
-      }catch{/* Sound must never block gameplay. */}
-    },
-    cue(which){
+    context:null,
+    tap(){
       if(!soundEnabled())return;
-      const tunes={
-        select:[[540,.09,"sine",.018,0]],
-        step:[[110,.07,"triangle",.013,0]],
-        rest:[[390,.13,"sine",.02,0],[530,.18,"sine",.02,.10]],
-        valve:[[410,.10,"triangle",.026,0]],
-        repair:[[330,.10,"square",.012,0],[560,.09,"sine",.019,.09]],
-        mistake:[[210,.18,"triangle",.024,0]],
-        quest:[[620,.12,"sine",.028,0],[840,.15,"sine",.028,.12]],
-        victory:[[520,.18,"sine",.035,0],[660,.16,"sine",.034,.15],
-          [800,.16,"sine",.034,.32],[1060,.40,"sine",.038,.48]]
-      };
-      for(const args of tunes[which]||[])this.note(...args);
-    },
-    startAmbience(){
-      if(this.ambience||!soundEnabled()||!state.active||state.paused||state.modal)return;
-      const audio=this.contextForPlayback();
-      if(!audio?.createBuffer)return;
       try{
-        const sampleCount=Math.floor(audio.sampleRate*2);
-        const buffer=audio.createBuffer(1,sampleCount,audio.sampleRate);
-        const channel=buffer.getChannelData(0);
-        // Soft flowing-water / wind noise, filtered and quiet under puzzle cues.
-        let brown=0;
-        for(let i=0;i<sampleCount;i++){
-          brown=(brown+(.045*(Math.random()*2-1)))*.985;
-          channel[i]=brown;
-        }
-        const source=audio.createBufferSource();
-        source.buffer=buffer;source.loop=true;
-        const filter=audio.createBiquadFilter();
-        filter.type="lowpass";filter.frequency.value=950;
-        const gain=audio.createGain();gain.gain.value=.045;
-        source.connect(filter);filter.connect(gain);gain.connect(audio.destination);
-        source.start();this.ambience={source,filter,gain};
-      }catch{/* Web Audio restrictions should not affect movement or visuals. */}
-    },
-    stopAmbience(){
-      if(!this.ambience)return;
-      const {source,filter,gain}=this.ambience;this.ambience=null;
-      try{source.stop();}catch{}
-      try{source.disconnect();filter.disconnect();gain.disconnect();}catch{}
-    },
-    sync(){if(state.active&&!state.paused&&!state.modal&&soundEnabled())this.startAmbience();
-      else this.stopAmbience();}
+        const AudioClass=window.AudioContext||window.webkitAudioContext;
+        if(!AudioClass)return;
+        this.context=this.context||new AudioClass();
+        const audio=this.context;
+        if(audio.state==="suspended")audio.resume()?.catch?.(()=>{});
+        const oscillator=audio.createOscillator(),gain=audio.createGain();
+        const start=audio.currentTime,duration=.07;
+        oscillator.type="sine";
+        oscillator.frequency.setValueAtTime(550,start);
+        oscillator.frequency.exponentialRampToValueAtTime(385,start+duration);
+        gain.gain.setValueAtTime(.018,start);
+        gain.gain.exponentialRampToValueAtTime(.001,start+duration);
+        oscillator.connect(gain);gain.connect(audio.destination);
+        oscillator.start(start);oscillator.stop(start+duration);
+        oscillator.onended=()=>{oscillator.disconnect();gain.disconnect();};
+      }catch{/* Sound is optional; never interrupt gameplay. */}
+    }
   };
   function syncCanyonSoundButton(){
     const enabled=soundEnabled();
@@ -200,7 +144,7 @@
     state.done.add(key);state.score+=points;
     save();refreshUI();
     showImpact(key,points);
-    sound.cue("quest");
+    
     toast("✓ "+goals[key].title+" complete! +"+points+" impact");
   }
   function modal(tag,title,text,choices,extra){
@@ -218,14 +162,14 @@
       b.addEventListener("click",item.action);actions.append(b);
     }
     $("canyonModalBackdrop").hidden=false;
-    sound.sync();
+    
     $("canyonModal").scrollTop=0;
     $("canyonModal").focus({preventScroll:true});
   }
   function closeModal(){
     state.modal=false;$("canyonModalBackdrop").hidden=true;
     $("canyonModalBackdrop").classList.remove("canyon-victory-backdrop");
-    sound.sync();
+    
     canvas.focus({preventScroll:true});
   }
   function interact(){
@@ -235,7 +179,7 @@
     state.path=[];
     if(key==="rest"){
       state.energy=Math.min(100,state.energy+34);
-      sound.cue("rest");
+      
       toast("Rested in the canyon shade · +34 energy");save();refreshUI();
       return;
     }
@@ -272,7 +216,7 @@
         const row=document.createElement("div");row.className="canyon-valve";
         const label=document.createElement("strong");label.textContent=["Intake · +16 kPa","Regulator · +13 kPa","Return · +11 kPa"][i];
         const btn=document.createElement("button");btn.type="button";btn.textContent="OPEN "+state.valves[i]+" / 3";
-        btn.addEventListener("click",()=>{state.valves[i]=(state.valves[i]+1)%4;sound.cue("valve");redraw(root);save();});
+        btn.addEventListener("click",()=>{state.valves[i]=(state.valves[i]+1)%4;redraw(root);save();});
         row.append(label,btn);root.append(row);
       }
       const meter=document.createElement("div");meter.className="canyon-pressure-meter";
@@ -286,7 +230,7 @@
       [{text:"💧 Test pressure",primary:true,action:()=>{
         if(pressureSafe()){closeModal();completeQuest("valves",250);return;}
         state.energy=Math.max(15,state.energy-4);
-        sound.cue("mistake");
+        
         toast("Pressure outside safe range or unbalanced · −4 energy");
         valveChallenge();save();
       }},{text:"↩ Continue exploring",action:()=>{save();closeModal();}}],
@@ -303,11 +247,11 @@
         const label=document.createElement("small");label.textContent=repairOrder[i];btn.append(label);
         btn.addEventListener("click",()=>{
           if(i===state.repairStep){
-            state.repairStep++;save();sound.cue("repair");
+            state.repairStep++;save();
             if(state.repairStep===4){closeModal();completeQuest("span",310);return;}
             draw(root);
           }else{
-            sound.cue("mistake");
+            
             toast("Secure the components in a safe construction order.");
           }
         });board.append(btn);
@@ -328,7 +272,7 @@
         closeModal();completeQuest("cistern",430);finish();
       }},{text:"If the water looks clear, it must be safe",action:()=>{
         state.energy=Math.max(15,state.energy-5);
-        sound.cue("mistake");
+        
         toast("Appearance does not prove drinking-water safety. −5 energy");
         cisternChallenge();
       }},{text:"Return to the canyon",action:closeModal}]);
@@ -336,7 +280,7 @@
   function finish(){
     if(state.finished)return;
     state.finished=true;state.active=false;state.score+=Math.round(state.energy)*2;
-    sound.stopAmbience();sound.cue("victory");showImpact("cistern",0,true);
+    showImpact("cistern",0,true);
     progress?.complete("canyon");refreshUI();
     world?.startCelebration?.();
     $("canyonModalBackdrop").classList.add("canyon-victory-backdrop");
@@ -430,9 +374,7 @@
       if(!blocked(nx,state.y))state.x=nx;
       if(!blocked(state.x,ny))state.y=ny;
       state.energy=Math.max(7,state.energy-dt*(sprint?.38:.12));
-      if(state.elapsed-(state.lastStepSound||-1)>(sprint?.24:.38)){
-        sound.cue("step");state.lastStepSound=state.elapsed;
-      }
+
       if(state.energy<=12 && state.elapsed%20<dt)toast("Low energy · rest at the shelter.");
     }
     state.elapsed+=dt;
@@ -1095,7 +1037,7 @@
     if(world){/* Reuse existing scene and renderer on replay. */}
     const saved=!forceNew?progress.saved("canyon"):null;
     if(forceNew)progress.clearSave("canyon");
-    sound.stopAmbience();
+    
     state=defaultState();state.active=true;
     $("canyonImpactBurst").hidden=true;impactHideAt=0;
     world?.recenterCamera?.();syncScenicButton();
@@ -1103,7 +1045,7 @@
     $("startScreen").hidden=true;$("gameScreen").hidden=true;$("canyonScreen").hidden=false;
     closeModal();refreshUI();
     $("canyonToast").hidden=true;
-    save();buildWorld();sound.sync();
+    save();buildWorld();
     if(saved)toast("Canyon checkpoint restored. Welcome back!");
     else toast("Chapter 2 · Reach the canyon surveyor to begin.");
     canvas.focus({preventScroll:true});
@@ -1112,7 +1054,7 @@
   function suspend(){
     if(state.active&&!state.finished)save();
     state.active=false;state.paused=false;state.finished=false;state.keys.clear();state.path=[];
-    sound.stopAmbience();$("canyonImpactBurst").hidden=true;impactHideAt=0;
+    $("canyonImpactBurst").hidden=true;impactHideAt=0;
     $("canyonModalBackdrop").hidden=true;state.modal=false;
     $("canyonModalBackdrop").classList.remove("canyon-victory-backdrop");
   }
@@ -1126,10 +1068,10 @@
   }
   function pause(){
     if(!state.active)return;
-    state.paused=true;save();sound.sync();
+    state.paused=true;save();
     modal("REST IN THE SHADE","Expedition paused",
       "Your checkpoint is saved automatically. Resume when you are ready, or return to the chapter selector.",
-      [{text:"▶ Resume canyon",primary:true,action:()=>{state.paused=false;closeModal();sound.sync();}},
+      [{text:"▶ Resume canyon",primary:true,action:()=>{state.paused=false;closeModal();}},
        {text:"◈ Chapter selection",action:goHome}]);
   }
   function syncScenicButton(){
@@ -1142,7 +1084,7 @@
     state.scenic=!state.scenic;world?.setScenic?.(state.scenic);
     syncScenicButton();
     toast(state.scenic?"Scenic overview on · press V or move to follow your explorer.":"Following your explorer again.");
-    sound.cue("select");
+    
   }
   function canyonHelp(){
     if(state.finished)return;
@@ -1178,11 +1120,21 @@
     const next=!soundEnabled();
     try{localStorage.setItem("thirstTrailSound",String(next));}catch{}
     window.dispatchEvent(new Event("trail:audio"));
-    if(next)sound.cue("select");
+
   });
   window.addEventListener("trail:audio",()=>{
-    syncCanyonSoundButton();sound.sync();
+    syncCanyonSoundButton();
   });
+  // The browser click event covers mouse clicks, touch taps, and UI buttons,
+  // including the 3D canvas and Canyon quest dialogs. No audio while walking.
+  document.addEventListener("click",event=>{
+    const target=event.target;
+    if(target?.closest?.("#canyonSound"))return;
+    const screen=$("canyonScreen"),dialog=$("canyonModalBackdrop");
+    if(screen.hidden)return;
+    if(screen.contains(target)||(!dialog.hidden&&dialog.contains(target)))sound.tap();
+  },true);
+
   syncCanyonSoundButton();
   $("canyonGraphics").addEventListener("click",()=>{$("graphicsButton").click();});
   $("canyonCameraReset").addEventListener("click",recenterCanyonCamera);
