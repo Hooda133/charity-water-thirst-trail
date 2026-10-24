@@ -19,6 +19,9 @@ assert.match(canyonSource,/assets\/characters\/explorer\.gltf/);
 assert.match(canyonSource,/fallbackParts\.forEach/);
 assert.match(canyonSource,/GLTFLoader/);
 assert.match(canyonSource,/renderer\.render\(scene,camera\)/);
+assert.match(canyonSource,/startCelebration\(\)/);
+assert.match(artSource,/sandstoneArch\(/);
+assert.match(artSource,/celebrationParticles\.visible/);
 class Color{
  constructor(value=0xffffff){this.set(value)}
  set(v){const c=typeof v==="string"?Number.parseInt(v.slice(1),16):v;
@@ -75,7 +78,8 @@ class Object3D{
  constructor(){
   this.children=[];this.parent=null;this.position={x:0,y:0,z:0,set(x,y,z){this.x=x;this.y=y;this.z=z}};
   this.rotation={x:0,y:0,z:0,set(x,y,z){this.x=x;this.y=y;this.z=z}};
-  this.scale={x:1,y:1,z:1,set(x,y,z){this.x=x;this.y=y;this.z=z}};
+  this.scale={x:1,y:1,z:1,set(x,y,z){this.x=x;this.y=y;this.z=z},
+   setScalar(v){this.x=this.y=this.z=v}};
   this.matrix={};this.userData={};
  }
  add(x){x.parent=this;this.children.push(x)}
@@ -114,13 +118,18 @@ const ctx={
 const document={createElement(tag){assert.equal(tag,"canvas");return {width:0,height:0,getContext(){return ctx}}}};
 const window={matchMedia:()=>({matches:false})};
 runInNewContext(artSource,{window,document,console,Math,Float32Array});
-const scene=new Object3D(),done=new Set();
+const scene=new Object3D(),done=new Set();let finished=false;
 const art=window.ThirstCanyonVisuals.build(THREE,{scene,camera:{},worldSpread:1.42,
- getState:()=>({done})});
+ getState:()=>({done,finished})});
 assert.ok(scene.children.length>65,"Art pass should create detailed layered scenery");
 assert.equal(typeof art.update,"function");
 assert.equal(typeof art.dispose,"function");
 art.update(1);done.add("span");art.update(2.5);
+assert.ok(scene.children.some(o=>o.isInstancedMesh&&o.visible===false),
+ "Restoration plants should not appear before the cistern is complete");
+finished=true;art.update(4.5);
+assert.ok(scene.children.some(o=>o.isPoints&&o.visible===true),
+ "Finishing the level should visibly release celebration particles");
 assert.ok(scene.children.some(o=>o.isInstancedMesh),"Scatter detail should be instanced");
 art.dispose();
 assert.ok(scene.children.length===0,"Art resources should detach on disposal");
