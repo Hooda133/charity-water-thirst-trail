@@ -239,6 +239,8 @@
         for(let i=0;i<26;i++){
           const piece=document.createElement("i");
           piece.style.setProperty("--i",String(i));
+          piece.style.setProperty("--left",String(4+(i*37%93))+"%");
+          piece.style.setProperty("--drift",String((i*11%71)-35)+"px");
           piece.style.setProperty("--delay",String((i*7%19)/10)+"s");
           confetti.append(piece);
         }
@@ -354,7 +356,10 @@
         graphics.preset:"high";
       const renderer=new THREE.WebGLRenderer({alpha:false,antialias:true,powerPreference:"high-performance"});
       const requestedScale=clamp(Number(graphics.resolution)||1.1,.65,1.5);
-      renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,requestedScale*1.65));
+      // Ultra can render above native resolution, with a cap to protect GPUs.
+      renderer.setPixelRatio(Math.min(2.25,
+        (window.devicePixelRatio||1)*(graphicsQuality==="ultra"?
+          Math.max(1.35,requestedScale):requestedScale)));
       renderer.outputColorSpace=THREE.SRGBColorSpace;
       renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.14;
       renderer.shadowMap.enabled=graphics.shadows!==false;
@@ -497,7 +502,8 @@
       let canyonArt=null;
       try{
         canyonArt=window.ThirstCanyonVisuals?.build(THREE,{
-          scene,camera,worldSpread,getState:()=>state
+          scene,camera,worldSpread,getState:()=>state,
+          quality:graphicsQuality,effectsEnabled:graphics.effects!==false
         })||null;
       }catch(error){
         console.warn("Canyon advanced scenery unavailable; using safe original terrain.",error);
@@ -532,6 +538,20 @@
       }
       // Character: local procedural fallback renders immediately.
       const player=new THREE.Group();scene.add(player);
+      // Soft hero fill and a visible ground marker keep the explorer legible
+      // against sun-bleached cliffs, including at long zoom distances.
+      const heroLight=new THREE.PointLight(0xffe5ae,.70,5.5,2);
+      heroLight.position.set(0,2.3,1.0);player.add(heroLight);
+      const locatorRing=new THREE.Mesh(
+        new THREE.RingGeometry(.40,.56,36),
+        new THREE.MeshBasicMaterial({
+          color:0xffdf73,transparent:true,opacity:.55,
+          depthWrite:false,depthTest:false,side:THREE.DoubleSide
+        })
+      );
+      locatorRing.rotation.x=-Math.PI/2;
+      locatorRing.position.y=.045;locatorRing.renderOrder=25;
+      player.add(locatorRing);
       // Character remains human-sized while landscape and landmarks spread apart.
       player.scale.set(1/worldSpread,1,1/worldSpread);
       const jacket=mat(0xf0b935),skin=mat(0x70432d),hat=mat(0xf4c776),boots=mat(0x604837);
@@ -702,6 +722,8 @@
             player.rotation.y+=angle*(1-Math.exp(-delta*11));
           }
           const moving=actuallyMoving;
+          locatorRing.visible=state.path.length>0||state.keys.size>0||moving;
+          locatorRing.scale.setScalar(1+Math.sin(time*4)*.05);
           const celebrating=state.finished;
           const cheer=celebrating?Math.sin((time-celebrationStarted)*7)*.10:0;
           const gait=Math.sin(time*9)*playerMotion.blend*.52;
