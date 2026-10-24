@@ -92,6 +92,7 @@
       vertexColors:true,side:THREE.BackSide,depthWrite:false,fog:false
     }));
     sky.renderOrder=-20;
+    const skyDayTint=new THREE.Color(0xffffff),skyNightTint=new THREE.Color(0x526d9c);
     const sunDisc=add(new THREE.SphereGeometry(4,24,12),
       new THREE.MeshBasicMaterial({color:0xffe1a5,fog:false,depthWrite:false}),-44,59,-92);
     const sunGlow=add(new THREE.SphereGeometry(6.5,24,12),
@@ -479,15 +480,17 @@
     const glowShell=new THREE.MeshBasicMaterial({
       color:0xffd488,transparent:true,opacity:.23,depthWrite:false
     });
+    const lanternAuras=[],lanternLights=[];
     for(const [mx,mz] of [[-13,-1],[-7,10],[8,2],[13,-7]]){
       const post=add(new THREE.CylinderGeometry(.12,.16,1.9,7),wood,mx,.95,mz,true);
       add(new THREE.SphereGeometry(.20,10,8),lanternMaterial,mx,1.99,mz);
       const aura=add(new THREE.SphereGeometry(.47,12,8),
         glowShell.clone?glowShell.clone():glowShell,mx,1.99,mz);
-      aura.renderOrder=5;
-      if(THREE.PointLight&&maximal&&effectsEnabled){
+      aura.renderOrder=5;lanternAuras.push(aura);
+      if(THREE.PointLight&&maximal){
         const lamp=new THREE.PointLight(0xffc56a,.60,6,2);
         lamp.position.set(mx,2,mz);scene.add(lamp);props.push(lamp);
+        lanternLights.push(lamp);
       }
     }
     // Canyons revive visually as water reaches the final cistern.
@@ -509,7 +512,7 @@
 
     // A short celebratory shower of light rises over the restored cistern.
     // It only starts after the real mission state says the chapter is finished.
-    const sparkleCount=effectsEnabled?110:0;
+    const sparkleCount=110; // Always create once: live effects toggle can enable it later.
     const sparkleCoords=new Float32Array(sparkleCount*3);
     const sparklePhases=new Float32Array(sparkleCount);
     const [finaleX,finaleZ]=[(820-500)/24,(175-305)/24];
@@ -532,16 +535,29 @@
     const finiteTime=t=>Number.isFinite(t)?t:0;
     return {
       occluders,
+      setEffectsEnabled(enabled){effectsEnabled=!!enabled;},
+      setDaylight(darkness){
+        const n=THREE.MathUtils.clamp(darkness||0,0,1);
+        sky.material.color.copy(skyDayTint).lerp(skyNightTint,n*.82);
+        sunDisc.material.color.setHex(n>.55?0xf8baa7:0xffe1a5);
+        sunGlow.material.opacity=.15*(1-n*.70);
+        for(const aura of lanternAuras)aura.material.opacity=effectsEnabled?(.20+n*.18):0;
+        for(const lamp of lanternLights)lamp.intensity=effectsEnabled?.34+n*.86:0;
+      },
       update(time){
         const t=finiteTime(time);
-        if(waterMap&&!reduced)waterMap.offset.y=-(t*.018%1);
+        const animate=!reduced&&effectsEnabled;
+        if(waterMap&&animate)waterMap.offset.y=-(t*.018%1);
+        dust.visible=animate;
+        for(const mote of trailDust.concat(dustMotes))mote.mesh.visible=animate;
+        for(const flow of currents)flow.mesh.visible=effectsEnabled;
         const chapterState=getState();
         const completed=chapterState.done.has("span");
         const restored=chapterState.finished||chapterState.done.has("cistern");
         restoredPlants.visible=restored;
         grass.color.setHex(restored?0x63a277:0x889976);
         currentMaterial.opacity=restored?.46:.31;
-        celebrationParticles.visible=restored&&!reduced&&effectsEnabled;
+        celebrationParticles.visible=restored&&animate;
         if(celebrationParticles.visible){
           const attr=sparkleGeometry.getAttribute("position");
           for(let i=0;i<sparkleCount;i++){
@@ -552,12 +568,12 @@
           }
           attr.needsUpdate=true;
         }
-        if(!reduced)for(const flow of currents){
+        if(animate)for(const flow of currents){
           flow.mesh.position.z=flow.start+Math.sin(t*.45+flow.phase)*.37;
         }
         brine.color.setHex(completed?0x8fe5d8:0x73cbd0);
         riverMesh.material.opacity=completed?.92:.76;
-        if(!reduced){
+        if(animate){
           const xyz=sprayGeo.getAttribute("position");
           for(let i=0;i<155;i++){
             let x=xyz.getX(i)+Math.sin(t*.31+i)*.002;
