@@ -2,7 +2,7 @@
 /* Forgotten Canyon's authored visual pass. Purely decorative: world/quest coordinates,
    collision, saved progress, renderer ownership and 2D fallback remain in canyon.js. */
 (() => {
-  function build(THREE, {scene, camera, worldSpread, getState}) {
+  function build(THREE, {scene, camera, worldSpread, getState, quality="high", effectsEnabled=true}) {
     let seed=782331;
     const rand=()=>((seed=(Math.imul(seed,1664525)+1013904223)>>>0)/4294967296);
     const props=[];
@@ -411,6 +411,118 @@
       dustMotes.push({mesh:mote,material:mote.material,phase:rand()*6.28,baseX:mote.position.x,
         baseY:mote.position.y,baseZ:mote.position.z});
     }
+
+    // Cinematic visual upgrade: silhouette arches, layered rocks, botanical detail
+    // and luminous flowing water. These are entirely decorative (no collision).
+    const maximal=quality==="ultra"||quality==="high";
+    const archRock=new THREE.MeshStandardMaterial({color:0xd89874,map:stoneMap,roughness:.97,flatShading:true});
+    const archShadow=new THREE.MeshStandardMaterial({color:0x8b5b59,map:stoneMap,roughness:.98,flatShading:true});
+    function sandstoneArch(cx,cz,scale,mirror){
+      const group=new THREE.Group();group.position.set(cx,0,cz);
+      group.rotation.y=mirror*.15;scene.add(group);props.push(group);
+      const shape=(geometry,material,x,y,z,angle=0)=>{
+        const mesh=new THREE.Mesh(geometry,material);mesh.position.set(x*scale,y*scale,z*scale);
+        mesh.scale.setScalar(scale);mesh.rotation.z=angle;
+        mesh.castShadow=maximal;mesh.receiveShadow=true;group.add(mesh);return mesh;
+      };
+      shape(new THREE.CylinderGeometry(.72,.95,4.1,7),archRock,-2.15,2.02,0,-.09);
+      shape(new THREE.CylinderGeometry(.68,.98,4.5,7),archShadow,2.18,2.21,0,.08);
+      shape(new THREE.BoxGeometry(3.50,.87,1.48),archRock,0,4.40,0,.02);
+      for(let j=0;j<4;j++){
+        const stone=shape(new THREE.BoxGeometry(.65,.15,1.51),j%2?archShadow:archRock,
+          -1.44+j*.94,4.85,0);
+        stone.rotation.y=(j-1.5)*.045;
+      }
+    }
+    sandstoneArch(-13,-12,1.15,1);
+    sandstoneArch(12.5,12,1.32,-1);
+    sandstoneArch(-18,9,.91,-1);
+
+    // Instancing adds strong geology silhouettes without hundreds of draw calls.
+    const spireGeo=new THREE.ConeGeometry(1,1,7);
+    const spireMat=new THREE.MeshStandardMaterial({
+      color:0xe1a17b,roughness:1,flatShading:true
+    });
+    const count=maximal?180:85;
+    const spires=new THREE.InstancedMesh(spireGeo,spireMat,count);
+    for(let i=0;i<count;i++){
+      const side=i%2?-1:1;
+      const x=side*(7.8+rand()*29),z=-22+rand()*44;
+      const height=.7+rand()*3.7,radius=.19+rand()*.65;
+      temp.position.set(x,height*.48-.05,z);
+      temp.rotation.set((rand()-.5)*.08,rand()*6.28,(rand()-.5)*.18);
+      temp.scale.set(radius,height,radius*(.7+rand()*.55));
+      temp.updateMatrix();spires.setMatrixAt(i,temp.matrix);
+    }
+    spires.instanceMatrix.needsUpdate=true;scene.add(spires);props.push(spires);
+
+    // Blue river currents and foamy ripples stretch under the aqueduct.
+    const currents=[];
+    const currentMaterial=new THREE.MeshBasicMaterial({
+      color:0xb7f7ed,transparent:true,opacity:.31,depthWrite:false,side:THREE.DoubleSide
+    });
+    for(let i=0;i<9;i++){
+      const ribbon=add(new THREE.PlaneGeometry(.055+i%3*.033,9+i%4*2),
+        currentMaterial.clone?currentMaterial.clone():currentMaterial,
+        -.95+i*.24,-.110,-7+(i%3)*7,false);
+      ribbon.rotation.x=-Math.PI/2;ribbon.renderOrder=3;
+      currents.push({mesh:ribbon,start:ribbon.position.z,phase:i*.9});
+    }
+    // Warm wayfinding beacons make the major quest areas stand apart from scenery.
+    const lanternMaterial=new THREE.MeshStandardMaterial({
+      color:0xffda78,emissive:0xffb93f,emissiveIntensity:2.2,roughness:.35
+    });
+    const glowShell=new THREE.MeshBasicMaterial({
+      color:0xffd488,transparent:true,opacity:.23,depthWrite:false
+    });
+    for(const [mx,mz] of [[-13,-1],[-7,10],[8,2],[13,-7]]){
+      const post=add(new THREE.CylinderGeometry(.12,.16,1.9,7),wood,mx,.95,mz,true);
+      add(new THREE.SphereGeometry(.20,10,8),lanternMaterial,mx,1.99,mz);
+      const aura=add(new THREE.SphereGeometry(.47,12,8),
+        glowShell.clone?glowShell.clone():glowShell,mx,1.99,mz);
+      aura.renderOrder=5;
+      if(THREE.PointLight&&maximal&&effectsEnabled){
+        const lamp=new THREE.PointLight(0xffc56a,.60,6,2);
+        lamp.position.set(mx,2,mz);scene.add(lamp);props.push(lamp);
+      }
+    }
+    // Canyons revive visually as water reaches the final cistern.
+    const renewalMat=new THREE.MeshStandardMaterial({
+      color:0x7c9467,roughness:1,flatShading:true
+    });
+    const plantGeometry=new THREE.ConeGeometry(.15,.65,6);
+    const plantCount=maximal?170:75;
+    const restoredPlants=new THREE.InstancedMesh(plantGeometry,renewalMat,plantCount);
+    for(let i=0;i<plantCount;i++){
+      const x=(i%2?-1:1)*(3.7+rand()*14),z=-15+rand()*30;
+      const sc=.32+rand()*.9;
+      temp.position.set(x,.20*sc,z);
+      temp.rotation.set(0,rand()*Math.PI*2,(rand()-.5)*.35);
+      temp.scale.set(sc,sc,sc);temp.updateMatrix();restoredPlants.setMatrixAt(i,temp.matrix);
+    }
+    restoredPlants.instanceMatrix.needsUpdate=true;
+    scene.add(restoredPlants);props.push(restoredPlants);
+
+    // A short celebratory shower of light rises over the restored cistern.
+    // It only starts after the real mission state says the chapter is finished.
+    const sparkleCount=effectsEnabled?110:0;
+    const sparkleCoords=new Float32Array(sparkleCount*3);
+    const sparklePhases=new Float32Array(sparkleCount);
+    const [finaleX,finaleZ]=[(820-500)/24,(175-305)/24];
+    for(let i=0;i<sparkleCount;i++){
+      sparklePhases[i]=rand()*Math.PI*2;
+      sparkleCoords[i*3]=finaleX+(rand()-.5)*5.5;
+      sparkleCoords[i*3+1]=.3+rand()*5;
+      sparkleCoords[i*3+2]=finaleZ+(rand()-.5)*5.5;
+    }
+    const sparkleGeometry=new THREE.BufferGeometry();
+    sparkleGeometry.setAttribute("position",new THREE.BufferAttribute(sparkleCoords,3));
+    const celebrationParticles=new THREE.Points(sparkleGeometry,new THREE.PointsMaterial({
+      color:0xffe4a0,size:.20,transparent:true,opacity:.95,
+      depthWrite:false,sizeAttenuation:true
+    }));
+    celebrationParticles.visible=false;
+    scene.add(celebrationParticles);props.push(celebrationParticles);
     const reduced=typeof window.matchMedia==="function"&&
       window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     const finiteTime=t=>Number.isFinite(t)?t:0;
@@ -418,7 +530,26 @@
       update(time){
         const t=finiteTime(time);
         if(waterMap&&!reduced)waterMap.offset.y=-(t*.018%1);
-        const completed=getState().done.has("span");
+        const chapterState=getState();
+        const completed=chapterState.done.has("span");
+        const restored=chapterState.finished||chapterState.done.has("cistern");
+        restoredPlants.visible=restored;
+        grass.color.setHex(restored?0x63a277:0x889976);
+        currentMaterial.opacity=restored?.46:.31;
+        celebrationParticles.visible=restored&&!reduced&&effectsEnabled;
+        if(celebrationParticles.visible){
+          const attr=sparkleGeometry.getAttribute("position");
+          for(let i=0;i<sparkleCount;i++){
+            const a=sparklePhases[i];
+            attr.setY(i,.25+((t*.82+i*.113)%5.1));
+            attr.array[i*3]=finaleX+Math.sin(t*.6+a)*(.55+i%8*.28);
+            attr.array[i*3+2]=finaleZ+Math.cos(t*.7+a)*(.55+i%7*.34);
+          }
+          attr.needsUpdate=true;
+        }
+        if(!reduced)for(const flow of currents){
+          flow.mesh.position.z=flow.start+Math.sin(t*.45+flow.phase)*.37;
+        }
         brine.color.setHex(completed?0x8fe5d8:0x73cbd0);
         riverMesh.material.opacity=completed?.92:.76;
         if(!reduced){
