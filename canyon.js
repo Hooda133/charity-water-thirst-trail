@@ -23,6 +23,119 @@
   });
   let state=defaultState(),world=null,creating=false,lastFrame=0,raf=0;
   const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+  // Both chapters use one persisted sound preference and one graphics panel.
+  function readGraphics(){
+    try{return JSON.parse(localStorage.getItem("thirstTrailGraphics")||"null")||{};}
+    catch{return {};}
+  }
+  function soundEnabled(){
+    try{return localStorage.getItem("thirstTrailSound")!=="false";}
+    catch{return true;}
+  }
+  function canyonDaypart(elapsed){
+    const phase=(Math.max(0,elapsed)%480)/480;
+    const darkness=(1-Math.cos(phase*Math.PI*2))/2;
+    const label=phase<.18?"☀️ CANYON MORNING":
+      phase<.38?"🌤️ GOLDEN HOUR":phase<.62?"🌙 CANYON STARLIGHT":
+      phase<.82?"🌅 CANYON DAWN":"☀️ CANYON MORNING";
+    return {darkness,label};
+  }
+  // Small original Web Audio soundscape: no licensed audio files, and silence
+  // is always a safe fallback for browsers without audio support.
+  const sound={
+    context:null,ambience:null,
+    contextForPlayback(){
+      if(!soundEnabled())return null;
+      try{
+        if(!this.context){
+          const AudioClass=window.AudioContext||window.webkitAudioContext;
+          if(!AudioClass)return null;
+          this.context=new AudioClass();
+        }
+        if(this.context.state==="suspended"){
+          const resumed=this.context.resume();
+          resumed?.catch?.(()=>{});
+        }
+        return this.context;
+      }catch{return null;}
+    },
+    note(frequency,duration=.12,wave="sine",level=.025,delay=0){
+      const audio=this.contextForPlayback();if(!audio)return;
+      try{
+        const start=audio.currentTime+delay;
+        const oscillator=audio.createOscillator(),gain=audio.createGain();
+        oscillator.type=wave;oscillator.frequency.setValueAtTime(frequency,start);
+        oscillator.frequency.exponentialRampToValueAtTime(Math.max(65,frequency*.78),start+duration);
+        gain.gain.setValueAtTime(.0001,start);
+        gain.gain.exponentialRampToValueAtTime(Math.max(.001,level),start+.013);
+        gain.gain.exponentialRampToValueAtTime(.0001,start+duration);
+        oscillator.connect(gain);gain.connect(audio.destination);
+        oscillator.start(start);oscillator.stop(start+duration+.02);
+        oscillator.onended=()=>{oscillator.disconnect();gain.disconnect();};
+      }catch{/* Sound must never block gameplay. */}
+    },
+    cue(which){
+      if(!soundEnabled())return;
+      const tunes={
+        select:[[540,.09,"sine",.018,0]],
+        step:[[110,.07,"triangle",.013,0]],
+        rest:[[390,.13,"sine",.02,0],[530,.18,"sine",.02,.10]],
+        valve:[[410,.10,"triangle",.026,0]],
+        repair:[[330,.10,"square",.012,0],[560,.09,"sine",.019,.09]],
+        mistake:[[210,.18,"triangle",.024,0]],
+        quest:[[620,.12,"sine",.028,0],[840,.15,"sine",.028,.12]],
+        victory:[[520,.18,"sine",.035,0],[660,.16,"sine",.034,.15],
+          [800,.16,"sine",.034,.32],[1060,.40,"sine",.038,.48]]
+      };
+      for(const args of tunes[which]||[])this.note(...args);
+    },
+    startAmbience(){
+      if(this.ambience||!soundEnabled()||!state.active||state.paused||state.modal)return;
+      const audio=this.contextForPlayback();
+      if(!audio?.createBuffer)return;
+      try{
+        const sampleCount=Math.floor(audio.sampleRate*2);
+        const buffer=audio.createBuffer(1,sampleCount,audio.sampleRate);
+        const channel=buffer.getChannelData(0);
+        // Soft flowing-water / wind noise, filtered and quiet under puzzle cues.
+        let brown=0;
+        for(let i=0;i<sampleCount;i++){
+          brown=(brown+(.045*(Math.random()*2-1)))*.985;
+          channel[i]=brown;
+        }
+        const source=audio.createBufferSource();
+        source.buffer=buffer;source.loop=true;
+        const filter=audio.createBiquadFilter();
+        filter.type="lowpass";filter.frequency.value=950;
+        const gain=audio.createGain();gain.gain.value=.045;
+        source.connect(filter);filter.connect(gain);gain.connect(audio.destination);
+        source.start();this.ambience={source,filter,gain};
+      }catch{/* Web Audio restrictions should not affect movement or visuals. */}
+    },
+    stopAmbience(){
+      if(!this.ambience)return;
+      const {source,filter,gain}=this.ambience;this.ambience=null;
+      try{source.stop();}catch{}
+      try{source.disconnect();filter.disconnect();gain.disconnect();}catch{}
+    },
+    sync(){if(state.active&&!state.paused&&!state.modal&&soundEnabled())this.startAmbience();
+      else this.stopAmbience();}
+  };
+  function syncCanyonSoundButton(){
+    const enabled=soundEnabled();
+    $("canyonSound").setAttribute("aria-pressed",String(enabled));
+    $("canyonSound").textContent=enabled?"♫ Sound":"♪̸ Muted";
+  }
+  let impactHideAt=0;
+  function showImpact(key,points,victory=false){
+    const panel=$("canyonImpactBurst");
+    $("canyonBurstIcon").textContent=victory?"🏆":goals[key]?.icon||"✦";
+    $("canyonBurstTitle").textContent=victory?"The canyon has water again!":goals[key]?.title||"Mission complete!";
+    $("canyonBurstPoints").textContent=victory?"ALL FIVE MISSIONS COMPLETE":"+"+points+" IMPACT POINTS";
+    panel.hidden=false;panel.classList.remove("replay");
+    void panel.offsetWidth;panel.classList.add("replay");
+    impactHideAt=performance.now()+(victory?4000:2700);
+  }
   const pointDistance=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y);
   const wX=x=>(x-500)/24,wZ=y=>(y-305)/24;
   const leftSide=x=>x<480,rightSide=x=>x>550;
@@ -86,6 +199,8 @@
     if(state.done.has(key))return;
     state.done.add(key);state.score+=points;
     save();refreshUI();
+    showImpact(key,points);
+    sound.cue("quest");
     toast("✓ "+goals[key].title+" complete! +"+points+" impact");
   }
   function modal(tag,title,text,choices,extra){
@@ -103,12 +218,14 @@
       b.addEventListener("click",item.action);actions.append(b);
     }
     $("canyonModalBackdrop").hidden=false;
+    sound.sync();
     $("canyonModal").scrollTop=0;
     $("canyonModal").focus({preventScroll:true});
   }
   function closeModal(){
     state.modal=false;$("canyonModalBackdrop").hidden=true;
     $("canyonModalBackdrop").classList.remove("canyon-victory-backdrop");
+    sound.sync();
     canvas.focus({preventScroll:true});
   }
   function interact(){
@@ -118,6 +235,7 @@
     state.path=[];
     if(key==="rest"){
       state.energy=Math.min(100,state.energy+34);
+      sound.cue("rest");
       toast("Rested in the canyon shade · +34 energy");save();refreshUI();
       return;
     }
@@ -154,7 +272,7 @@
         const row=document.createElement("div");row.className="canyon-valve";
         const label=document.createElement("strong");label.textContent=["Intake · +16 kPa","Regulator · +13 kPa","Return · +11 kPa"][i];
         const btn=document.createElement("button");btn.type="button";btn.textContent="OPEN "+state.valves[i]+" / 3";
-        btn.addEventListener("click",()=>{state.valves[i]=(state.valves[i]+1)%4;redraw(root);save();});
+        btn.addEventListener("click",()=>{state.valves[i]=(state.valves[i]+1)%4;sound.cue("valve");redraw(root);save();});
         row.append(label,btn);root.append(row);
       }
       const meter=document.createElement("div");meter.className="canyon-pressure-meter";
@@ -168,6 +286,7 @@
       [{text:"💧 Test pressure",primary:true,action:()=>{
         if(pressureSafe()){closeModal();completeQuest("valves",250);return;}
         state.energy=Math.max(15,state.energy-4);
+        sound.cue("mistake");
         toast("Pressure outside safe range or unbalanced · −4 energy");
         valveChallenge();save();
       }},{text:"↩ Continue exploring",action:()=>{save();closeModal();}}],
@@ -184,10 +303,11 @@
         const label=document.createElement("small");label.textContent=repairOrder[i];btn.append(label);
         btn.addEventListener("click",()=>{
           if(i===state.repairStep){
-            state.repairStep++;save();
+            state.repairStep++;save();sound.cue("repair");
             if(state.repairStep===4){closeModal();completeQuest("span",310);return;}
             draw(root);
           }else{
+            sound.cue("mistake");
             toast("Secure the components in a safe construction order.");
           }
         });board.append(btn);
@@ -208,6 +328,7 @@
         closeModal();completeQuest("cistern",430);finish();
       }},{text:"If the water looks clear, it must be safe",action:()=>{
         state.energy=Math.max(15,state.energy-5);
+        sound.cue("mistake");
         toast("Appearance does not prove drinking-water safety. −5 energy");
         cisternChallenge();
       }},{text:"Return to the canyon",action:closeModal}]);
@@ -215,6 +336,7 @@
   function finish(){
     if(state.finished)return;
     state.finished=true;state.active=false;state.score+=Math.round(state.energy)*2;
+    sound.stopAmbience();sound.cue("victory");showImpact("cistern",0,true);
     progress?.complete("canyon");refreshUI();
     world?.startCelebration?.();
     $("canyonModalBackdrop").classList.add("canyon-victory-backdrop");
@@ -255,6 +377,10 @@
     $("canyonSubtitle").textContent=state.finished?"Canyon restored — chapter complete!":
       next?"Next mission: "+goals[next].title:"The canyon water system is restored.";
     $("canyonEnergy").textContent="⚡ "+Math.ceil(state.energy)+"% energy";
+    $("canyonEnergyFill").style.width=state.energy+"%";
+    $("canyonEnergyFill").classList.toggle("low",state.energy<=28);
+    $("canyonEnergyMeter").setAttribute("aria-valuenow",String(Math.ceil(state.energy)));
+    $("canyonDaypart").textContent=canyonDaypart(state.elapsed).label;
     $("canyonScore").textContent="✦ "+state.score.toLocaleString()+" impact";
     $("canyonTimer").textContent="◷ "+formatTime(state.elapsed);
     const quests=$("canyonQuestList"),dest=$("canyonDestinations");
@@ -296,17 +422,25 @@
     }
     const len=Math.hypot(dx,dy);
     if(len){
-      const step=Math.min(185*dt,manual?185*dt:Math.max(0,len));
+      const sprint=state.keys.has("shift");
+      const speed=sprint?265:185;
+      const step=Math.min(speed*dt,manual?speed*dt:Math.max(0,len));
       dx=dx/len*step;dy=dy/len*step;
       let nx=state.x+dx,ny=state.y+dy;
       if(!blocked(nx,state.y))state.x=nx;
       if(!blocked(state.x,ny))state.y=ny;
-      state.energy=Math.max(7,state.energy-dt*.12);
+      state.energy=Math.max(7,state.energy-dt*(sprint?.38:.12));
+      if(state.elapsed-(state.lastStepSound||-1)>(sprint?.24:.38)){
+        sound.cue("step");state.lastStepSound=state.elapsed;
+      }
       if(state.energy<=12 && state.elapsed%20<dt)toast("Low energy · rest at the shelter.");
     }
     state.elapsed+=dt;
     if(state.elapsed-state.lastSave>7)save();
     if(state.toast&&performance.now()>state.toastUntil){$("canyonToast").hidden=true;state.toast="";}
+    if(impactHideAt&&performance.now()>impactHideAt){
+      $("canyonImpactBurst").hidden=true;impactHideAt=0;
+    }
     if(state.elapsed-(state.lastUI||0)>.28){
       state.lastUI=state.elapsed;refreshUI();
     }
@@ -912,13 +1046,15 @@
     if(world){/* Reuse existing scene and renderer on replay. */}
     const saved=!forceNew?progress.saved("canyon"):null;
     if(forceNew)progress.clearSave("canyon");
+    sound.stopAmbience();
     state=defaultState();state.active=true;
+    $("canyonImpactBurst").hidden=true;impactHideAt=0;
     world?.recenterCamera?.();
     if(saved)restore(saved);
     $("startScreen").hidden=true;$("gameScreen").hidden=true;$("canyonScreen").hidden=false;
     closeModal();refreshUI();
     $("canyonToast").hidden=true;
-    save();buildWorld();
+    save();buildWorld();sound.sync();
     if(saved)toast("Canyon checkpoint restored. Welcome back!");
     else toast("Chapter 2 · Reach the canyon surveyor to begin.");
     canvas.focus({preventScroll:true});
@@ -927,6 +1063,7 @@
   function suspend(){
     if(state.active&&!state.finished)save();
     state.active=false;state.paused=false;state.finished=false;state.keys.clear();state.path=[];
+    sound.stopAmbience();$("canyonImpactBurst").hidden=true;impactHideAt=0;
     $("canyonModalBackdrop").hidden=true;state.modal=false;
     $("canyonModalBackdrop").classList.remove("canyon-victory-backdrop");
   }
@@ -940,11 +1077,24 @@
   }
   function pause(){
     if(!state.active)return;
-    state.paused=true;save();
+    state.paused=true;save();sound.sync();
     modal("REST IN THE SHADE","Expedition paused",
       "Your checkpoint is saved automatically. Resume when you are ready, or return to the chapter selector.",
-      [{text:"▶ Resume canyon",primary:true,action:()=>{closeModal();state.paused=false;}},
+      [{text:"▶ Resume canyon",primary:true,action:()=>{state.paused=false;closeModal();sound.sync();}},
        {text:"◈ Chapter selection",action:goHome}]);
+  }
+  function canyonHelp(){
+    if(state.finished)return;
+    modal("HOW TO PLAY · CHAPTER 02","Your Canyon expedition guide",
+      "Use WASD or the arrow keys to walk, hold Shift to sprint (uses more energy), and press E near glowing mission markers. Click the terrain to travel and drag to explore the view. Use C to recenter, V for a scenic overlook, mouse wheel to zoom, and the map for fast travel. Collect the seal kit, balance pressure, repair the aqueduct in order, and test the cistern. The ♫ Sound and ⚙ Graphics controls use the same preferences as Chapter 1. The game saves your progress automatically.",
+      [{text:"▶ Back to the canyon",primary:true,action:closeModal}]);
+  }
+  function restartCanyon(){
+    if(!state.active)return;
+    modal("NEW CANYON EXPEDITION","Start Forgotten Canyon again?",
+      "This will erase the current Canyon checkpoint and reset all five missions. Your completed Valley chapter will not be changed.",
+      [{text:"↻ Restart chapter",primary:true,action:()=>{closeModal();launch(true);}},
+       {text:"Keep exploring",action:closeModal}]);
   }
   function clickFallback(event){
     if(world||!state.active||state.modal||state.paused)return;
@@ -961,6 +1111,19 @@
   $("canyonTouchInteract").addEventListener("click",interact);
   $("canyonToChapters").addEventListener("click",goHome);
   $("canyonPause").addEventListener("click",pause);
+  $("canyonHelp").addEventListener("click",canyonHelp);
+  $("canyonRestart").addEventListener("click",restartCanyon);
+  $("canyonSound").addEventListener("click",()=>{
+    const next=!soundEnabled();
+    try{localStorage.setItem("thirstTrailSound",String(next));}catch{}
+    window.dispatchEvent(new Event("trail:audio"));
+    if(next)sound.cue("select");
+  });
+  window.addEventListener("trail:audio",()=>{
+    syncCanyonSoundButton();sound.sync();
+  });
+  syncCanyonSoundButton();
+  $("canyonGraphics").addEventListener("click",()=>{$("graphicsButton").click();});
   $("canyonCameraReset").addEventListener("click",recenterCanyonCamera);
   for(const btn of document.querySelectorAll("[data-canyon-move]")){
     const key={up:"w",down:"s",left:"a",right:"d"}[btn.dataset.canyonMove];
@@ -974,9 +1137,10 @@
     if(state.modal){if(event.key==="Escape"&&!state.finished){closeModal();state.paused=false;}return;}
     const key=event.key.toLowerCase();
     if(["arrowup","arrowdown","arrowleft","arrowright"," "].includes(key))event.preventDefault();
-    if(["w","a","s","d","arrowup","arrowdown","arrowleft","arrowright"].includes(key))state.keys.add(key);
+    if(["w","a","s","d","arrowup","arrowdown","arrowleft","arrowright","shift"].includes(key))state.keys.add(key);
     if((key==="e"||key===" ")&&!event.repeat)interact();
     if(key==="p"&&!event.repeat)pause();
+    if(key==="h"&&!event.repeat)canyonHelp();
     if(key==="c"&&!event.repeat)recenterCanyonCamera();
   });
   window.addEventListener("keyup",event=>state.keys.delete(event.key.toLowerCase()));
@@ -987,7 +1151,7 @@
     if(document.hidden&&state.active&&!state.modal)pause();
   });
   window.TrailCanyon=Object.freeze({
-    launch,suspend,goHome,snapshot:()=>({
+    launch,suspend,goHome,help:canyonHelp,snapshot:()=>({
       active:state.active,paused:state.paused,finished:state.finished,
       x:state.x,y:state.y,energy:state.energy,score:state.score,
       done:[...state.done],pressure:currentPressure(),valves:[...state.valves],
