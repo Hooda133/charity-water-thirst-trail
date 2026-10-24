@@ -4,6 +4,10 @@
 
 The new explorer features a padded teal adventurer jacket, expressive face and eyes, ranger hat, shoulder scarf, travel pack and bedroll, brass compass, hanging flask, articulated gloves, pants and boots. The mesh is approximately **5,928 triangles**, with **14 named rig nodes** and 28 colored PBR materials.
 
+## Clean-water yellow visual identity — October 24
+
+The explorer jacket and existing backpack have been recolored in a warm yellow and dark-strap palette inspired by clean-water adventure storytelling. The flask uses blue water-inspired tones. This is a visual recolor of the existing mesh, not a new reservoir mechanic or a partnership/official charity: water character. The named rig nodes and animations remain unchanged.
+
 ## Visual refinement — October 21
 
 Following a real in-game screenshot, the explorer received warmer skin and clothing colors, a slightly larger readable face, slimmer padded sleeves and legs, a less bulky pack, and interpolated vertex normals across rounded surfaces. The gait now eases into and out of motion instead of stopping abruptly. The original camera and movement speed were not changed.
