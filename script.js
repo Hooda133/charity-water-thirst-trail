@@ -868,6 +868,11 @@
     openModal({tag:"GAME PAUSED",icon:"⏸️",title:"Take your time",description:"Your energy won't change while paused. Ready to continue your expedition?",kind:"pause",choices:[{text:"▶ Resume adventure",primary:true,action:()=>closeModal()},{text:"↻ Start a new expedition",action:start}]});
   }
   function help(){
+    // The global help icon follows the active chapter, not just the Valley.
+    if(!$("canyonScreen").hidden&&window.TrailCanyon?.help){
+      window.TrailCanyon.help();
+      return;
+    }
     safeStore.markTutorialSeen();
     openModal({tag:"HOW TO PLAY",icon:"🧭",title:"Your adventure guide",description:"Move using WASD or arrow keys. On phones, use the on-screen directional buttons. Click the 3D world once to walk; hold and drag with the left button to pan the camera without moving, or right-drag to rotate around the landscape. Use the mouse wheel to zoom, and press C to return the camera to your explorer. The live mini-map shows your location and route; click one of its markers to travel there, or press M to hide or show it. Press V or select SCENIC VIEW above the world to see the full valley, and press it again to follow your explorer. When you're near a glowing marker, press E or tap INTERACT. Solve challenges, collect items, rotate the pipe sections during the pump repair, and restore water before your energy runs out. Raincatch Ridge is an optional hands-on collection activity. Rest at the camp to recharge. Press Shift to sprint (uses more energy).",kind:"help",choices:[{text:"Got it — let's go!",primary:true,action:()=>closeModal()}],tip:"BONUS ROUTES: Earn a test kit at the River Bank to survey Hill Spring, or inspect the collection station at Raincatch Ridge. Your current run resets on refresh; only your best score is saved."});
   }
@@ -1062,7 +1067,23 @@
   $("resetButton").addEventListener("click",()=>openModal({tag:"NEW EXPEDITION",icon:"↻",title:"Restart this journey?",description:"Your current expedition progress and inventory will reset. Your best score will be kept.",choices:[{text:"Restart adventure",primary:true,action:start},{text:"Keep playing",action:()=>closeModal()}]}));
   $("modalClose").addEventListener("click",()=>closeModal());
   $("modalBackdrop").addEventListener("click",e=>{if(e.target===$("modalBackdrop")&&state.modalKind!=="end")closeModal();});
-  $("soundButton").addEventListener("click",()=>{state.sound=!state.sound;$("soundButton").setAttribute("aria-pressed",String(state.sound));$("soundButton").textContent=state.sound?"♫":"♪̸";if(state.sound)tone();});
+  function syncSoundButton(){
+    $("soundButton").setAttribute("aria-pressed",String(state.sound));
+    $("soundButton").textContent=state.sound?"♫":"♪̸";
+    $("soundButton").title=state.sound?"Mute game audio":"Enable game audio";
+  }
+  $("soundButton").addEventListener("click",()=>{
+    state.sound=!state.sound;
+    safeStore.setSound(state.sound);
+    syncSoundButton();
+    window.dispatchEvent(new Event("trail:audio"));
+    if(state.sound)tone();
+  });
+  window.addEventListener("trail:audio",()=>{
+    state.sound=safeStore.getSound();
+    syncSoundButton();
+  });
+  syncSoundButton();
   const graphicsPanel=$("graphicsPanel"),qualityPreset=$("qualityPreset");
   function syncGraphicsPanel(){
     qualityPreset.value=graphicsPresets[graphicsPreset]?graphicsPreset:"medium";
@@ -1077,6 +1098,8 @@
     world3d?.setGraphicsSettings(graphics);
     safeStore.setGraphics(graphicsProfile());
     syncGraphicsPanel();
+    // Keep Canyon graphics live when the same global settings change.
+    window.dispatchEvent(new Event("trail:graphics"));
   }
   $("graphicsButton").addEventListener("click",()=>{
     graphicsPanel.hidden=!graphicsPanel.hidden;

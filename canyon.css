@@ -193,3 +193,43 @@
 @media(max-width:760px){
  .canyon-world-label{font-size:10px;padding:6px 8px;max-width:165px}
 }
+
+
+/* Feature parity with the Valley: quick settings, readable expedition HUD,
+   accessible visual feedback and camera modes. */
+.canyon-controls{row-gap:7px}
+.canyon-controls .button[aria-pressed="false"]{opacity:.7}
+.canyon-stage-heading #canyonScenic{margin-left:auto}
+.canyon-stage-heading #canyonScenic[aria-pressed="true"]{
+ background:#e3bf61;color:#183943;border-color:#ffe8aa
+}
+.canyon-stage-heading #canyonScenic + #canyonCameraReset{margin-left:0}
+.canyon-impact-burst{top:23%;z-index:8;min-width:min(350px,88%)}
+.canyon-energy-track{
+ position:absolute;top:106px;left:16px;width:min(208px,46%);
+ height:10px;z-index:4;pointer-events:none;
+ background:#173d4bc9;border:1px solid #b8decc92;border-radius:22px;
+ overflow:hidden;box-shadow:0 5px 13px #09263199;
+}
+.canyon-energy-track>div{
+ height:100%;width:100%;border-radius:22px;
+ background:linear-gradient(90deg,#35cfb2,#a6efab);
+ transition:width .24s linear,background .24s
+}
+.canyon-energy-track>div.low{
+ background:linear-gradient(90deg,#ea6358,#f4bd62)
+}
+.canyon-stage .canyon-toast{top:135px}
+.canyon-overlay-hud #canyonDaypart{color:#ffe5a0;border-color:#e8bc7b95}
+@media(max-width:760px){
+ .canyon-controls .button{min-height:33px;padding:0 9px;font-size:10px}
+ .canyon-stage-heading{gap:8px}
+ .canyon-stage-heading #canyonScenic{margin-left:0}
+ .canyon-stage-heading #canyonCameraReset{margin-left:0}
+ .canyon-energy-track{top:95px;left:8px;width:135px;height:8px}
+ .canyon-stage .canyon-toast{top:115px}
+ .canyon-impact-burst{top:26%;min-width:min(285px,90%)}
+}
+@media(prefers-reduced-motion:reduce){
+ .canyon-energy-track>div{transition:none}
+}

@@ -17,6 +17,17 @@ for(const js of Object.values(scripts))new Function(js);
 assert.ok(html.indexOf('src="progression.js"')<html.indexOf('src="script.js"'));
 assert.ok(html.indexOf('src="script.js"')<html.indexOf('src="canyon.js"'));
 assert.ok(css.includes(".canyon-stage") && css.includes(".chapter-select-grid"));
+for(const id of ["canyonSound","canyonGraphics","canyonScenic","canyonHelp","canyonRestart",
+  "canyonDaypart","canyonImpactBurst","canyonEnergyMeter"]){
+  assert.ok(html.includes('id="'+id+'"'),"Missing Canyon feature control "+id);
+}
+assert.match(scripts.valley,/trail:audio/,"Valley sound preferences must sync with Canyon");
+assert.match(scripts.valley,/trail:graphics/,"Valley graphics settings must broadcast updates");
+assert.match(scripts.canyon,/sound\.cue\("quest"\)/,"Quest sound effect missing");
+assert.match(scripts.canyon,/sound\.cue\("victory"\)/,"Victory fanfare missing");
+assert.match(scripts.canyon,/applyCanyonGraphics\(next\)/,"Live graphics update missing");
+assert.match(scripts.canyon,/canyonDaypart\(state\.elapsed\)/,"Canyon day-night cycle missing");
+assert.match(scripts.canyon,/movingNow&&state\.scenic/,"Walking must exit scenic mode to keep hero visible");
 assert.ok(idsPlaceholder());
 function idsPlaceholder(){
   // New camera exploration controls must remain wired in both chapters.
@@ -53,7 +64,7 @@ function node(id){
  return {
   id,textContent:"",innerHTML:"",dataset:{},hidden:false,
   style:{setProperty(name,value){this[name]=value;}},children:[],listeners:{},
-  classList:{add(n){classes.add(n);},remove(n){classes.delete(n);},contains(n){return classes.has(n);}},
+  classList:{add(n){classes.add(n);},remove(n){classes.delete(n);},contains(n){return classes.has(n);},toggle(n,force){const enabled=force??!classes.has(n);if(enabled)classes.add(n);else classes.delete(n);return enabled;}},
   getContext(){return frameCtx;},focus(){},append(...children){this.children.push(...children);},
   replaceChildren(){this.children=[];},setAttribute(){},
   addEventListener(name,fn){this.listeners[name]=fn;},
@@ -99,6 +110,19 @@ function go(key){
 }
 canyon.launch();
 assert.equal(canyon.snapshot().active,true);
+assert.equal(document.getElementById("canyonDaypart").textContent,"☀️ CANYON MORNING");
+document.getElementById("canyonScenic").listeners.click();
+assert.equal(test.get().scenic,true,"Scenic camera should toggle on");
+document.getElementById("canyonScenic").listeners.click();
+assert.equal(test.get().scenic,false,"Scenic camera should toggle off");
+document.getElementById("canyonSound").listeners.click();
+assert.equal(storage.getItem("thirstTrailSound"),"false","Canyon mute must persist across chapters");
+document.getElementById("canyonSound").listeners.click();
+assert.equal(storage.getItem("thirstTrailSound"),"true","Canyon sound must re-enable");
+document.getElementById("canyonHelp").listeners.click();
+assert.equal(document.getElementById("canyonModalTitle").textContent,"Your Canyon expedition guide");
+select()[0].listeners.click();
+assert.equal(test.get().modal,false,"Closing Canyon help should resume play");
 // Regression: Level 2 character moves independently of the free-camera state.
 const startX=canyon.snapshot().x;
 test.get().keys.add("d");
@@ -111,6 +135,8 @@ test.get().keys.delete("d");
 assert.ok(canyon.snapshot().x>startX+15,"Canyon player must move on D key");
 go("surveyor");select()[0].listeners.click();
 assert.ok(canyon.snapshot().done.includes("surveyor"));
+assert.equal(document.getElementById("canyonImpactBurst").hidden,false,
+  "Canyon quests should show the same impact feedback as Chapter 1");
 go("kit");select()[0].listeners.click();
 assert.ok(canyon.snapshot().done.includes("kit"));
 go("valves");assert.equal(test.safe(),false);
@@ -169,6 +195,8 @@ assert.equal(canyon.snapshot().active,false);
 assert.ok(progress.snapshot().completed.includes("canyon"));
 assert.equal(progress.saved("canyon"),null);
 assert.equal(canyon.snapshot().done.length,5);
+assert.equal(document.getElementById("canyonBurstTitle").textContent,"The canyon has water again!",
+  "End-of-chapter victory should replace the ordinary impact badge");
 console.log("✓ Versioned chapter unlocking and Valley checkpoint storage");
 console.log("✓ Five canyon quests, 69 kPa valve solution, unsafe pressure penalty");
 console.log("✓ Aqueduct repair order, checkpoint restore, safety quiz and chapter completion");

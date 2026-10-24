@@ -127,6 +127,15 @@ assert.ok(art.occluders.every(parts=>parts.length&&parts.every(mesh=>mesh.isMesh
  "Every camera-fade occluder must contain real mesh geometry");
 assert.ok(scene.children.length>65,"Art pass should create detailed layered scenery");
 assert.equal(typeof art.update,"function");
+assert.equal(typeof art.setEffectsEnabled,"function");
+assert.equal(typeof art.setDaylight,"function");
+art.setDaylight(.7);
+art.setEffectsEnabled(false);
+art.update(.5);
+assert.ok(scene.children.some(o=>o.isPoints&&o.visible===false),
+ "Canyon particles must obey the live graphics effects toggle");
+art.setEffectsEnabled(true);
+art.setDaylight(.1);
 assert.equal(typeof art.dispose,"function");
 art.update(1);done.add("span");art.update(2.5);
 assert.ok(scene.children.some(o=>o.isInstancedMesh&&o.visible===false),

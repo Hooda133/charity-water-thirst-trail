@@ -141,15 +141,39 @@
       <section id="canyonScreen" class="canyon-screen" hidden aria-label="Level 2: The Forgotten Canyon">
         <div class="canyon-header">
           <div><span class="overline">CHAPTER 02 · THE FORGOTTEN CANYON</span><h2>Restore the forgotten aqueduct<span class="yellow">.</span></h2><p id="canyonSubtitle">Meet the canyon surveyor to begin.</p></div>
-          <div class="canyon-controls"><span id="canyonProgressLabel" class="canyon-progress-label">0 / 5 repaired</span><button id="canyonPause" class="button button-compact button-ghost-dark" type="button">Ⅱ Pause</button><button id="canyonToChapters" class="button button-compact button-ghost-dark" type="button">◈ Chapters</button></div>
+          <div class="canyon-controls">
+            <span id="canyonProgressLabel" class="canyon-progress-label">0 / 5 repaired</span>
+            <button id="canyonSound" class="button button-compact button-ghost-dark" type="button" aria-label="Toggle canyon sound" aria-pressed="true" title="Toggle canyon sound effects and water ambience">♫ Sound</button>
+            <button id="canyonGraphics" class="button button-compact button-ghost-dark" type="button" title="Open graphics settings for both chapters">⚙ Graphics</button>
+            <button id="canyonHelp" class="button button-compact button-ghost-dark" type="button">? Help</button>
+            <button id="canyonRestart" class="button button-compact button-ghost-dark" type="button">↻ Restart</button>
+            <button id="canyonPause" class="button button-compact button-ghost-dark" type="button">Ⅱ Pause</button>
+            <button id="canyonToChapters" class="button button-compact button-ghost-dark" type="button">◈ Chapters</button>
+          </div>
         </div>
         <div class="canyon-layout">
           <div class="canyon-stage">
-            <div class="canyon-stage-heading"><span>🏜️ SUNSTONE CANYON · OPEN WORLD</span><span id="canyonPositionLabel">Explore the red cliffs</span><button id="canyonCameraReset" class="camera-reset" type="button" title="Return camera to explorer (C)">⌖ RECENTER</button></div>
+            <div class="canyon-stage-heading"><span>🏜️ SUNSTONE CANYON · OPEN WORLD</span><span id="canyonPositionLabel">Explore the red cliffs</span>
+              <button id="canyonScenic" class="camera-reset" type="button" aria-pressed="false" title="Toggle scenic camera overview (V)">◈ SCENIC VIEW</button>
+              <button id="canyonCameraReset" class="camera-reset" type="button" title="Return camera to explorer (C)">⌖ RECENTER</button></div>
             <canvas id="canyonCanvas" width="1000" height="610" tabindex="0" role="img" aria-label="Playable canyon environment. Use WASD or arrow keys to walk, E to interact, click to walk, hold and drag the mouse to explore without walking, or press C to recenter.">Your browser does not support canvas.</canvas>
-            <div class="canyon-overlay-hud"><span id="canyonEnergy">⚡ 100% energy</span><span id="canyonScore">✦ 0 impact</span><span id="canyonTimer">◷ 00:00</span></div>
+            <div class="canyon-overlay-hud">
+              <span id="canyonEnergy">⚡ 100% energy</span><span id="canyonScore">✦ 0 impact</span>
+              <span id="canyonTimer">◷ 00:00</span>
+              <span id="canyonDaypart">☀️ CANYON MORNING</span>
+            </div>
+            <div id="canyonImpactBurst" class="impact-burst canyon-impact-burst" role="status" aria-live="polite" aria-atomic="true" hidden>
+              <span class="impact-burst-medal" id="canyonBurstIcon" aria-hidden="true">✦</span>
+              <div class="impact-burst-copy"><span class="impact-burst-eyebrow">CANYON RESTORATION</span>
+                <strong id="canyonBurstTitle">Mission completed!</strong>
+                <small id="canyonBurstPoints">+100 impact</small>
+              </div>
+            </div>
+            <div class="canyon-energy-track" role="progressbar" aria-label="Canyon energy" aria-valuemin="0" aria-valuemax="100" aria-valuenow="100" id="canyonEnergyMeter">
+              <div id="canyonEnergyFill"></div>
+            </div>
             <div id="canyonPrompt" class="canyon-prompt" hidden><span id="canyonPromptText">Talk to the surveyor</span><button id="canyonInteract" type="button">E · INTERACT</button></div>
-            <div class="canyon-key-hint"><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> MOVE <kbd>E</kbd> INTERACT <span>DRAG TO LOOK AROUND · CLICK TO WALK · C RECENTER</span></div>
+            <div class="canyon-key-hint"><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> MOVE <kbd>E</kbd> INTERACT <span>DRAG TO LOOK AROUND · CLICK TO WALK · C RECENTER · V SCENIC</span></div>
             <div class="canyon-touch-controls" aria-label="Canyon movement controls"><button data-canyon-move="up" type="button">▲</button><button data-canyon-move="left" type="button">◀</button><button data-canyon-move="down" type="button">▼</button><button data-canyon-move="right" type="button">▶</button><button id="canyonTouchInteract" type="button">✦ ACT</button></div>
             <p id="canyonToast" class="canyon-toast" role="status" aria-live="polite" hidden></p>
           </div>
