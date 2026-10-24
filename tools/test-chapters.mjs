@@ -64,7 +64,7 @@ function node(id){
  return {
   id,textContent:"",innerHTML:"",dataset:{},hidden:false,
   style:{setProperty(name,value){this[name]=value;}},children:[],listeners:{},
-  classList:{add(n){classes.add(n);},remove(n){classes.delete(n);},contains(n){return classes.has(n);}},
+  classList:{add(n){classes.add(n);},remove(n){classes.delete(n);},contains(n){return classes.has(n);},toggle(n,force){const enabled=force??!classes.has(n);if(enabled)classes.add(n);else classes.delete(n);return enabled;}},
   getContext(){return frameCtx;},focus(){},append(...children){this.children.push(...children);},
   replaceChildren(){this.children=[];},setAttribute(){},
   addEventListener(name,fn){this.listeners[name]=fn;},
