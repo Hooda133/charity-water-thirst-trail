@@ -121,6 +121,10 @@ runInNewContext(artSource,{window,document,console,Math,Float32Array});
 const scene=new Object3D(),done=new Set();let finished=false;
 const art=window.ThirstCanyonVisuals.build(THREE,{scene,camera:{},worldSpread:1.42,
  getState:()=>({done,finished})});
+assert.ok(Array.isArray(art.occluders)&&art.occluders.length>=40,
+ "Large canyon mesas and arches must register as camera-fade occluders");
+assert.ok(art.occluders.every(parts=>parts.length&&parts.every(mesh=>mesh.isMesh)),
+ "Every camera-fade occluder must contain real mesh geometry");
 assert.ok(scene.children.length>65,"Art pass should create detailed layered scenery");
 assert.equal(typeof art.update,"function");
 assert.equal(typeof art.dispose,"function");
