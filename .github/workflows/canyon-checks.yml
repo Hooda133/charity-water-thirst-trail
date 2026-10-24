@@ -1,0 +1,40 @@
+name: Canyon gameplay and visual checks
+
+on:
+  pull_request:
+    paths:
+      - 'canyon.js'
+      - 'canyon-visuals.js'
+      - 'canyon.css'
+      - 'tools/**'
+      - 'assets/characters/**'
+      - '.github/workflows/canyon-checks.yml'
+  push:
+    branches:
+      - 'feature/canyon-cinematic-finale'
+  workflow_dispatch:
+
+jobs:
+  canyon-regressions:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Check JavaScript syntax
+        run: |
+          node --check canyon.js
+          node --check canyon-visuals.js
+          node --check script.js
+          node --check tools/test-chapters.mjs
+          node --check tools/test-canyon-visuals.mjs
+      - name: Run gameplay and art regression tests
+        run: |
+          node tools/test-chapters.mjs
+          node tools/test-canyon-visuals.mjs
+          node tools/test-pipes.mjs
+          node tools/test-valley-movement.mjs
+          node tools/validate-explorer.mjs

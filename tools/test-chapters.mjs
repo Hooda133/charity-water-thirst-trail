@@ -51,7 +51,8 @@ const frameCtx=new Proxy({createLinearGradient(){return {addColorStop(){}};}},{g
 function node(id){
  const classes=new Set();
  return {
-  id,textContent:"",innerHTML:"",dataset:{},hidden:false,style:{},children:[],listeners:{},
+  id,textContent:"",innerHTML:"",dataset:{},hidden:false,
+  style:{setProperty(name,value){this[name]=value;}},children:[],listeners:{},
   classList:{add(n){classes.add(n);},remove(n){classes.delete(n);},contains(n){return classes.has(n);}},
   getContext(){return frameCtx;},focus(){},append(...children){this.children.push(...children);},
   replaceChildren(){this.children=[];},setAttribute(){},
@@ -150,6 +151,12 @@ select()[1].listeners.click();
 assert.ok(test.get().energy<energyBeforeWrong);
 select()[0].listeners.click();
 assert.equal(canyon.snapshot().finished,true);
+assert.ok(document.getElementById("canyonModalBackdrop").classList.contains("canyon-victory-backdrop"),
+  "Finishing the water-safety quest must activate the victory celebration");
+assert.ok(document.getElementById("canyonModalExtra").children.length>=2,
+  "Victory modal must include a celebratory banner and confetti");
+assert.match(scripts.canyon,/heroProjected\.set\(baseX,1\.40,baseZ\)\.project\(camera\)/,
+  "Follow camera must guard against losing the explorer offscreen");
 assert.equal(canyon.snapshot().active,false);
 assert.ok(progress.snapshot().completed.includes("canyon"));
 assert.equal(progress.saved("canyon"),null);

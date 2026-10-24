@@ -108,6 +108,7 @@
   }
   function closeModal(){
     state.modal=false;$("canyonModalBackdrop").hidden=true;
+    $("canyonModalBackdrop").classList.remove("canyon-victory-backdrop");
     canvas.focus({preventScroll:true});
   }
   function interact(){
@@ -215,11 +216,36 @@
     if(state.finished)return;
     state.finished=true;state.active=false;state.score+=Math.round(state.energy)*2;
     progress?.complete("canyon");refreshUI();
+    world?.startCelebration?.();
+    $("canyonModalBackdrop").classList.add("canyon-victory-backdrop");
     modal("✦ CHAPTER COMPLETE","The aqueduct flows again!",
       "You brought the canyon system back into service and verified the water-safety steps. The Forgotten Canyon is complete! Total impact: "+
       state.score.toLocaleString()+" points. This is a fictional training scenario, not drinking-water guidance.",
       [{text:"◈ Return to chapter selection",primary:true,action:goHome},
-       {text:"↻ Replay Forgotten Canyon",action:()=>{closeModal();launch(true);}}]);
+       {text:"↻ Replay Forgotten Canyon",action:()=>{closeModal();launch(true);}}],
+      root=>{
+        const finale=document.createElement("div");
+        finale.className="canyon-victory-banner";
+        finale.setAttribute("role","status");
+        const trophy=document.createElement("span");
+        trophy.className="canyon-victory-emblem";trophy.textContent="🏆";
+        const copy=document.createElement("div");
+        const heading=document.createElement("strong");heading.textContent="WATER RESTORED!";
+        const detail=document.createElement("small");
+        detail.textContent="All 5 missions complete · The canyon celebrates your achievement";
+        copy.append(heading,detail);finale.append(trophy,copy);
+        const confetti=document.createElement("div");
+        confetti.className="canyon-confetti";confetti.setAttribute("aria-hidden","true");
+        for(let i=0;i<26;i++){
+          const piece=document.createElement("i");
+          piece.style.setProperty("--i",String(i));
+          piece.style.setProperty("--left",String(4+(i*37%93))+"%");
+          piece.style.setProperty("--drift",String((i*11%71)-35)+"px");
+          piece.style.setProperty("--delay",String((i*7%19)/10)+"s");
+          confetti.append(piece);
+        }
+        root.append(finale,confetti);
+      });
   }
   function formatTime(t){const sec=Math.floor(t);return String(Math.floor(sec/60)).padStart(2,"0")+":"+String(sec%60).padStart(2,"0");}
   function refreshUI(){
@@ -319,9 +345,9 @@
       const scene=new THREE.Scene();scene.background=new THREE.Color(0x93b9c9);
       // Widen the entire traversable 3D valley without changing quest logic or save coordinates.
       const worldSpread=1.42;scene.scale.set(worldSpread,1,worldSpread);
-      scene.fog=new THREE.FogExp2(0xe0b897,.0068);
+      scene.fog=new THREE.FogExp2(0xdfb998,.0053);
       const camera=new THREE.PerspectiveCamera(47,1000/610,.1,300);
-      camera.position.set(7.4,10.5,13.6);camera.lookAt(0,0,0);
+      camera.position.set(6.2,9.0,11.7);camera.lookAt(0,1.1,0);
       // Honor the player's saved Valley graphics profile in Canyon as well.
       let graphics={};
       try{graphics=JSON.parse(localStorage.getItem("thirstTrailGraphics")||"null")||{};}
@@ -330,7 +356,10 @@
         graphics.preset:"high";
       const renderer=new THREE.WebGLRenderer({alpha:false,antialias:true,powerPreference:"high-performance"});
       const requestedScale=clamp(Number(graphics.resolution)||1.1,.65,1.5);
-      renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,requestedScale*1.65));
+      // Ultra can render above native resolution, with a cap to protect GPUs.
+      renderer.setPixelRatio(Math.min(2.25,
+        (window.devicePixelRatio||1)*(graphicsQuality==="ultra"?
+          Math.max(1.35,requestedScale):requestedScale)));
       renderer.outputColorSpace=THREE.SRGBColorSpace;
       renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.14;
       renderer.shadowMap.enabled=graphics.shadows!==false;
@@ -473,7 +502,8 @@
       let canyonArt=null;
       try{
         canyonArt=window.ThirstCanyonVisuals?.build(THREE,{
-          scene,camera,worldSpread,getState:()=>state
+          scene,camera,worldSpread,getState:()=>state,
+          quality:graphicsQuality,effectsEnabled:graphics.effects!==false
         })||null;
       }catch(error){
         console.warn("Canyon advanced scenery unavailable; using safe original terrain.",error);
@@ -508,9 +538,23 @@
       }
       // Character: local procedural fallback renders immediately.
       const player=new THREE.Group();scene.add(player);
+      // Soft hero fill and a visible ground marker keep the explorer legible
+      // against sun-bleached cliffs, including at long zoom distances.
+      const heroLight=new THREE.PointLight(0xffe5ae,.70,5.5,2);
+      heroLight.position.set(0,2.3,1.0);player.add(heroLight);
+      const locatorRing=new THREE.Mesh(
+        new THREE.RingGeometry(.40,.56,36),
+        new THREE.MeshBasicMaterial({
+          color:0xffdf73,transparent:true,opacity:.55,
+          depthWrite:false,depthTest:false,side:THREE.DoubleSide
+        })
+      );
+      locatorRing.rotation.x=-Math.PI/2;
+      locatorRing.position.y=.045;locatorRing.renderOrder=25;
+      player.add(locatorRing);
       // Character remains human-sized while landscape and landmarks spread apart.
       player.scale.set(1/worldSpread,1,1/worldSpread);
-      const jacket=mat(0x1c8d8a),skin=mat(0xe0a87d),hat=mat(0xf4c776),boots=mat(0x293b50);
+      const jacket=mat(0xf0b935),skin=mat(0x70432d),hat=mat(0xf4c776),boots=mat(0x604837);
       const torso=new THREE.Mesh(new THREE.CapsuleGeometry(.31,.63,5,10),jacket);
       torso.position.y=1.2;torso.castShadow=true;player.add(torso);
       const head=new THREE.Mesh(new THREE.SphereGeometry(.29,12,9),skin);head.position.y=2.05;player.add(head);
@@ -525,21 +569,27 @@
         const hand=new THREE.Mesh(new THREE.SphereGeometry(.115,9,8),skin);
         hand.position.set(side*.49,.86,.05);player.add(hand);
       }
-      const pack=new THREE.Mesh(new THREE.BoxGeometry(.60,.79,.34),rock[1]);
-      pack.position.set(0,1.29,-.37);player.add(pack);
-      // Readable face, goggles, jacket trim and backpack straps for the closer follow camera.
-      const eyeMat=mat(0x1c2a33),strapMat=mat(0xc7a675);
+      // Fallback hero matches the shared dark-skinned explorer and signature yellow jerrycan.
+      const jugMat=mat(0xf9cb21),jugRib=mat(0xfff6d9);
+      const pack=new THREE.Mesh(new THREE.BoxGeometry(.65,.83,.21),jugMat);
+      pack.position.set(0,1.32,-.46);player.add(pack);
+      const rib=new THREE.Mesh(new THREE.BoxGeometry(.24,.20,.03),jugRib);
+      rib.position.set(0,1.32,-.583);player.add(rib);
+      for(const sign of [-1,1]){
+        const brace=new THREE.Mesh(new THREE.BoxGeometry(.07,.48,.035),jugRib);
+        brace.position.set(sign*.16,1.32,-.59);brace.rotation.z=sign*.48;player.add(brace);
+      }
+      // Keep the fallback face legible without reinstating the old backpack straps.
+      const eyeMat=mat(0x1c2a33);
       for(const side of [-1,1]){
         const eye=new THREE.Mesh(new THREE.SphereGeometry(.038,7,6),eyeMat);
         eye.position.set(side*.12,2.10,.258);player.add(eye);
-        const strap=new THREE.Mesh(new THREE.BoxGeometry(.095,.55,.05),strapMat);
-        strap.position.set(side*.22,1.32,.30);player.add(strap);
       }
       const brim=new THREE.Mesh(new THREE.CylinderGeometry(.45,.45,.045,16),hat);
       brim.position.y=2.31;player.add(brim);
       // Reuse the exact authored explorer asset and joint names used in Chapter 1.
       // The procedural version stays as a reliable offline/model-load fallback.
-      const fallbackParts=[...player.children];
+      const fallbackParts=[...player.children].filter(o=>o!==heroLight&&o!==locatorRing);
       let explorerRig=null,explorerDisposed=false;
       const explorerStatus={status:"fallback"};
       async function loadCanyonExplorer(){
@@ -581,7 +631,8 @@
       // Drag-to-explore is independent of character movement and mission progression.
       const pan=new THREE.Vector3(),drag={id:null,x:0,y:0,startX:0,startY:0,moved:false,suppress:false};
       let zoom=1;
-      const recenterCamera=()=>{pan.set(0,0,0);zoom=1;};
+      const recenterCamera=()=>{pan.set(0,0,0);zoom=1;cameraSnap=true;};
+      let cameraSnap=true;
       dom.style.cursor="grab";
       dom.addEventListener("pointerdown",event=>{
         if(event.button!==0||event.pointerType==="touch"||!state.active||state.modal||state.paused)return;
@@ -641,9 +692,12 @@
       }
       // Smooth locomotion and heading for the shared rig (keyboard and click-to-walk).
       const playerMotion={lastTime:0,lastX:state.x,lastY:state.y,blend:0};
+      const heroProjected=new THREE.Vector3(),cameraDesired=new THREE.Vector3();
+      let celebrationStarted=0;
       world={
         dom,renderer,scene,camera,player,limbs,marks,broken,pipeMesh,water,
         recenterCamera,
+        startCelebration(){celebrationStarted=performance.now()/1000;recenterCamera();},
         draw(time){
           const width=dom.clientWidth||1000,height=dom.clientHeight||610;
           const targetWidth=Math.max(300,Math.floor(width)),targetHeight=Math.max(180,Math.floor(height));
@@ -668,6 +722,10 @@
             player.rotation.y+=angle*(1-Math.exp(-delta*11));
           }
           const moving=actuallyMoving;
+          locatorRing.visible=state.path.length>0||state.keys.size>0||moving;
+          locatorRing.scale.setScalar(1+Math.sin(time*4)*.05);
+          const celebrating=state.finished;
+          const cheer=celebrating?Math.sin((time-celebrationStarted)*7)*.10:0;
           const gait=Math.sin(time*9)*playerMotion.blend*.52;
           for(let i=0;i<limbs.length;i++)
             limbs[i].rotation.x=(i%2?-1:1)*Math.sin(time*9+Math.floor(i/2)*Math.PI)*(.35*playerMotion.blend+.025);
@@ -685,17 +743,41 @@
             rig.ExplorerBody.rotation.x=moving?-.035:0;
             rig.ExplorerScarfTail.rotation.z=-.24+Math.sin(time*(moving?9:1.4))*.07;
             rig.ExplorerPackFlap.rotation.x=moving?Math.sin(time*9)*.045:0;
-            rig.ExplorerHead.rotation.y=Math.sin(time*.6)*.035;
+            if(celebrating){
+              rig.ExplorerArmLeft.rotation.z=-2.15;
+              rig.ExplorerArmRight.rotation.z=2.15;
+              rig.ExplorerBody.position.y=.11+Math.abs(cheer);
+              rig.ExplorerHead.rotation.y=Math.sin(time*2)*.15;
+            }else{
+              rig.ExplorerArmLeft.rotation.z=0;rig.ExplorerArmRight.rotation.z=0;
+              rig.ExplorerHead.rotation.y=Math.sin(time*.6)*.035;
+            }
             rig.ExplorerEyes.scale.y=time%5.3<.12?.15:1;
           }
-          // Once travel resumes, follow the explorer so walking never appears frozen offscreen.
-          if(state.path.length||state.keys.size)pan.set(0,0,0);
-          // Clamp the free camera within the entire expanded canyon; player stays put.
+          // Follow the *real* player every movement frame; manual panning is only
+          // temporary while stationary. A screen-space guard prevents offscreen travel.
+          const following=state.path.length>0||state.keys.size>0||actuallyMoving||celebrating;
+          if(following)pan.set(0,0,0);
           const baseX=px*worldSpread,baseZ=pz*worldSpread;
-          cameraTarget.set(clamp(baseX+pan.x,-31,31),0,clamp(baseZ+pan.z,-23,23));
+          cameraTarget.set(clamp(baseX+pan.x,-31,31),1.1,clamp(baseZ+pan.z,-23,23));
           pan.x=cameraTarget.x-baseX;pan.z=cameraTarget.z-baseZ;
-          camera.position.lerp(new THREE.Vector3(cameraTarget.x+7.4*zoom,10.5*zoom,cameraTarget.z+13.6*zoom),.09);
+          cameraDesired.set(cameraTarget.x+6.2*zoom,9.0*zoom,cameraTarget.z+11.7*zoom);
+          const followEase=1-Math.exp(-delta*(following?15:8));
+          if(cameraSnap)camera.position.copy(cameraDesired);
+          else camera.position.lerp(cameraDesired,followEase);
           camera.lookAt(cameraTarget);
+          camera.updateMatrixWorld();
+          if(following&&!cameraSnap){
+            heroProjected.set(baseX,1.40,baseZ).project(camera);
+            if(Math.abs(heroProjected.x)>.64||Math.abs(heroProjected.y)>.67||
+              heroProjected.z< -1||heroProjected.z>1){
+              // A camera teleport is preferable to losing the hero behind the frame.
+              camera.position.copy(cameraDesired);
+              camera.lookAt(cameraTarget);
+              camera.updateMatrixWorld();
+            }
+          }
+          cameraSnap=false;
           for(const m of marks){
             const done=state.done.has(m.key);
             m.pillar.visible=!done;m.ring.material.color.set(done?0x70c5a4:0xffd787);
@@ -719,7 +801,7 @@
   }
   function frame(time){
     const dt=lastFrame?clamp((time-lastFrame)/1000,0,.05):0;lastFrame=time;
-    if(state.active){
+    if(state.active||state.finished){
       update(dt);
       if(world){
         try{world.draw(time/1000);}
@@ -752,8 +834,9 @@
   }
   function suspend(){
     if(state.active&&!state.finished)save();
-    state.active=false;state.paused=false;state.keys.clear();state.path=[];
+    state.active=false;state.paused=false;state.finished=false;state.keys.clear();state.path=[];
     $("canyonModalBackdrop").hidden=true;state.modal=false;
+    $("canyonModalBackdrop").classList.remove("canyon-victory-backdrop");
   }
   function recenterCanyonCamera(){
     world?.recenterCamera?.();
