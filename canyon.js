@@ -589,7 +589,7 @@
       brim.position.y=2.31;player.add(brim);
       // Reuse the exact authored explorer asset and joint names used in Chapter 1.
       // The procedural version stays as a reliable offline/model-load fallback.
-      const fallbackParts=[...player.children];
+      const fallbackParts=[...player.children].filter(o=>o!==heroLight&&o!==locatorRing);
       let explorerRig=null,explorerDisposed=false;
       const explorerStatus={status:"fallback"};
       async function loadCanyonExplorer(){
