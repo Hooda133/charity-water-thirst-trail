@@ -19,7 +19,7 @@
     active:false,paused:false,finished:false,x:170,y:425,
     energy:100,score:0,elapsed:0,done:new Set(),keys:new Set(),
     path:[],nearby:null,modal:false,valves:[0,0,0],repairStep:0,
-    lastSave:0,toastUntil:0,toast:""
+    lastSave:0,toastUntil:0,toast:"",scenic:false
   });
   let state=defaultState(),world=null,creating=false,lastFrame=0,raf=0;
   const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
@@ -483,12 +483,11 @@
       scene.fog=new THREE.FogExp2(0xdfb998,.0053);
       const camera=new THREE.PerspectiveCamera(47,1000/610,.1,300);
       camera.position.set(6.2,9.0,11.7);camera.lookAt(0,1.1,0);
-      // Honor the player's saved Valley graphics profile in Canyon as well.
-      let graphics={};
-      try{graphics=JSON.parse(localStorage.getItem("thirstTrailGraphics")||"null")||{};}
-      catch{/* use safe defaults when browser storage is disabled */}
-      const graphicsQuality=["low","medium","high","ultra"].includes(graphics.preset)?
+      // The same saved presets/settings as Chapter 1; can also change live.
+      let graphics=readGraphics();
+      let graphicsQuality=["low","medium","high","ultra"].includes(graphics.preset)?
         graphics.preset:"high";
+      let cameraSensitivity=clamp(Number(graphics.sensitivity)||1,.5,1.8);
       const renderer=new THREE.WebGLRenderer({alpha:false,antialias:true,powerPreference:"high-performance"});
       const requestedScale=clamp(Number(graphics.resolution)||1.1,.65,1.5);
       // Ultra can render above native resolution, with a cap to protect GPUs.
@@ -774,7 +773,10 @@
       // Drag-to-explore is independent of character movement and mission progression.
       const pan=new THREE.Vector3(),drag={id:null,x:0,y:0,startX:0,startY:0,moved:false,suppress:false};
       let zoom=1;
-      const recenterCamera=()=>{pan.set(0,0,0);zoom=1;cameraSnap=true;};
+      const recenterCamera=()=>{
+        state.scenic=false;syncScenicButton();
+        pan.set(0,0,0);zoom=1;cameraSnap=true;
+      };
       let cameraSnap=true;
       dom.style.cursor="grab";
       dom.addEventListener("pointerdown",event=>{
@@ -793,7 +795,8 @@
         const scale=2*Math.tan(camera.fov*Math.PI/360)*Math.max(8,camera.position.distanceTo(cameraTarget))/height*1.35;
         const right=new THREE.Vector3().setFromMatrixColumn(camera.matrixWorld,0).setY(0).normalize();
         const forward=new THREE.Vector3(cameraTarget.x-camera.position.x,0,cameraTarget.z-camera.position.z).normalize();
-        pan.addScaledVector(right,-dx*scale).addScaledVector(forward,dy*scale);
+        pan.addScaledVector(right,-dx*scale*cameraSensitivity)
+          .addScaledVector(forward,dy*scale*cameraSensitivity);
       });
       const finishDrag=event=>{
         if(drag.id!==event.pointerId)return;
@@ -890,10 +893,36 @@
           fadeRock(rock,rock.opacity);
         }
       };
-      let celebrationStarted=0;
+      let celebrationStarted=0,lastCssWidth=0,lastCssHeight=0;
+      const dayBackground=new THREE.Color(0x93b9c9),nightBackground=new THREE.Color(0x203f65),
+        dayFog=new THREE.Color(0xdfb998),nightFog=new THREE.Color(0x344d6b);
+      function applyCanyonGraphics(next){
+        graphics=next||{};graphicsQuality=
+          ["low","medium","high","ultra"].includes(graphics.preset)?graphics.preset:"high";
+        cameraSensitivity=clamp(Number(graphics.sensitivity)||1,.5,1.8);
+        const scale=clamp(Number(graphics.resolution)||1.1,.65,1.5);
+        const ratio=Math.min(2.25,(window.devicePixelRatio||1)*
+          (graphicsQuality==="ultra"?Math.max(1.35,scale):scale));
+        renderer.setPixelRatio(ratio);
+        const shadows=graphics.shadows!==false;
+        renderer.shadowMap.enabled=shadows;sun.castShadow=shadows;
+        const shadowSize=graphicsQuality==="low"?512:graphicsQuality==="medium"?1024:
+          graphicsQuality==="high"?1536:2048;
+        sun.shadow.mapSize.set(shadowSize,shadowSize);
+        sun.shadow.map?.dispose?.();sun.shadow.needsUpdate=true;
+        scene.fog.density=graphicsQuality==="low"?.008:graphicsQuality==="ultra"?.0047:.0053;
+        renderer.toneMappingExposure=graphicsQuality==="ultra"?1.20:graphicsQuality==="low"?1.10:1.14;
+        canyonArt?.setEffectsEnabled?.(graphics.effects!==false);
+      }
+      applyCanyonGraphics(graphics);
       world={
         dom,renderer,scene,camera,player,limbs,marks,broken,pipeMesh,water,
         recenterCamera,
+        setGraphicsSettings(next){applyCanyonGraphics(next);},
+        setScenic(enabled){
+          state.scenic=!!enabled;syncScenicButton();cameraSnap=true;
+          if(!enabled)pan.set(0,0,0);
+        },
         startCelebration(){celebrationStarted=performance.now()/1000;recenterCamera();},
         draw(time){
           const width=dom.clientWidth||1000,height=dom.clientHeight||610;
@@ -901,8 +930,11 @@
           if(camera.aspect!==targetWidth/targetHeight){
             camera.aspect=targetWidth/targetHeight;camera.updateProjectionMatrix();
           }
-          if(dom.width!==targetWidth||dom.height!==targetHeight)
+          // Compare CSS sizes, not canvas backing pixels (pixel ratio can be >1).
+          if(lastCssWidth!==targetWidth||lastCssHeight!==targetHeight){
             renderer.setSize(targetWidth,targetHeight,false);
+            lastCssWidth=targetWidth;lastCssHeight=targetHeight;
+          }
           const px=wX(state.x),pz=wZ(state.y);
           const delta=playerMotion.lastTime?
             clamp(time-playerMotion.lastTime,0,.05):.016;
@@ -951,14 +983,22 @@
             }
             rig.ExplorerEyes.scale.y=time%5.3<.12?.15:1;
           }
-          // Follow the *real* player every movement frame; manual panning is only
-          // temporary while stationary. A screen-space guard prevents offscreen travel.
-          const following=state.path.length>0||state.keys.size>0||actuallyMoving||celebrating;
+          // Cinematic overview is optional; moving instantly resumes hero follow.
+          const movingNow=state.path.length>0||state.keys.size>0||actuallyMoving;
+          if(movingNow&&state.scenic){
+            state.scenic=false;syncScenicButton();cameraSnap=true;
+          }
+          const following=movingNow||celebrating;
           if(following)pan.set(0,0,0);
           const baseX=px*worldSpread,baseZ=pz*worldSpread;
-          cameraTarget.set(clamp(baseX+pan.x,-31,31),1.1,clamp(baseZ+pan.z,-23,23));
-          pan.x=cameraTarget.x-baseX;pan.z=cameraTarget.z-baseZ;
-          cameraDesired.set(cameraTarget.x+6.2*zoom,9.0*zoom,cameraTarget.z+11.7*zoom);
+          if(state.scenic){
+            cameraTarget.set(0,1.1,0);
+            cameraDesired.set(0,31,37);
+          }else{
+            cameraTarget.set(clamp(baseX+pan.x,-31,31),1.1,clamp(baseZ+pan.z,-23,23));
+            pan.x=cameraTarget.x-baseX;pan.z=cameraTarget.z-baseZ;
+            cameraDesired.set(cameraTarget.x+6.2*zoom,9.0*zoom,cameraTarget.z+11.7*zoom);
+          }
           const followEase=1-Math.exp(-delta*(following?15:8));
           if(cameraSnap)camera.position.copy(cameraDesired);
           else camera.position.lerp(cameraDesired,followEase);
@@ -975,6 +1015,15 @@
             }
           }
           cameraSnap=false;
+          const daylight=canyonDaypart(state.elapsed);
+          const night=daylight.darkness;
+          scene.background.copy(dayBackground).lerp(nightBackground,night*.85);
+          scene.fog.color.copy(dayFog).lerp(nightFog,night*.73);
+          hemi.intensity=1.55-night*.65;
+          sun.intensity=3.2-night*2.35;
+          fill.intensity=.65+night*.40;
+          heroLight.intensity=.70+night*.35;
+          canyonArt?.setDaylight?.(night);
           keepExplorerVisible(time,delta,baseX,baseZ);
           const stageRect=parent.getBoundingClientRect();
           const viewRect=dom.getBoundingClientRect();
@@ -1049,7 +1098,7 @@
     sound.stopAmbience();
     state=defaultState();state.active=true;
     $("canyonImpactBurst").hidden=true;impactHideAt=0;
-    world?.recenterCamera?.();
+    world?.recenterCamera?.();syncScenicButton();
     if(saved)restore(saved);
     $("startScreen").hidden=true;$("gameScreen").hidden=true;$("canyonScreen").hidden=false;
     closeModal();refreshUI();
@@ -1082,6 +1131,18 @@
       "Your checkpoint is saved automatically. Resume when you are ready, or return to the chapter selector.",
       [{text:"▶ Resume canyon",primary:true,action:()=>{state.paused=false;closeModal();sound.sync();}},
        {text:"◈ Chapter selection",action:goHome}]);
+  }
+  function syncScenicButton(){
+    const active=!!state.scenic;
+    $("canyonScenic").setAttribute("aria-pressed",String(active));
+    $("canyonScenic").textContent=active?"◈ FOLLOW PLAYER":"◈ SCENIC VIEW";
+  }
+  function toggleCanyonScenic(){
+    if(!state.active||state.modal||state.paused)return;
+    state.scenic=!state.scenic;world?.setScenic?.(state.scenic);
+    syncScenicButton();
+    toast(state.scenic?"Scenic overview on · press V or move to follow your explorer.":"Following your explorer again.");
+    sound.cue("select");
   }
   function canyonHelp(){
     if(state.finished)return;
@@ -1125,6 +1186,9 @@
   syncCanyonSoundButton();
   $("canyonGraphics").addEventListener("click",()=>{$("graphicsButton").click();});
   $("canyonCameraReset").addEventListener("click",recenterCanyonCamera);
+  $("canyonScenic").addEventListener("click",toggleCanyonScenic);
+  window.addEventListener("trail:graphics",()=>world?.setGraphicsSettings?.(readGraphics()));
+  syncScenicButton();
   for(const btn of document.querySelectorAll("[data-canyon-move]")){
     const key={up:"w",down:"s",left:"a",right:"d"}[btn.dataset.canyonMove];
     if(!key)continue;
@@ -1142,6 +1206,7 @@
     if(key==="p"&&!event.repeat)pause();
     if(key==="h"&&!event.repeat)canyonHelp();
     if(key==="c"&&!event.repeat)recenterCanyonCamera();
+    if(key==="v"&&!event.repeat)toggleCanyonScenic();
   });
   window.addEventListener("keyup",event=>state.keys.delete(event.key.toLowerCase()));
   window.addEventListener("blur",()=>state.keys.clear());
