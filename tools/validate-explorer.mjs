@@ -8,20 +8,32 @@ const model=JSON.parse(readFileSync(resolve(root,"assets/characters/explorer.glt
 const script=readFileSync(resolve(root,"script.js"),"utf8");
 const html=readFileSync(resolve(root,"index.html"),"utf8");
 assert.equal(model.asset.version,"2.0");
-assert.ok(model.buffers.length===1 && model.buffers[0].uri.startsWith("data:application/octet-stream;base64,"));
-const binary=Buffer.from(model.buffers[0].uri.split(",")[1],"base64");
-assert.equal(binary.length,model.buffers[0].byteLength);
-assert.ok(binary.length<2_000_000,"Character should remain portable on laptops");
+assert.ok(model.buffers.length>=1,"Explorer needs at least one embedded geometry buffer");
+const binaries=model.buffers.map((buffer,i)=>{
+  assert.ok(buffer.uri?.startsWith("data:application/octet-stream;base64,"),
+    `Non-embedded geometry buffer ${i}`);
+  const bytes=Buffer.from(buffer.uri.split(",")[1],"base64");
+  assert.equal(bytes.length,buffer.byteLength,`Buffer ${i} byte length mismatch`);
+  return bytes;
+});
+const totalBytes=binaries.reduce((n,buffer)=>n+buffer.length,0);
+assert.ok(totalBytes<2_000_000,"Character should remain portable on laptops");
 const sizes={5123:2,5125:4,5126:4},dims={SCALAR:1,VEC3:3};
 for(const [i,v] of model.bufferViews.entries()){
-  assert.equal(v.byteOffset%4,0,`Unaligned buffer view ${i}`);
-  assert.ok(v.byteOffset+v.byteLength<=binary.length,`Buffer view ${i} extends beyond file`);
+  assert.ok(binaries[v.buffer],`Missing binary buffer for view ${i}`);
+  assert.equal((v.byteOffset||0)%4,0,`Unaligned buffer view ${i}`);
+  assert.ok((v.byteOffset||0)+v.byteLength<=binaries[v.buffer].length,
+    `Buffer view ${i} extends beyond its buffer`);
 }
 for(const [i,a] of model.accessors.entries()){
   const v=model.bufferViews[a.bufferView];
   const elementSize=sizes[a.componentType]*dims[a.type];
   assert.ok(v&&elementSize,`Bad accessor ${i}`);
-  assert.ok(a.count*elementSize<=v.byteLength,`Accessor ${i} extends beyond view`);
+  const stride=v.byteStride||elementSize;
+  assert.ok((a.byteOffset||0)+(a.count-1)*stride+elementSize<=v.byteLength,
+    `Accessor ${i} extends beyond view`);
+  assert.equal((a.byteOffset||0)%sizes[a.componentType],0,
+    `Accessor ${i} is misaligned`);
 }
 const required=[
   "ExplorerCharacter","ExplorerBody","ExplorerHead","ExplorerEyes","ExplorerScarfTail",
@@ -58,8 +70,9 @@ for(const [mi,mesh] of model.meshes.entries()){
     assert.equal(p.count,n.count,`Mesh ${mi} missing normals`);
     assert.equal(ix.count%3,0);
     const v=model.bufferViews[ix.bufferView],stride=sizes[ix.componentType];
+    const binary=binaries[v.buffer];
     for(let i=0;i<ix.count;i++){
-      const at=v.byteOffset+i*stride;
+      const at=(v.byteOffset||0)+(ix.byteOffset||0)+i*(v.byteStride||stride);
       const index=stride===2?binary.readUInt16LE(at):binary.readUInt32LE(at);
       assert.ok(index<p.count,`Mesh ${mi} invalid vertex index`);
     }
@@ -75,5 +88,5 @@ assert.ok(script.includes("rig.eyes.scale.y="),"Missing eye-blink animation");
 assert.ok(html.includes('"three/addons/"'),"Missing pinned Three.js import map");
 new Function(script);
 console.log(`✓ Original glTF explorer: ${model.nodes.length} rig nodes, ${triangles.toLocaleString()} triangles`);
-console.log(`✓ ${binary.length.toLocaleString()} bytes of valid embedded geometry; joints and mesh indices checked`);
+console.log(`✓ ${totalBytes.toLocaleString()} bytes across ${binaries.length} embedded buffers; joints and mesh indices checked`);
 console.log("✓ Runtime loader, procedural fallback, animation wiring and JavaScript syntax");
