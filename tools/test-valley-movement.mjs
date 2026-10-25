@@ -124,6 +124,66 @@ release('d');
 console.log('✓ Saved sound preference, initial checkpoint, immediate Continue and restart');
 console.log('✓ Modal, blur, chapter-selection and final-waypoint movement transitions');
 
+// A damaged local checkpoint should fall back safely, without breaking Continue.
+window.TrailProgress.save('valley',{
+ x:850,y:300,energy:90,score:12,elapsed:4,
+ done:{bad:true},inventory:'toolkit',supplies:true
+});
+nodes.get('valleyChapter').click();
+assert.deepEqual(Array.from(snapshot().quests),[]);
+assert.deepEqual(Array.from(snapshot().items),[]);
+assert.equal(snapshot().x,310,'A checkpoint inside the river restores to the safe starting bank');
+assert.equal(snapshot().y,620);
+
+// Exercise the actual quest, pipe-tile and safety-quiz callbacks end to end.
+// Only travel is accelerated through test-only coordinate access; no solver state
+// or completion function is replaced.
+nodes.get('startButton').click();
+const choose=index=>nodes.get('modalChoices').children[index].click();
+const go=(x,y)=>{state.x=x;state.y=y;press('e');};
+for(const [key,x,y,item] of [
+ ['elder',280,490,'fieldNotes'],['toolkit',455,765,'toolkit'],['gasket',1190,825,'gasket']
+]){
+ go(x,y);choose(0);
+ assert.ok(snapshot().quests.includes(key),`Quest ${key} completes through its interaction`);
+ assert.ok(snapshot().items.includes(item));
+ assert.ok(window.TrailProgress.saved('valley').done.includes(key),'Quest reward is saved immediately');
+}
+go(1540,690);
+assert.equal(state.modalKind,'pipe');
+const beforeBadFlow=state.energy;choose(0);
+assert.equal(state.energy,beforeBadFlow-2,'An incomplete pipe network cannot skip to the final quiz');
+assert.equal(state.modalKind,'pipe');
+for(let hint=0;hint<10;hint++){
+ nodes.get('pipeHint').click();
+ const text=nodes.get('pipeStatus').textContent;
+ if(text.includes('valid leak-free network'))break;
+ const match=text.match(/Tile (\d+).*click (\d+) more/);
+ assert.ok(match,'A pipe hint identifies a tile and its remaining clockwise rotations');
+ for(let turns=0;turns<Number(match[2]);turns++)
+   nodes.get('pipeGrid').children[Number(match[1])-1].click();
+}
+assert.ok(nodes.get('pipeStatus').className.includes('is-success'),'Actual tile rotations form a leak-free supplied network');
+choose(0);assert.equal(state.modalKind,'quiz');
+const beforeWrongSafety=state.energy;choose(1);
+assert.equal(state.energy,beforeWrongSafety-6,'Unsafe pump answer costs energy and keeps the quiz open');
+assert.equal(state.modalKind,'quiz');
+for(const answer of [0,1,2])choose(answer);
+assert.equal(snapshot().screen,'ended');
+assert.ok(snapshot().quests.includes('pump'));
+assert.equal(state.effect.kind,'victory');
+assert.equal(window.TrailProgress.unlocked('canyon'),true,'Pump victory unlocks the next chapter');
+assert.equal(window.TrailProgress.saved('valley'),null,'Completion removes the finished checkpoint');
+assert.ok(Number(values.get('thirstTrailBest'))>0,'Winning score is retained');
+nodes.get('modalChoices').children.find(n=>n.textContent.includes('Chapter selection')).click();
+nodes.get('valleyChapter').click();
+assert.equal(snapshot().screen,'playing');assert.equal(snapshot().x,310);
+assert.equal(snapshot().quests.length,0,'Replay starts with fresh quests');
+assert.equal(window.TrailProgress.saved('valley')?.x,310,'Completed chapters still save a new replay');
+assert.ok(window.TrailProgress.snapshot().completed.includes('valley'),'Replay keeps the completion/unlock record');
+console.log('✓ Malformed checkpoint recovery and full Valley quests → real pipe callbacks → safety quiz → victory');
+console.log('✓ Canyon unlock, winning score, completion checkpoint cleanup and resumable replay');
+
 
 // Exercise the REAL camera-controller click and release functions in isolation.
 // This catches JavaScript ReferenceErrors that a keyboard-only regression misses.
