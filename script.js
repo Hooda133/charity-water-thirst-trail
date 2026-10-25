@@ -72,13 +72,14 @@
     if(!chapters)return;
     const data=chapters.snapshot(),valleySave=!!data.saves.valley,
       canyonSave=!!data.saves.canyon,canyonUnlocked=chapters.unlocked("canyon");
-    $("valleyChapterStatus").textContent=data.completed.includes("valley")?"✓ Chapter complete · Replay":
-      valleySave?"▶ Continue saved journey":"Start chapter →";
+    $("valleyChapterStatus").textContent=valleySave?"▶ Continue saved journey":
+      data.completed.includes("valley")?"✓ Chapter complete · Replay":"Start chapter →";
     $("canyonChapter").disabled=!canyonUnlocked;
     $("canyonChapter").classList.toggle("is-locked",!canyonUnlocked);
     $("canyonChapter").classList.toggle("is-ready",canyonUnlocked);
-    $("canyonChapterStatus").textContent=data.completed.includes("canyon")?"✓ Chapter complete · Replay":
-      canyonUnlocked?(canyonSave?"▶ Continue saved chapter":"▶ Chapter unlocked"):"🔒 Finish Chapter 1 to unlock";
+    $("canyonChapterStatus").textContent=canyonUnlocked&&canyonSave?"▶ Continue saved chapter":
+      data.completed.includes("canyon")?"✓ Chapter complete · Replay":
+      canyonUnlocked?"▶ Chapter unlocked":"🔒 Finish Chapter 1 to unlock";
   }
   function showChapters(){
     closeModal(true);
