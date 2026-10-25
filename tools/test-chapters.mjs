@@ -109,6 +109,11 @@ for(let i=1;i<=9;i++){
 }
 test.get().keys.delete("d");
 assert.ok(canyon.snapshot().x>startX+15,"Canyon player must move on D key");
+events.keydown[0]({key:"d",target:{tagName:"BUTTON"}});
+assert.ok(test.get().keys.has("d"),"WASD still works after a toolbar button keeps focus");
+events.keyup[0]({key:"d"});
+events.keydown[0]({key:"d",target:{tagName:"INPUT"}});
+assert.equal(test.get().keys.has("d"),false,"Editing a control does not move the explorer");
 assert.equal(audioEvents.length,0,"Launching and walking in Canyon stay quiet");
 assert.equal(test.surface(500,350),.29,"The character stands on the bridge deck");
 assert.equal(test.surface(170,425),0,"Trail foot placement stays at ground level");

@@ -351,7 +351,7 @@
         graphics.preset:"medium";
       const renderer=new THREE.WebGLRenderer({alpha:false,antialias:true,powerPreference:"high-performance"});
       const requestedScale=clamp(Number(graphics.resolution)||1,.65,1.5);
-      renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,requestedScale*1.65));
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,1.7)*requestedScale);
       renderer.outputColorSpace=THREE.SRGBColorSpace;
       renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.14;
       renderer.shadowMap.enabled=graphics.shadows!==false;
@@ -511,7 +511,7 @@
       function applyGraphicsSettings(next={}){
         graphics={...graphics,...next};
         graphicsQuality=["low","medium","high","ultra"].includes(graphics.preset)?graphics.preset:"medium";
-        renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,clamp(Number(graphics.resolution)||1,.65,1.5)*1.65));
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,1.7)*clamp(Number(graphics.resolution)||1,.65,1.5));
         renderer.shadowMap.enabled=graphics.shadows!==false;sun.castShadow=renderer.shadowMap.enabled;
         const size=graphicsQuality==="low"?512:graphicsQuality==="medium"?1024:graphicsQuality==="high"?1536:2048;
         if(sun.shadow.mapSize.x!==size){
@@ -867,7 +867,8 @@
   window.addEventListener("keydown",event=>{
     if(!state.active)return;
     if(state.modal){if(event.key==="Escape"&&!state.finished){closeModal();state.paused=false;}return;}
-    if(["INPUT","SELECT","TEXTAREA","BUTTON"].includes(event.target?.tagName))return;
+    if(["INPUT","SELECT","TEXTAREA"].includes(event.target?.tagName))return;
+    if(["BUTTON","A"].includes(event.target?.tagName)&&[" ","Enter"].includes(event.key))return;
     const key=event.key.toLowerCase();
     if(["arrowup","arrowdown","arrowleft","arrowright"," "].includes(key))event.preventDefault();
     if(["w","a","s","d","arrowup","arrowdown","arrowleft","arrowright"].includes(key))state.keys.add(key);
