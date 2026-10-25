@@ -44,7 +44,7 @@ for(const source of [scripts.canyon,scripts.valley]){
  const refs=[...new Set([...source.matchAll(/\$\("([^"]+)"\)/g)].map(m=>m[1]))];
  assert.deepEqual(refs.filter(name=>!ids.has(name)),[],"Missing referenced HTML element");
 }
-const values=new Map(),events={},registry=new Map();
+const values=new Map(),events={},registry=new Map(),audioEvents=[];
 const Event=class{constructor(type){this.type=type;}};
 const storage={getItem(k){return values.get(k)||null;},setItem(k,v){values.set(k,String(v));}};
 const frameCtx=new Proxy({createLinearGradient(){return {addColorStop(){}};}},{get(obj,k){return obj[k]||(()=>{});}});
@@ -52,7 +52,7 @@ function node(id){
  const classes=new Set();
  return {
   id,textContent:"",innerHTML:"",dataset:{},hidden:false,style:{},children:[],listeners:{},
-  classList:{add(n){classes.add(n);},remove(n){classes.delete(n);},contains(n){return classes.has(n);}},
+  classList:{add(n){classes.add(n);},remove(n){classes.delete(n);},contains(n){return classes.has(n);},toggle(n,enabled){if(enabled)classes.add(n);else classes.delete(n);}},
   getContext(){return frameCtx;},focus(){},append(...children){this.children.push(...children);},
   replaceChildren(){this.children=[];},setAttribute(){},
   addEventListener(name,fn){this.listeners[name]=fn;},
@@ -64,6 +64,7 @@ const document={
  createElement:node,querySelectorAll(){return [];},addEventListener(){}
 };
 const window={
+ ThirstAudio:{tone(frequency,duration){audioEvents.push({frequency,duration});}},
  addEventListener(name,fn){(events[name]??=[]).push(fn);},
  dispatchEvent(event){for(const fn of events[event.type]||[])fn(event);},
  scrollTo(){}
@@ -84,7 +85,7 @@ assert.equal(progress.unlocked("canyon"),true);
 // Replace the graphics invocation in this isolated test copy, never in the game.
 const noGraphics=scripts.canyon.replace("save();buildWorld();","save(); /* isolated deterministic test */");
 const testCode=noGraphics.replace(/\}\)\(\);\s*$/,
-  'window.canyonTest={get:()=>state,interact,pressure:currentPressure,safe:pressureSafe};\n})();');
+  'window.canyonTest={get:()=>state,interact,pressure:currentPressure,safe:pressureSafe,surface:surfaceHeight};\n})();');
 runInNewContext(testCode,sandbox);
 const canyon=window.TrailCanyon,test=window.canyonTest;
 const select=()=>document.getElementById("canyonModalOptions").children;
@@ -108,8 +109,18 @@ for(let i=1;i<=9;i++){
 }
 test.get().keys.delete("d");
 assert.ok(canyon.snapshot().x>startX+15,"Canyon player must move on D key");
+events.keydown[0]({key:"d",target:{tagName:"BUTTON"}});
+assert.ok(test.get().keys.has("d"),"WASD still works after a toolbar button keeps focus");
+events.keyup[0]({key:"d"});
+events.keydown[0]({key:"d",target:{tagName:"INPUT"}});
+assert.equal(test.get().keys.has("d"),false,"Editing a control does not move the explorer");
+assert.equal(audioEvents.length,0,"Launching and walking in Canyon stay quiet");
+assert.equal(test.surface(500,350),.29,"The character stands on the bridge deck");
+assert.equal(test.surface(170,425),0,"Trail foot placement stays at ground level");
+assert.ok(test.surface(415,350)>0&&test.surface(415,350)<.29,"Bridge entry rises along its access ramp");
 go("surveyor");select()[0].listeners.click();
 assert.ok(canyon.snapshot().done.includes("surveyor"));
+assert.ok(audioEvents.some(e=>e.frequency===550)&&audioEvents.some(e=>e.frequency===750),"Interactions reuse Chapter 1 feedback tones");
 go("kit");select()[0].listeners.click();
 assert.ok(canyon.snapshot().done.includes("kit"));
 go("valves");assert.equal(test.safe(),false);
@@ -154,7 +165,26 @@ assert.equal(canyon.snapshot().active,false);
 assert.ok(progress.snapshot().completed.includes("canyon"));
 assert.equal(progress.saved("canyon"),null);
 assert.equal(canyon.snapshot().done.length,5);
+// Replaying a completed chapter must preserve both the completion badge and a
+// new resumable checkpoint rather than silently disabling all future saves.
+canyon.launch(true);
+assert.equal(canyon.snapshot().done.length,0);
+assert.ok(progress.saved("canyon"),"A completed chapter replay can save");
+test.get().x=248;test.get().score=75;
+canyon.suspend();canyon.launch();
+assert.equal(canyon.snapshot().x,248);
+assert.equal(canyon.snapshot().score,75);
+assert.ok(progress.snapshot().completed.includes("canyon"));
+// A damaged checkpoint is discarded field by field without crashing launch.
+canyon.suspend(); // Do not overwrite the fixture with the live replay.
+progress.save("canyon",{x:500,y:50,energy:"invalid",score:null,done:"broken",repairStep:Infinity});
+canyon.launch();
+assert.equal(canyon.snapshot().x,170,"A saved position inside the gorge is reset safely");
+assert.equal(canyon.snapshot().done.length,0);
+assert.equal(canyon.snapshot().energy,100);
+assert.equal(canyon.snapshot().repairStep,0);
 console.log("✓ Versioned chapter unlocking and Valley checkpoint storage");
 console.log("✓ Five canyon quests, 69 kPa valve solution, unsafe pressure penalty");
 console.log("✓ Aqueduct repair order, checkpoint restore, safety quiz and chapter completion");
 console.log("✓ Existing Valley JavaScript and new chapter UI references validated");
+console.log("✓ Completed-chapter replay saving, restore and malformed-checkpoint recovery");

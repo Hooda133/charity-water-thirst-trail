@@ -344,7 +344,7 @@
 
 /* SHOWCASE PASS — cinematic composition, clearer world controls and premium HUD. */
 .start-screen::before{
-  content:"";position:absolute;z-index:0;left:12%;top:3%;height:440px;width:580px;
+  content:"";position:absolute;z-index:0;left:12%;top:3%;height:440px;width:min(580px,88%);
   background:radial-gradient(ellipse,#31b5a423,transparent 70%);
   pointer-events:none;filter:blur(20px)
 }
@@ -550,4 +550,46 @@
   .modal-card.is-pipe #pipePuzzle{max-width:340px}
   .modal-card.is-pipe #modalTitle{font-size:25px}
   .modal-card.is-pipe #modalChoices .choice{min-height:40px;padding:8px 12px}
+}
+
+/* Final usability pass: anchor overlays to the playfield, not a fixed heading height. */
+.world-frame{display:grid;grid-template-columns:minmax(0,1fr)}
+.world-frame>.frame-label{grid-column:1;grid-row:1;min-width:0}
+.world-frame>canvas{grid-column:1;grid-row:2;min-width:0}
+.canvas-top-left{position:relative;grid-column:1;grid-row:2;align-self:start;justify-self:start;top:auto;left:auto;margin:8px 14px;z-index:2}
+.frame-label{flex-wrap:wrap;line-height:1.45}
+.frame-tools{flex-wrap:wrap}
+.nearby-prompt{max-width:calc(100% - 24px);white-space:normal;line-height:1.4}
+.nearby-prompt button{flex-shrink:0;min-height:40px}
+.quest-card strong,.quest-card small,.destination-btn .dest-name{line-height:1.45}
+.quest-card small{font-size:11px}
+.hud-stat strong,.resource-label strong,#canyonTimer,#canyonScore,.canyon-progress-label{font-variant-numeric:tabular-nums}
+.modal-card,.canyon-modal{overscroll-behavior:contain;scrollbar-gutter:stable}
+.modal-card.is-victory{overflow-x:hidden;overflow-y:auto}
+.modal-card.is-victory .modal-illustration{animation:none}
+.modal-backdrop:has(.is-victory){background:#041a2399;backdrop-filter:none}
+.graphics-panel{z-index:900;max-height:calc(100dvh - 96px);overflow-y:auto;overscroll-behavior:contain}
+@media(max-width:680px),(pointer:coarse){
+ .touch-controls{grid-column:1;grid-row:4;grid-template-columns:repeat(3,44px) 70px;grid-template-rows:repeat(2,44px)}
+ .nearby-prompt{grid-column:1;grid-row:3;font-size:12px}
+ .canvas-top-left{margin:8px}
+ .frame-tools>span{display:none}
+ .frame-tools{margin-left:auto}
+ .hud-buttons .button,.icon-button{min-height:40px}
+ .graphics-panel{right:12px;width:min(350px,calc(100vw - 24px))}
+}
+@media(max-width:420px){
+ .topbar{gap:10px}
+ .wordmark{font-size:18px;gap:8px}
+ .wordmark small{font-size:8px;letter-spacing:2.5px}
+ .water-mark{width:32px;height:34px;font-size:27px;flex-shrink:0}
+ .top-actions{gap:6px}
+ .icon-button{width:34px;min-height:38px;height:38px;font-size:17px}
+ .frame-label{gap:7px;padding:10px}
+ .frame-tools{gap:6px}
+ .frame-tools .scenic-button,.frame-tools .camera-reset{min-height:32px}
+ .hud-buttons{flex-basis:100%}
+ .hud-buttons .button{flex:1;padding-inline:8px}
+ .start-buttons .button{min-height:48px;padding-inline:18px;gap:20px}
+ .modal-card{max-height:calc(100dvh - 24px)}
 }

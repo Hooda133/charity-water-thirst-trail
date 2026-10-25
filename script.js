@@ -72,13 +72,14 @@
     if(!chapters)return;
     const data=chapters.snapshot(),valleySave=!!data.saves.valley,
       canyonSave=!!data.saves.canyon,canyonUnlocked=chapters.unlocked("canyon");
-    $("valleyChapterStatus").textContent=data.completed.includes("valley")?"✓ Chapter complete · Replay":
-      valleySave?"▶ Continue saved journey":"Start chapter →";
+    $("valleyChapterStatus").textContent=valleySave?"▶ Continue saved journey":
+      data.completed.includes("valley")?"✓ Chapter complete · Replay":"Start chapter →";
     $("canyonChapter").disabled=!canyonUnlocked;
     $("canyonChapter").classList.toggle("is-locked",!canyonUnlocked);
     $("canyonChapter").classList.toggle("is-ready",canyonUnlocked);
-    $("canyonChapterStatus").textContent=data.completed.includes("canyon")?"✓ Chapter complete · Replay":
-      canyonUnlocked?(canyonSave?"▶ Continue saved chapter":"▶ Chapter unlocked"):"🔒 Finish Chapter 1 to unlock";
+    $("canyonChapterStatus").textContent=canyonUnlocked&&canyonSave?"▶ Continue saved chapter":
+      data.completed.includes("canyon")?"✓ Chapter complete · Replay":
+      canyonUnlocked?"▶ Chapter unlocked":"🔒 Finish Chapter 1 to unlock";
   }
   function showChapters(){
     closeModal(true);
@@ -89,20 +90,23 @@
   }
   function continueValley(){
     const saved=chapters?.saved("valley");
-    start();
+    start({resume:!!saved});
     if(!saved)return;
     closeModal(true);
-    state.x=Math.max(50,Math.min(W-50,Number(saved.x)||310));
-    state.y=Math.max(50,Math.min(H-50,Number(saved.y)||620));
-    state.energy=Math.max(1,Math.min(100,Number(saved.energy)||100));
-    state.score=Math.max(0,Number(saved.score)||0);
-    state.elapsed=Math.max(0,Number(saved.elapsed)||0);
+    const number=(value,fallback)=>Number.isFinite(Number(value))?Number(value):fallback;
+    state.x=Math.max(50,Math.min(W-50,number(saved.x,310)));
+    state.y=Math.max(50,Math.min(H-50,number(saved.y,620)));
+    if(blocked(state.x,state.y)){state.x=310;state.y=620;}
+    state.energy=Math.max(1,Math.min(100,number(saved.energy,100)));
+    state.score=Math.max(0,number(saved.score,0));
+    state.elapsed=Math.max(0,number(saved.elapsed,0));
     lastValleySaveTime=state.elapsed;
-    state.done=new Set((saved.done||[]).filter(k=>spots[k]));
-    state.inventory=new Set((saved.inventory||[]).filter(x=>typeof x==="string"));
-    state.supplies=new Set((saved.supplies||[]).filter(x=>supplyCaches.some(s=>s.id===x)));
+    state.done=new Set((Array.isArray(saved.done)?saved.done:[]).filter(k=>spots[k]));
+    state.inventory=new Set((Array.isArray(saved.inventory)?saved.inventory:[]).filter(x=>typeof x==="string"));
+    state.supplies=new Set((Array.isArray(saved.supplies)?saved.supplies:[]).filter(x=>supplyCaches.some(s=>s.id===x)));
     state.campUses=Math.max(0,Math.min(2,Number(saved.campUses)||0));
     state.lastStatus="";updateNearby();updateUI();notify("Welcome back — valley progress restored.");
+    saveValley();
   }
   // The 3D world is loaded without blocking startup. If Three.js cannot be reached,
   // the original Canvas 2D renderer remains available as a playable fallback.
@@ -138,14 +142,21 @@
       const AudioClass = window.AudioContext || window.webkitAudioContext;
       if (!AudioClass) return;
       audioContext = audioContext || new AudioClass();
+      if(audioContext.state==="suspended")audioContext.resume()?.catch(()=>{});
+      duration=Math.max(.03,Math.min(.35,duration));
       const o=audioContext.createOscillator(),g=audioContext.createGain();
       o.type="sine";o.frequency.setValueAtTime(freq,audioContext.currentTime);
       o.frequency.exponentialRampToValueAtTime(Math.max(100,freq*.7),audioContext.currentTime+duration);
-      g.gain.setValueAtTime(.032,audioContext.currentTime);
+      g.gain.setValueAtTime(.001,audioContext.currentTime);
+      g.gain.linearRampToValueAtTime(.032,audioContext.currentTime+.006);
       g.gain.exponentialRampToValueAtTime(.001,audioContext.currentTime+duration);
       o.connect(g).connect(audioContext.destination);o.start();o.stop(audioContext.currentTime+duration);
+      o.onended=()=>{o.disconnect();g.disconnect();};
     }catch{/* Audio is optional */}
   }
+  // Both chapters share short interaction cues and the same persisted mute setting.
+  // No ambient oscillator, sound loop or background track is created.
+  window.ThirstAudio=Object.freeze({tone,get enabled(){return state.sound;}});
   // One gentle dawn-to-dusk cycle lasts eight in-game minutes. Exploration
   // remains fully playable after sunset; nothing changes collision or quests.
   function timeOfDay(elapsed){
@@ -338,20 +349,21 @@
       b.title=`Walk to ${sp.name}`;b.addEventListener("click",()=>navigateTo(key));ds.append(b);
     }
   }
-  function start(){
+  function start({resume=false}={}){
     lastValleySaveTime=0;
     Object.assign(state,{screen:"playing",energy:100,score:0,elapsed:0,x:310,y:620,walkT:0,
-      path:[],goal:null,destination:null,nearby:null,campUses:0,ended:false,lastStatus:"",cameraX:0,cameraY:0,effect:null,scenic:false});
+      path:[],goal:null,destination:null,nearby:null,campUses:0,ended:false,moving:false,lastStatus:"",cameraX:0,cameraY:0,effect:null,scenic:false});
     $("scenicViewButton").setAttribute("aria-pressed","false");
     $("scenicViewButton").textContent="◈ SCENIC VIEW";
     state.keys.clear();state.touch.clear();state.done.clear();state.inventory.clear();state.supplies.clear();
     if(state.impactTimer)clearTimeout(state.impactTimer);
     state.impactTimer=null;$("impactBurst").hidden=true;
     world3d?.recenter?.();
-    chapters?.clearSave("valley");
+    if(!resume)chapters?.clearSave("valley");
     $("startScreen").hidden=true;$("gameScreen").hidden=false;$("toast").hidden=true;
     setRenderLoading(!world3d,"Preparing the 2D expedition fallback…");
     closeModal(true);updateUI();
+    if(!resume)saveValley();
     if(world3d)world3d.focus();else canvas.focus({preventScroll:true});
     notify("MISSION STARTED · Visit the Village Elder to begin.");tone(480,.18);
     if(!safeStore.tutorialSeen())help();
@@ -419,7 +431,7 @@
     let dx=Number(key("arrowright","d","right"))-Number(key("arrowleft","a","left"));
     let dy=Number(key("arrowdown","s","down"))-Number(key("arrowup","w","up"));
     const direct=!!(dx||dy);if(direct){state.path=[];state.destination=null;state.goal=null;}
-    else if(state.path.length){const t=state.path[0],dd=dist(state,t);if(dd<11){state.path.shift();if(!state.path.length){state.goal=null;state.destination=null;updateNearby();return;}}
+    else if(state.path.length){const t=state.path[0],dd=dist(state,t);if(dd<11){state.path.shift();if(!state.path.length){state.moving=false;state.goal=null;state.destination=null;updateNearby();return;}}
       const to=state.path[0];if(to){dx=to.x-state.x;dy=to.y-state.y;}}
     if(!dx&&!dy){state.moving=false;return;}
     const length=Math.hypot(dx,dy);dx/=length;dy/=length;
@@ -435,6 +447,8 @@
     drain(speed*dt*(sprint?.020:.014));
   }
   function openModal({tag="FIELD NOTES",icon="💧",title,description,choices=[],progress=0,total=0,tip="",kind="dialog",allowClose=true,celebrateWin=false}){
+    saveValley();
+    state.keys.clear();state.touch.clear();state.moving=false;
     state.modalOpen=true;state.modalKind=kind;
     $("dialog").classList.toggle("is-victory",celebrateWin);
     // The pipe challenge uses a wider two-column workshop layout, while
@@ -465,6 +479,7 @@
     if(state.modalKind==="end"&&!silent)return;
     $("modalBackdrop").hidden=true;$("pipePuzzle").hidden=true;$("rainPanel").hidden=true;$("marshPanel").hidden=true;
     state.modalOpen=false;state.modalKind="";
+    if(!silent)saveValley();
     if(!silent&&state.screen==="playing"){
       if(world3d)world3d.focus();else canvas.focus({preventScroll:true});
     }
@@ -868,8 +883,9 @@
     openModal({tag:"GAME PAUSED",icon:"⏸️",title:"Take your time",description:"Your energy won't change while paused. Ready to continue your expedition?",kind:"pause",choices:[{text:"▶ Resume adventure",primary:true,action:()=>closeModal()},{text:"↻ Start a new expedition",action:start}]});
   }
   function help(){
+    if(window.TrailCanyon?.snapshot().active){window.TrailCanyon.pause?.();return;}
     safeStore.markTutorialSeen();
-    openModal({tag:"HOW TO PLAY",icon:"🧭",title:"Your adventure guide",description:"Move using WASD or arrow keys. On phones, use the on-screen directional buttons. Click the 3D world once to walk; hold and drag with the left button to pan the camera without moving, or right-drag to rotate around the landscape. Use the mouse wheel to zoom, and press C to return the camera to your explorer. The live mini-map shows your location and route; click one of its markers to travel there, or press M to hide or show it. Press V or select SCENIC VIEW above the world to see the full valley, and press it again to follow your explorer. When you're near a glowing marker, press E or tap INTERACT. Solve challenges, collect items, rotate the pipe sections during the pump repair, and restore water before your energy runs out. Raincatch Ridge is an optional hands-on collection activity. Rest at the camp to recharge. Press Shift to sprint (uses more energy).",kind:"help",choices:[{text:"Got it — let's go!",primary:true,action:()=>closeModal()}],tip:"BONUS ROUTES: Earn a test kit at the River Bank to survey Hill Spring, or inspect the collection station at Raincatch Ridge. Your current run resets on refresh; only your best score is saved."});
+    openModal({tag:"HOW TO PLAY",icon:"🧭",title:"Your adventure guide",description:"Move using WASD or arrow keys. On phones, use the on-screen directional buttons. Click the 3D world once to walk; hold and drag with the left button to pan the camera without moving, or right-drag to rotate around the landscape. Use the mouse wheel to zoom, and press C to return the camera to your explorer. The live mini-map shows your location and route; click one of its markers to travel there, or press M to hide or show it. Press V or select SCENIC VIEW above the world to see the full valley, and press it again to follow your explorer. When you're near a glowing marker, press E or tap INTERACT. Solve challenges, collect items, rotate the pipe sections during the pump repair, and restore water before your energy runs out. Raincatch Ridge is an optional hands-on collection activity. Rest at the camp to recharge. Press Shift to sprint (uses more energy).",kind:"help",choices:[{text:"Got it — let's go!",primary:true,action:()=>closeModal()}],tip:"BONUS ROUTES: Earn a test kit at the River Bank to survey Hill Spring, or inspect the collection station at Raincatch Ridge. Progress saves automatically on this device. Choose Continue from chapter selection after a refresh."});
   }
   const plants=[];
   let seed=24521;function random(){seed=(1664525*seed+1013904223)>>>0;return seed/4294967296;}
@@ -931,15 +947,16 @@
     const bounce=state.moving?Math.sin(state.walkT*2)*3:Math.sin(time*2.2)*1.3;
     ctx.save();ctx.translate(state.x,state.y+bounce);
     ellipse(0,29,21,9,"#1b484568");
-    // Boots, backpack, jacket and head.
+    // Keep the same dark-skinned explorer and back-mounted yellow jug in 2D.
     const step=state.moving?Math.sin(state.walkT*2)*7:0;
     roundRect(-13,18+step,10,17,3,"#254553");roundRect(4,18-step,10,17,3,"#254553");
-    roundRect(-21,-14,40,38,12,gradient(-21,-14,19,24,[[0,"#e98249"],[.55,"#f8b35a"],[1,"#c9673f"]]));
-    roundRect(state.facing===1?-22:13,-11,10,26,5,"#315666");
-    roundRect(-13,-16,26,29,8,"#3cae99");path([[-6,-10],[5,3]],2,"#a9e1bb");path([[5,-10],[-6,3]],2,"#a9e1bb");
-    ellipse(0,-26,19,19,"#bf7955");
+    roundRect(-21,-14,40,38,6,"#f5c928");
+    roundRect(-8,-20,16,8,3,"#d4a91e");
+    roundRect(-13,-16,26,29,8,"#278e88");
+    path([[-8,-13],[-7,10]],3,"#40372b");path([[8,-13],[7,10]],3,"#40372b");
+    ellipse(0,-26,19,19,"#603820");
     ctx.fillStyle="#1d363a";ctx.beginPath();ctx.arc(state.facing*7,-25,2.5,0,Math.PI*2);ctx.fill();
-    roundRect(-22,-40,40,11,6,"#fbd05b");roundRect(2,-34,24,5,3,"#e3b649");
+    roundRect(-18,-43,36,14,7,"#191719");
     ctx.fillStyle="#f9d69b";ctx.fillRect(-5,-27,3,2);
     ctx.restore();
   }
@@ -1002,7 +1019,9 @@
   }
   window.addEventListener("keydown",e=>{
     if(e.key==="Escape"&&state.modalOpen&&state.modalKind!=="end"){closeModal();return;}
-    if(state.modalOpen)return;
+    if(state.screen!=="playing"||state.modalOpen||!$("graphicsPanel").hidden)return;
+    if(e.target?.closest?.('input,select,textarea,[contenteditable="true"]'))return;
+    if((e.key===" "||e.key==="Enter")&&e.target?.closest?.('button,a'))return;
     const k=e.key.toLowerCase();if(["arrowup","arrowdown","arrowleft","arrowright"," "].includes(k))e.preventDefault();
     if(["arrowup","arrowdown","arrowleft","arrowright","w","a","s","d","shift"].includes(k))state.keys.add(k);
     if((k==="e"||k===" ")&&!e.repeat&&state.screen==="playing")interact();
@@ -1062,7 +1081,16 @@
   $("resetButton").addEventListener("click",()=>openModal({tag:"NEW EXPEDITION",icon:"↻",title:"Restart this journey?",description:"Your current expedition progress and inventory will reset. Your best score will be kept.",choices:[{text:"Restart adventure",primary:true,action:start},{text:"Keep playing",action:()=>closeModal()}]}));
   $("modalClose").addEventListener("click",()=>closeModal());
   $("modalBackdrop").addEventListener("click",e=>{if(e.target===$("modalBackdrop")&&state.modalKind!=="end")closeModal();});
-  $("soundButton").addEventListener("click",()=>{state.sound=!state.sound;$("soundButton").setAttribute("aria-pressed",String(state.sound));$("soundButton").textContent=state.sound?"♫":"♪̸";if(state.sound)tone();});
+  function syncSoundButton(){
+    $("soundButton").setAttribute("aria-pressed",String(state.sound));
+    $("soundButton").setAttribute("aria-label",state.sound?"Mute interaction sounds":"Enable interaction sounds");
+    $("soundButton").textContent=state.sound?"♫":"♪̸";
+  }
+  $("soundButton").addEventListener("click",()=>{
+    state.sound=!state.sound;safeStore.setSound(state.sound);syncSoundButton();
+    if(state.sound)tone();
+  });
+  syncSoundButton();
   const graphicsPanel=$("graphicsPanel"),qualityPreset=$("qualityPreset");
   function syncGraphicsPanel(){
     qualityPreset.value=graphicsPresets[graphicsPreset]?graphicsPreset:"medium";
@@ -1077,10 +1105,15 @@
     world3d?.setGraphicsSettings(graphics);
     safeStore.setGraphics(graphicsProfile());
     syncGraphicsPanel();
+    window.dispatchEvent(new CustomEvent("trail:graphics",{detail:graphicsProfile()}));
   }
   $("graphicsButton").addEventListener("click",()=>{
     graphicsPanel.hidden=!graphicsPanel.hidden;
-    if(!graphicsPanel.hidden)syncGraphicsPanel();
+    if(!graphicsPanel.hidden){
+      if(window.TrailCanyon?.snapshot().active)window.TrailCanyon.pause?.();
+      else if(state.screen==="playing"&&!state.modalOpen)pause();
+      syncGraphicsPanel();
+    }
   });
   $("graphicsClose").addEventListener("click",()=>{graphicsPanel.hidden=true;});
   qualityPreset.addEventListener("change",()=>{
@@ -1144,7 +1177,7 @@
     scene.fog = new THREE.FogExp2(0x9bc9d1, .009);
     const camera = new THREE.PerspectiveCamera(46, 1, .1, 180);
     const renderer = new THREE.WebGLRenderer({antialias:true, alpha:false, powerPreference:"high-performance"});
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, graphics.resolution * 1.7));
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1,1.7)*graphics.resolution);
     renderer.outputColorSpace = THREE.SRGBColorSpace;
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
     renderer.toneMappingExposure = 1.12;
@@ -1157,7 +1190,7 @@
       effectsEnabled=!!next.effects;
       cameraSensitivity=Math.max(.5,Math.min(1.8,Number(next.sensitivity)||1));
       const scale=Math.max(.65,Math.min(1.5,Number(next.resolution)||1));
-      renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,scale*1.7));
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,1.7)*scale);
       renderer.shadowMap.enabled=!!next.shadows;
       sun.castShadow=!!next.shadows;
       const quality=graphicsPreset==="ultra"?2048:graphicsPreset==="high"?1536:graphicsPreset==="medium"?1024:512;
@@ -1642,38 +1675,20 @@
     road([[455,765],[510,870],[560,970]],.67);
     // Timber bridge landmark at the existing collision-safe crossing. The
     // deck is decorative only; navigation remains governed by the 2D route.
-    function riverBridge(screenY){
-      const riverX=wx(riverCenter(screenY)),z=wz(screenY);
-      const bridgeGroup=new THREE.Group();bridgeGroup.position.set(riverX,.05,z);scene.add(bridgeGroup);
-      const bridgeWood=makeMat(0x8a5536,.92);
-      const bridgeTrim=makeMat(0xc58b55,.84);
-      const bridgeStone=makeMat(0x71856f,.98);
-      box(bridgeGroup,bridgeWood,0,0,0,5.8,.18,1.42);
-      for(let i=-8;i<=8;i++){
-        const plank=box(bridgeGroup,bridgeTrim,i*.34,.13,0,.27,.10,1.52,false);
-        plank.rotation.y=(i%3-1)*.018;
-      }
-      for(const x of [-2.45,2.45])for(const zOffset of [-.55,.55]){
-        box(bridgeGroup,bridgeWood,x,.78,zOffset,.18,1.45,.18);
-        box(bridgeGroup,bridgeTrim,x*.5,1.42,zOffset,4.9,.13,.13);
-      }
-      for(const x of [-2.15,-1.08,0,1.08,2.15])for(const zOffset of [-.55,.55])
-        box(bridgeGroup,bridgeTrim,x,.82,zOffset,.10,1.05,.10);
-      for(const x of [-2.05,2.05])for(const zOffset of [-.52,.52])
-        cyl(bridgeGroup,bridgeStone,x,-.13,zOffset,.28,.38,.62,7);
-      const ropeMat=new THREE.MeshStandardMaterial({color:0x554438,roughness:1});
-      for(const zOffset of [-.60,.60]){
-        const ropeCurve=new THREE.CatmullRomCurve3([
-          new THREE.Vector3(-2.45,1.28,zOffset),
-          new THREE.Vector3(0,1.08,zOffset),
-          new THREE.Vector3(2.45,1.28,zOffset)
-        ]);
-        const rope=new THREE.Mesh(new THREE.TubeGeometry(ropeCurve,12,.035,5,false),ropeMat);
-        bridgeGroup.add(rope);
-      }
-      contactShadow(riverX,z,2.2,.72,.16);
+    const bridgeScreenY=(532+635)/2,bridgeHalfDepth=1.365;
+    const bridgeX=wx(riverCenter(bridgeScreenY)),bridgeZ=wz(bridgeScreenY);
+    function bridgeGroundHeight(x,z){
+      const offset=x-bridgeX,d=Math.abs(offset);
+      if(Math.abs(z-bridgeZ)>bridgeHalfDepth+1e-6||d>4+1e-6)return terrainElevation(x,z);
+      if(d<=3.18)return .57;
+      // Use the same two planar triangles as the timber ramp, including its slope.
+      const edgeX=bridgeX+Math.sign(offset)*4,t=Math.min(1,Math.max(0,(d-3.18)/.82));
+      const u=Math.min(1,Math.max(0,(z-bridgeZ+bridgeHalfDepth)/(bridgeHalfDepth*2)));
+      const low=terrainElevation(edgeX,bridgeZ-bridgeHalfDepth);
+      const high=terrainElevation(edgeX,bridgeZ+bridgeHalfDepth);
+      return t+u<=1?.57+(low-.57)*t:
+        low*(1-u)+.57*(1-t)+high*(t+u-1);
     }
-    riverBridge(580);
     // Hand-set path shoulders and courtyard cobbles break up the broad grass
     // plane while staying decorative and outside the navigation collision map.
     const cobbleGeo=new THREE.IcosahedronGeometry(1,1);
@@ -1720,7 +1735,8 @@
       light.position.set(0,1.14,0);g.add(light);lanternLights.push(light);
     }
     // The bridge is true geometry: elevated planks, support pillars, railings and posts.
-    const bridge=new THREE.Group();bridge.position.set(wx(850),0,wz(580));scene.add(bridge);
+    // One detailed crossing replaces the two previously overlapping bridge meshes.
+    const bridge=new THREE.Group();bridge.position.set(bridgeX,0,bridgeZ);scene.add(bridge);
     box(bridge,mats.wood,0,.24,0,6.35,.37,2.65);
     for(let i=0;i<25;i++){
       const x=-3.06+i*.255;
@@ -1736,6 +1752,17 @@
       box(bridge,mats.lightWood,0,1.24,side*1.33,6.45,.12,.12);
     }
     for(const x of [-2.75,2.75])for(const z of [-.95,.95])cyl(bridge,mats.wood,x,-.26,z,.21,.27,1.3);
+    for(const side of [-1,1]){
+      const verts=[];
+      for(const [x,z] of [[side*3.18,-bridgeHalfDepth],[side*3.18,bridgeHalfDepth],
+        [side*4,-bridgeHalfDepth],[side*4,bridgeHalfDepth]])
+        verts.push(x,bridgeGroundHeight(bridgeX+x,bridgeZ+z),z);
+      const ramp=new THREE.BufferGeometry();
+      ramp.setAttribute("position",new THREE.Float32BufferAttribute(verts,3));
+      ramp.setIndex(side>0?[0,1,2,2,1,3]:[0,2,1,2,3,1]);ramp.computeVertexNormals();
+      mesh(ramp,mats.wood,bridge,false);
+    }
+    contactShadow(bridgeX,bridgeZ,2.7,1.25,.16);
     // Bridge ropes and extra braces add detail while preserving its safe crossing footprint.
     for(const side of [-1,1]){
       for(let i=0;i<6;i++){
@@ -1918,9 +1945,19 @@
       dummy.scale.setScalar(.55+rng()*1.5);dummy.updateMatrix();instanced.setMatrixAt(i,dummy.matrix);
     }
     instanced.instanceMatrix.needsUpdate=true;scene.add(instanced);
+    const smallFlowerBatches=[
+      new THREE.InstancedMesh(unitSphere,makeMat(0xffffff),48),
+      new THREE.InstancedMesh(unitSphere,flowerMat,47)
+    ];
+    dummy.rotation.set(0,0,0);dummy.scale.set(.085,.09,.085);
     for(let i=0;i<95;i++){
-      const x=(rng()-.5)*43,z=(rng()-.5)*26;
-      ball(scene,i%2?flowerMat:makeMat(0xffffff),x,.16,z,.085,.09,.085,false);
+      // Keep the original two RNG draws and alternating colors at each location.
+      dummy.position.set((rng()-.5)*43,.16,(rng()-.5)*26);dummy.updateMatrix();
+      smallFlowerBatches[i%2].setMatrixAt(Math.floor(i/2),dummy.matrix);
+    }
+    for(const batch of smallFlowerBatches){
+      batch.castShadow=false;batch.receiveShadow=true;
+      batch.instanceMatrix.needsUpdate=true;scene.add(batch);
     }
   
     // Delicate butterflies add motion close to the paths and garden.
@@ -2455,7 +2492,8 @@
       c.strokeStyle="rgba(255,229,148,.8)";c.lineWidth=4;c.stroke();
       c.fillStyle="#fff5d6";c.font="bold 40px system-ui";c.textAlign="center";
       c.fillText(title,256,80,450);
-      return new THREE.CanvasTexture(cn);
+      const texture=new THREE.CanvasTexture(cn);texture.colorSpace=THREE.SRGBColorSpace;
+      return texture;
     }
     const markers={};
     for(const [key,sx,sy,name,color] of spots){
@@ -2465,8 +2503,9 @@
       ring.rotation.x=-Math.PI/2;ring.position.y=.15;
       const beacon=mesh(new THREE.CylinderGeometry(.07,.45,1.5,12),new THREE.MeshBasicMaterial({color,transparent:true,opacity:.15,depthWrite:false}),g,false);
       beacon.position.y=.90;
-      const badge=new THREE.Sprite(new THREE.SpriteMaterial({map:labelTexture(name),transparent:true,depthTest:false,depthWrite:false}));
-      badge.position.set(0,3.28,0);badge.scale.set(3.45,.86,1);g.add(badge);
+      const badge=new THREE.Sprite(new THREE.SpriteMaterial({map:labelTexture(name),transparent:true,depthTest:false,depthWrite:false,fog:false}));
+      badge.renderOrder=1000;
+      badge.position.set(0,3.4,0);badge.scale.set(4.1,1.03,1);g.add(badge);
       const dot=ball(g,new THREE.MeshBasicMaterial({color}),0,1.72,0,.23,.23,.23,false);
       markers[key]={group:g,ring,beacon,dot,mat};
     }
@@ -2906,7 +2945,7 @@
           view.style.width="100%";view.style.height="auto";
           view.style.aspectRatio="1000 / 610";
         }
-        lastParent=parent;lastWidth=0;lastHeight=0;
+        lastParent=parent;lastWidth=0;lastHeight=0;firstFrame=true;
       }
       const rect=parent===hero?hero.getBoundingClientRect():host.getBoundingClientRect();
       const width=Math.max(200,Math.floor(rect.width||1000));
@@ -2959,8 +2998,7 @@
       }
       const playerX=wx(state.x),playerZ=wz(state.y);
       const actualDistance=Number.isFinite(explorer.userData.lastX)?Math.hypot(playerX-explorer.userData.lastX,playerZ-explorer.userData.lastZ):0;
-      const crossing=state.y>530&&state.y<635&&state.x>735&&state.x<967;
-      const playerY=crossing?.58:terrainElevation(playerX,playerZ);
+      const playerY=bridgeGroundHeight(playerX,playerZ);
       explorer.position.set(playerX,playerY,playerZ);
       const isMoving=!!state.moving&&state.screen==="playing";
       const effect=state.effect;
@@ -3031,6 +3069,12 @@
         interaction:!!state.modalOpen||!!state.nearby,victory:celebrating||(state.screen==="ended"&&state.effect?.kind==="victory"),reduced:reduceMotion
       });
       explorer.userData.lastX=playerX;explorer.userData.lastZ=playerZ;
+      // Disabled effects leave no frozen water glints or wildlife behind.
+      for(const wave of ripples)wave.visible=effectsEnabled;
+      for(const shine of glints)shine.mesh.visible=effectsEnabled;
+      for(const item of butterflies)item.group.visible=effectsEnabled;
+      for(const bird of birds)bird.group.visible=effectsEnabled;
+      for(const smoke of chimneySmokes)smoke.puff.visible=effectsEnabled;
       if(!reduceMotion&&effectsEnabled){
         // Time-based displacement stays consistent across refresh rates.
         for(let i=0;i<ripples.length;i++){
@@ -3252,8 +3296,8 @@
       if(firstFrame){
         camera.position.copy(camPos);camTarget.copy(aim);firstFrame=false;
       }else{
-        camera.position.lerp(camPos,.055);
-        camTarget.lerp(aim,.075);
+        camera.position.lerp(camPos,1-Math.exp(-3.4*cameraFrameDelta));
+        camTarget.lerp(aim,1-Math.exp(-4.7*cameraFrameDelta));
       }
       camera.lookAt(camTarget);
       characterVisibility?.update(camera,frameDelta);

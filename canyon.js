@@ -23,12 +23,20 @@
   });
   let state=defaultState(),world=null,creating=false,lastFrame=0,raf=0;
   const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+  // Reuse Chapter 1's optional, muted-by-default-setting audio path. Canyon has
+  // only short action cues: no oscillator, timer or ambient sound loop of its own.
+  const sound=(frequency=620,duration=.09)=>window.ThirstAudio?.tone(frequency,duration);
   const pointDistance=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y);
   const wX=x=>(x-500)/24,wZ=y=>(y-305)/24;
   const leftSide=x=>x<480,rightSide=x=>x>550;
   function blocked(x,y){
     if(x<39||x>961||y<43||y>567)return true;
     return x>459&&x<558&&(y<316||y>392);
+  }
+  function surfaceHeight(x,y){
+    if(y<316||y>392)return 0;
+    // Match the .29-high crossing deck and its two short access ramps.
+    return .29*Math.min(clamp((x-405)/19,0,1),clamp((598-x)/19,0,1));
   }
   function pathTo(point){
     if(!state.active||state.paused||state.modal)return;
@@ -71,25 +79,28 @@
   }
   function restore(saved){
     if(!saved||typeof saved!=="object")return;
-    state.x=clamp(Number(saved.x)||170,45,955);
-    state.y=clamp(Number(saved.y)||425,45,565);
+    const number=(value,fallback)=>value!==null&&value!==undefined&&Number.isFinite(Number(value))?Number(value):fallback;
+    state.x=clamp(number(saved.x,170),45,955);
+    state.y=clamp(number(saved.y,425),45,565);
     if(blocked(state.x,state.y)){state.x=170;state.y=425;}
-    state.energy=clamp(Number(saved.energy)||100,1,100);
-    state.score=Math.max(0,Number(saved.score)||0);
-    state.elapsed=Math.max(0,Number(saved.elapsed)||0);
-    state.done=new Set((saved.done||[]).filter(key=>goals[key]));
+    state.energy=clamp(number(saved.energy,100),1,100);
+    state.score=Math.max(0,number(saved.score,0));
+    state.elapsed=Math.max(0,number(saved.elapsed,0));
+    state.done=new Set((Array.isArray(saved.done)?saved.done:[]).filter(key=>questOrder.includes(key)));
     if(Array.isArray(saved.valves)&&saved.valves.length===3)
       state.valves=saved.valves.map(x=>clamp(Math.trunc(Number(x)||0),0,3));
-    state.repairStep=clamp(Math.trunc(Number(saved.repairStep)||0),0,4);
+    state.repairStep=clamp(Math.trunc(number(saved.repairStep,0)),0,4);
   }
   function completeQuest(key,points){
     if(state.done.has(key))return;
     state.done.add(key);state.score+=points;
+    if(key!=="cistern")sound(750,.13);
     save();refreshUI();
     toast("✓ "+goals[key].title+" complete! +"+points+" impact");
   }
   function modal(tag,title,text,choices,extra){
     state.modal=true;state.keys.clear();state.path=[];
+    save();
     $("canyonModalTag").textContent=tag;
     $("canyonModalTitle").textContent=title;
     $("canyonModalText").textContent=text;
@@ -103,12 +114,14 @@
       b.addEventListener("click",item.action);actions.append(b);
     }
     $("canyonModalBackdrop").hidden=false;
+    $("canyonModal").classList.toggle("is-victory",state.finished);
     $("canyonModal").scrollTop=0;
     $("canyonModal").focus({preventScroll:true});
+    sound(550,.07);
   }
   function closeModal(){
     state.modal=false;$("canyonModalBackdrop").hidden=true;
-    canvas.focus({preventScroll:true});
+    (world?.dom||canvas).focus({preventScroll:true});
   }
   function interact(){
     if(!state.active||state.paused||state.modal)return;
@@ -116,6 +129,7 @@
     if(!key)return toast("Walk toward a glowing mission marker and press E.");
     state.path=[];
     if(key==="rest"){
+      sound();
       state.energy=Math.min(100,state.energy+34);
       toast("Rested in the canyon shade · +34 energy");save();refreshUI();
       return;
@@ -153,7 +167,7 @@
         const row=document.createElement("div");row.className="canyon-valve";
         const label=document.createElement("strong");label.textContent=["Intake · +16 kPa","Regulator · +13 kPa","Return · +11 kPa"][i];
         const btn=document.createElement("button");btn.type="button";btn.textContent="OPEN "+state.valves[i]+" / 3";
-        btn.addEventListener("click",()=>{state.valves[i]=(state.valves[i]+1)%4;redraw(root);save();});
+        btn.addEventListener("click",()=>{state.valves[i]=(state.valves[i]+1)%4;sound(430,.045);redraw(root);save();});
         row.append(label,btn);root.append(row);
       }
       const meter=document.createElement("div");meter.className="canyon-pressure-meter";
@@ -166,7 +180,8 @@
       "Tune three valve settings. The pressure must be in the safe operating range, the regulator must be open, and intake/return flow must stay balanced.",
       [{text:"💧 Test pressure",primary:true,action:()=>{
         if(pressureSafe()){closeModal();completeQuest("valves",250);return;}
-        state.energy=Math.max(15,state.energy-4);
+        state.energy=Math.max(7,state.energy-4);
+        sound(180,.10);
         toast("Pressure outside safe range or unbalanced · −4 energy");
         valveChallenge();save();
       }},{text:"↩ Continue exploring",action:()=>{save();closeModal();}}],
@@ -183,10 +198,11 @@
         const label=document.createElement("small");label.textContent=repairOrder[i];btn.append(label);
         btn.addEventListener("click",()=>{
           if(i===state.repairStep){
-            state.repairStep++;save();
+            state.repairStep++;sound(620,.06);save();
             if(state.repairStep===4){closeModal();completeQuest("span",310);return;}
             draw(root);
           }else{
+            sound(180,.08);
             toast("Secure the components in a safe construction order.");
           }
         });board.append(btn);
@@ -206,14 +222,16 @@
       [{text:"Test water quality and follow local treatment and monitoring procedures",primary:true,action:()=>{
         closeModal();completeQuest("cistern",430);finish();
       }},{text:"If the water looks clear, it must be safe",action:()=>{
-        state.energy=Math.max(15,state.energy-5);
+        state.energy=Math.max(7,state.energy-5);
+        sound(180,.10);
         toast("Appearance does not prove drinking-water safety. −5 energy");
-        cisternChallenge();
+        cisternChallenge();save();
       }},{text:"Return to the canyon",action:closeModal}]);
   }
   function finish(){
     if(state.finished)return;
     state.finished=true;state.active=false;state.score+=Math.round(state.energy)*2;
+    sound(990,.18);
     progress?.complete("canyon");refreshUI();
     modal("✦ CHAPTER COMPLETE","The aqueduct flows again!",
       "You brought the canyon system back into service and verified the water-safety steps. The Forgotten Canyon is complete! Total impact: "+
@@ -308,8 +326,12 @@
       c.font="20px system-ui";c.textAlign="center";c.fillStyle="#fff";c.fillText(o.icon,o.x,o.y+7);
       c.font="800 13px system-ui";c.fillStyle="#243a40";c.fillText(o.title,o.x,o.y-26);
     }
-    c.beginPath();c.arc(state.x,state.y,16,0,Math.PI*2);c.fillStyle="#173d51";c.fill();c.lineWidth=3;c.strokeStyle="#f2da89";c.stroke();
-    c.fillStyle="#fff7da";c.font="900 21px system-ui";c.textAlign="center";c.fillText("◉",state.x,state.y+7);
+    // The lightweight fallback keeps the same dark-skinned, teal-clad explorer
+    // and a single yellow jug on his back (above the torso in this top view).
+    c.fillStyle="#f5c928";c.fillRect(state.x-9,state.y-17,18,17);
+    c.beginPath();c.ellipse(state.x,state.y+2,12,13,0,0,Math.PI*2);c.fillStyle="#278e88";c.fill();
+    c.beginPath();c.arc(state.x,state.y-7,8,0,Math.PI*2);c.fillStyle="#603820";c.fill();
+    c.fillStyle="#191719";c.fillRect(state.x-7,state.y-15,14,5);
   }
   async function buildWorld(){
     if(world||creating)return;
@@ -326,11 +348,11 @@
       let graphics={};
       try{graphics=JSON.parse(localStorage.getItem("thirstTrailGraphics")||"null")||{};}
       catch{/* use safe defaults when browser storage is disabled */}
-      const graphicsQuality=["low","medium","high","ultra"].includes(graphics.preset)?
-        graphics.preset:"high";
+      let graphicsQuality=["low","medium","high","ultra"].includes(graphics.preset)?
+        graphics.preset:"medium";
       const renderer=new THREE.WebGLRenderer({alpha:false,antialias:true,powerPreference:"high-performance"});
-      const requestedScale=clamp(Number(graphics.resolution)||1.1,.65,1.5);
-      renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,requestedScale*1.65));
+      const requestedScale=clamp(Number(graphics.resolution)||1,.65,1.5);
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,1.7)*requestedScale);
       renderer.outputColorSpace=THREE.SRGBColorSpace;
       renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.14;
       renderer.shadowMap.enabled=graphics.shadows!==false;
@@ -396,16 +418,20 @@
         p.rotation.y=Math.atan2(wX(b[0])-wX(a[0]),wZ(b[1])-wZ(a[1]));
       }
       // Cross-canyon bridge with guard rails.
-      const bridgeZ=wZ(350);
+      const bridgeZ=wZ(354);
       for(let i=0;i<18;i++){
-        const plank=box(timber,-3.0+i*.36,.20,bridgeZ,.33,.18,2.55);
+        const plank=box(timber,-3.0+i*.36,.20,bridgeZ,.33,.18,3.2);
         plank.rotation.y=Math.sin(i*.65)*.015;
       }
+      for(const [x,tilt] of [[-3.56,1],[3.68,-1]]){
+        const ramp=box(timber,x,.115,bridgeZ,.85,.06,3.2);
+        ramp.rotation.z=tilt*Math.atan2(.29,.8);
+      }
       for(const edge of [-1,1])for(let i=0;i<10;i++){
-        box(timber,-3.0+i*.7,.78,bridgeZ+edge*1.25,.12,1.15,.12);
+        box(timber,-3.0+i*.7,.78,bridgeZ+edge*1.54,.12,1.15,.12);
       }
       for(const edge of [-1,1]){
-        box(iron,0,1.29,bridgeZ+edge*1.25,6.5,.11,.11);
+        box(iron,0,1.29,bridgeZ+edge*1.54,6.5,.11,.11);
       }
       // Broken aqueduct and water tank (visually restored after repair).
       const aqueduct=new THREE.Group();scene.add(aqueduct);
@@ -478,6 +504,24 @@
       }catch(error){
         console.warn("Canyon advanced scenery unavailable; using safe original terrain.",error);
       }
+      const canyonEffects=[];
+      scene.traverse(o=>{
+        if(o.isPoints||(o.isMesh&&o.geometry?.type==="IcosahedronGeometry"&&o.material?.transparent&&o.material.opacity<.4))
+          canyonEffects.push(o);
+      });
+      function applyGraphicsSettings(next={}){
+        graphics={...graphics,...next};
+        graphicsQuality=["low","medium","high","ultra"].includes(graphics.preset)?graphics.preset:"medium";
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,1.7)*clamp(Number(graphics.resolution)||1,.65,1.5));
+        renderer.shadowMap.enabled=graphics.shadows!==false;sun.castShadow=renderer.shadowMap.enabled;
+        const size=graphicsQuality==="low"?512:graphicsQuality==="medium"?1024:graphicsQuality==="high"?1536:2048;
+        if(sun.shadow.mapSize.x!==size){
+          sun.shadow.map?.dispose();sun.shadow.map=null;
+          sun.shadow.mapSize.set(size,size);sun.shadow.needsUpdate=true;
+        }
+        for(const o of canyonEffects)o.visible=graphics.effects!==false;
+      }
+      applyGraphicsSettings(graphics);
       // Floating, player-facing world mission labels.
       const marks=[];
       for(const [key,obj] of Object.entries(goals)){
@@ -510,11 +554,11 @@
       const player=new THREE.Group();scene.add(player);
       // Character remains human-sized while landscape and landmarks spread apart.
       player.scale.set(1/worldSpread,1,1/worldSpread);
-      const jacket=mat(0x1c8d8a),skin=mat(0xe0a87d),hat=mat(0xf4c776),boots=mat(0x293b50);
+      const jacket=mat(0x278e88),skin=mat(0x603820),hair=mat(0x191719),boots=mat(0x293b50);
       const torso=new THREE.Mesh(new THREE.CapsuleGeometry(.31,.63,5,10),jacket);
       torso.position.y=1.2;torso.castShadow=true;player.add(torso);
       const head=new THREE.Mesh(new THREE.SphereGeometry(.29,12,9),skin);head.position.y=2.05;player.add(head);
-      const cap=new THREE.Mesh(new THREE.CylinderGeometry(.4,.43,.21,13),hat);cap.position.y=2.39;player.add(cap);
+      const cap=new THREE.Mesh(new THREE.SphereGeometry(.29,12,8),hair);cap.scale.y=.40;cap.position.y=2.27;player.add(cap);
       const limbs=[];
       for(const side of [-1,1]){
         const leg=new THREE.Mesh(new THREE.CapsuleGeometry(.11,.50,4,7),boots);
@@ -525,18 +569,16 @@
         const hand=new THREE.Mesh(new THREE.SphereGeometry(.115,9,8),skin);
         hand.position.set(side*.49,.86,.05);player.add(hand);
       }
-      const pack=new THREE.Mesh(new THREE.BoxGeometry(.60,.79,.34),rock[1]);
+      const pack=new THREE.Mesh(new THREE.BoxGeometry(.60,.79,.34),mat(0xf5c928));
       pack.position.set(0,1.29,-.37);player.add(pack);
       // Readable face, goggles, jacket trim and backpack straps for the closer follow camera.
-      const eyeMat=mat(0x1c2a33),strapMat=mat(0xc7a675);
+      const eyeMat=mat(0x1c2a33),strapMat=mat(0x40372b);
       for(const side of [-1,1]){
         const eye=new THREE.Mesh(new THREE.SphereGeometry(.038,7,6),eyeMat);
         eye.position.set(side*.12,2.10,.258);player.add(eye);
         const strap=new THREE.Mesh(new THREE.BoxGeometry(.095,.55,.05),strapMat);
         strap.position.set(side*.22,1.32,.30);player.add(strap);
       }
-      const brim=new THREE.Mesh(new THREE.CylinderGeometry(.45,.45,.045,16),hat);
-      brim.position.y=2.31;player.add(brim);
       // Reuse the exact authored explorer asset and joint names used in Chapter 1.
       // The procedural version stays as a reliable offline/model-load fallback.
       const fallbackParts=[...player.children];
@@ -600,7 +642,7 @@
         if(!drag.moved&&Math.hypot(event.clientX-drag.startX,event.clientY-drag.startY)<7)return;
         drag.moved=true;event.preventDefault();dom.style.cursor="grabbing";
         const height=Math.max(1,dom.getBoundingClientRect().height);
-        const scale=2*Math.tan(camera.fov*Math.PI/360)*Math.max(8,camera.position.distanceTo(cameraTarget))/height*1.35;
+        const scale=2*Math.tan(camera.fov*Math.PI/360)*Math.max(8,camera.position.distanceTo(cameraTarget))/height*1.35*clamp(Number(graphics.sensitivity)||1,.5,1.8);
         const right=new THREE.Vector3().setFromMatrixColumn(camera.matrixWorld,0).setY(0).normalize();
         const forward=new THREE.Vector3(cameraTarget.x-camera.position.x,0,cameraTarget.z-camera.position.z).normalize();
         pan.addScaledVector(right,-dx*scale).addScaledVector(forward,dy*scale);
@@ -646,17 +688,28 @@
       // Smooth locomotion and heading for the shared rig (keyboard and click-to-walk).
       const characterVisibility=window.ThirstExplorer?.visibility(THREE,scene,player);
       const playerMotion={lastTime:0,lastX:state.x,lastY:state.y,blend:0};
+      const reducedMotion=!!window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+      const desiredCameraPosition=new THREE.Vector3();
+      let renderWidth=0,renderHeight=0,cameraFirstFrame=true,lastArtDone=-1;
       world={
         dom,renderer,scene,camera,player,limbs,marks,broken,pipeMesh,water,
-        recenterCamera,
+        recenterCamera,setGraphicsSettings:applyGraphicsSettings,
+        resetForLaunch(){
+          cameraFirstFrame=true;playerMotion.lastTime=0;
+          playerMotion.lastX=state.x;playerMotion.lastY=state.y;playerMotion.blend=0;
+        },
         draw(time){
           const width=dom.clientWidth||1000,height=dom.clientHeight||610;
           const targetWidth=Math.max(300,Math.floor(width)),targetHeight=Math.max(180,Math.floor(height));
           if(camera.aspect!==targetWidth/targetHeight){
             camera.aspect=targetWidth/targetHeight;camera.updateProjectionMatrix();
           }
-          if(dom.width!==targetWidth||dom.height!==targetHeight)
+          // CSS dimensions differ from the backing buffer on high-DPI screens.
+          // Resize only when layout changes, not on every rendered frame.
+          if(renderWidth!==targetWidth||renderHeight!==targetHeight){
             renderer.setSize(targetWidth,targetHeight,false);
+            renderWidth=targetWidth;renderHeight=targetHeight;
+          }
           const px=wX(state.x),pz=wZ(state.y);
           const delta=playerMotion.lastTime?
             clamp(time-playerMotion.lastTime,0,.05):.016;
@@ -666,7 +719,7 @@
           // Don't animate or rotate against an obstacle when keys are held.
           playerMotion.blend+=(Number(actuallyMoving)-playerMotion.blend)*
             (1-Math.exp(-delta*9));
-          player.position.set(px,0,pz);
+          player.position.set(px,surfaceHeight(state.x,state.y),pz);
           if(actuallyMoving){
             const targetHeading=Math.atan2(dx,dy);
             const angle=((targetHeading-player.rotation.y+3*Math.PI)%(2*Math.PI))-Math.PI;
@@ -695,25 +748,29 @@
           }
           // Once travel resumes, follow the explorer so walking never appears frozen offscreen.
           if(explorerRig?.model?.userData.adventure)window.ThirstExplorer.animate(explorerRig.model,{
-            time,dt:delta,distance:Math.hypot(dx,dy)/24,running:state.keys.has("shift"),
+            time,dt:delta,distance:Math.hypot(dx,dy)*worldSpread/24,running:state.keys.has("shift"),
             interaction:!!state.modal,victory:state.finished,
-            reduced:window.matchMedia?.("(prefers-reduced-motion: reduce)").matches
+            reduced:reducedMotion
           });
           if(state.path.length||state.keys.size)pan.set(0,0,0);
           // Clamp the free camera within the entire expanded canyon; player stays put.
           const baseX=px*worldSpread,baseZ=pz*worldSpread;
-          cameraTarget.set(clamp(baseX+pan.x,-31,31),0,clamp(baseZ+pan.z,-23,23));
+          cameraTarget.set(clamp(baseX+pan.x,-31,31),.65,clamp(baseZ+pan.z,-23,23));
           pan.x=cameraTarget.x-baseX;pan.z=cameraTarget.z-baseZ;
-          camera.position.lerp(new THREE.Vector3(cameraTarget.x+7.4*zoom,10.5*zoom,cameraTarget.z+13.6*zoom),.09);
+          desiredCameraPosition.set(cameraTarget.x+7.4*zoom,10.5*zoom,cameraTarget.z+13.6*zoom);
+          if(cameraFirstFrame){camera.position.copy(desiredCameraPosition);cameraFirstFrame=false;}
+          else camera.position.lerp(desiredCameraPosition,1-Math.exp(-delta*5.65));
           camera.lookAt(cameraTarget);
           for(const m of marks){
             const done=state.done.has(m.key);
             m.pillar.visible=!done;m.ring.material.color.set(done?0x70c5a4:0xffd787);
-            m.ring.scale.setScalar(1+Math.sin(time*2.2)*.12);
+            m.ring.scale.setScalar(reducedMotion||graphics.effects===false?1:1+Math.sin(time*2.2)*.08);
           }
           broken.visible=!state.done.has("span");
           water.color.set(state.done.has("cistern")?0x55c4cb:0x50b1b9);
-          canyonArt?.update(time);
+          if(graphics.effects!==false)canyonArt?.update(time);
+          else if(lastArtDone!==state.done.size)canyonArt?.update(0);
+          lastArtDone=state.done.size;
           characterVisibility?.update(camera,delta);
           renderer.render(scene,camera);
         },
@@ -751,15 +808,17 @@
     const saved=!forceNew?progress.saved("canyon"):null;
     if(forceNew)progress.clearSave("canyon");
     state=defaultState();state.active=true;
+    lastFrame=0;
     world?.recenterCamera?.();
     if(saved)restore(saved);
+    world?.resetForLaunch?.();
     $("startScreen").hidden=true;$("gameScreen").hidden=true;$("canyonScreen").hidden=false;
     closeModal();refreshUI();
     $("canyonToast").hidden=true;
     save();buildWorld();
     if(saved)toast("Canyon checkpoint restored. Welcome back!");
     else toast("Chapter 2 · Reach the canyon surveyor to begin.");
-    canvas.focus({preventScroll:true});
+    (world?.dom||canvas).focus({preventScroll:true});
     window.scrollTo?.(0,0);
   }
   function suspend(){
@@ -779,7 +838,7 @@
     if(!state.active)return;
     state.paused=true;save();
     modal("REST IN THE SHADE","Expedition paused",
-      "Your checkpoint is saved automatically. Resume when you are ready, or return to the chapter selector.",
+      "Your checkpoint is saved automatically. WASD / arrows to walk · E to interact · click a destination to travel · drag to look around · wheel to zoom · C to recenter. Resume when you are ready.",
       [{text:"▶ Resume canyon",primary:true,action:()=>{closeModal();state.paused=false;}},
        {text:"◈ Chapter selection",action:goHome}]);
   }
@@ -809,6 +868,8 @@
   window.addEventListener("keydown",event=>{
     if(!state.active)return;
     if(state.modal){if(event.key==="Escape"&&!state.finished){closeModal();state.paused=false;}return;}
+    if(["INPUT","SELECT","TEXTAREA"].includes(event.target?.tagName))return;
+    if(["BUTTON","A"].includes(event.target?.tagName)&&[" ","Enter"].includes(event.key))return;
     const key=event.key.toLowerCase();
     if(["arrowup","arrowdown","arrowleft","arrowright"," "].includes(key))event.preventDefault();
     if(["w","a","s","d","arrowup","arrowdown","arrowleft","arrowright"].includes(key))state.keys.add(key);
@@ -823,8 +884,9 @@
     state.keys.clear();
     if(document.hidden&&state.active&&!state.modal)pause();
   });
+  window.addEventListener("trail:graphics",event=>world?.setGraphicsSettings?.(event.detail));
   window.TrailCanyon=Object.freeze({
-    launch,suspend,goHome,snapshot:()=>({
+    launch,suspend,goHome,pause,snapshot:()=>({
       active:state.active,paused:state.paused,finished:state.finished,
       x:state.x,y:state.y,energy:state.energy,score:state.score,
       done:[...state.done],pressure:currentPressure(),valves:[...state.valves],
