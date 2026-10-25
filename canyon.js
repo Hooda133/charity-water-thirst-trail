@@ -500,9 +500,9 @@
           const texture=new THREE.CanvasTexture(tag);
           texture.colorSpace=THREE.SRGBColorSpace;
           const sprite=new THREE.Sprite(new THREE.SpriteMaterial({
-            map:texture,transparent:true,depthWrite:false}));
+            map:texture,transparent:true,depthWrite:false,depthTest:false}));
           sprite.scale.set(3.9,.74,1);
-          sprite.position.y=2.65;group.add(sprite);
+          sprite.renderOrder=1000;sprite.position.y=2.65;group.add(sprite);
         }
         marks.push({key,ring,pillar});
       }
@@ -544,13 +544,17 @@
       const explorerStatus={status:"fallback"};
       async function loadCanyonExplorer(){
         try{
-          const {GLTFLoader}=await import("three/addons/loaders/GLTFLoader.js");
-          if(explorerDisposed)return;
-          const asset=await new GLTFLoader().loadAsync("./assets/characters/explorer.gltf");
+          let asset;
+          if(window.ThirstExplorer)asset={scene:window.ThirstExplorer.create(THREE)};
+          else {
+            const {GLTFLoader}=await import("three/addons/loaders/GLTFLoader.js");
+            if(explorerDisposed)return;
+            asset=await new GLTFLoader().loadAsync("./assets/characters/explorer.gltf");
+          }
           if(explorerDisposed)return;
           const source=asset?.scene?.getObjectByName("ExplorerCharacter");
           if(!source)throw Error("Authored explorer node was not found");
-          const candidate=source.clone(true);
+          const candidate=window.ThirstExplorer?source:source.clone(true);
           const names=[
             "ExplorerBody","ExplorerHead","ExplorerEyes","ExplorerArmLeft",
             "ExplorerArmRight","ExplorerElbowLeft","ExplorerElbowRight",
@@ -570,7 +574,7 @@
           if(parts<6)throw Error("Explorer model has too few meshes");
           player.add(candidate);
           fallbackParts.forEach(part=>part.visible=false);
-          explorerRig=rig;explorerStatus.status="ready";
+          explorerRig=rig;explorerRig.model=candidate;explorerStatus.status="ready";
           console.info("Forgotten Canyon: shared animated 3D explorer loaded.");
         }catch(error){
           explorerStatus.status="fallback";
@@ -640,6 +644,7 @@
         return;
       }
       // Smooth locomotion and heading for the shared rig (keyboard and click-to-walk).
+      const characterVisibility=window.ThirstExplorer?.visibility(THREE,scene,player);
       const playerMotion={lastTime:0,lastX:state.x,lastY:state.y,blend:0};
       world={
         dom,renderer,scene,camera,player,limbs,marks,broken,pipeMesh,water,
@@ -661,7 +666,7 @@
           // Don't animate or rotate against an obstacle when keys are held.
           playerMotion.blend+=(Number(actuallyMoving)-playerMotion.blend)*
             (1-Math.exp(-delta*9));
-          player.position.set(px,.07+Math.sin(time*9)*.027*playerMotion.blend,pz);
+          player.position.set(px,0,pz);
           if(actuallyMoving){
             const targetHeading=Math.atan2(dx,dy);
             const angle=((targetHeading-player.rotation.y+3*Math.PI)%(2*Math.PI))-Math.PI;
@@ -689,6 +694,11 @@
             rig.ExplorerEyes.scale.y=time%5.3<.12?.15:1;
           }
           // Once travel resumes, follow the explorer so walking never appears frozen offscreen.
+          if(explorerRig?.model?.userData.adventure)window.ThirstExplorer.animate(explorerRig.model,{
+            time,dt:delta,distance:Math.hypot(dx,dy)/24,running:state.keys.has("shift"),
+            interaction:!!state.modal,victory:state.finished,
+            reduced:window.matchMedia?.("(prefers-reduced-motion: reduce)").matches
+          });
           if(state.path.length||state.keys.size)pan.set(0,0,0);
           // Clamp the free camera within the entire expanded canyon; player stays put.
           const baseX=px*worldSpread,baseZ=pz*worldSpread;
@@ -704,10 +714,12 @@
           broken.visible=!state.done.has("span");
           water.color.set(state.done.has("cistern")?0x55c4cb:0x50b1b9);
           canyonArt?.update(time);
+          characterVisibility?.update(camera,delta);
           renderer.render(scene,camera);
         },
         getExplorerAssetStatus(){return {...explorerStatus};},
         dispose(){
+          characterVisibility?.dispose();
           explorerDisposed=true;
           canyonArt?.dispose();
           dom.remove();renderer.dispose();canvas.style.display="";
