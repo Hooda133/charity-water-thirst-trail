@@ -75,7 +75,7 @@
       rib.rotation.z=side*.63;
     }
     for(const side of [-1,1]){
-      const points=[new THREE.Vector3(side*.255,1.10,-.34),new THREE.Vector3(side*.28,1.77,-.32),new THREE.Vector3(side*.25,1.85,.04),new THREE.Vector3(side*.235,1.58,.255),new THREE.Vector3(side*.255,1.10,.18),new THREE.Vector3(side*.255,1.10,-.34)];
+      const points=[new THREE.Vector3(side*.255,1.10,-.34),new THREE.Vector3(side*.27,1.65,-.30),new THREE.Vector3(side*.25,1.73,0),new THREE.Vector3(side*.235,1.58,.225),new THREE.Vector3(side*.255,1.10,.18),new THREE.Vector3(side*.255,1.10,-.34)];
       mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(points),28,.035,5,false),strap,body,0,0,0);
       box(body,sole,side*.24,1.25,.247,.078,.10,.025);
     }
