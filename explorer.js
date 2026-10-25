@@ -72,7 +72,7 @@
       ell(elbow,skin,0,-.33,.014,.09,.12,.065);
       ell(elbow,skin,-side*.075,-.30,.045,.038,.073,.04);
       for(let f=0;f<3;f++)capsule(elbow,skin,(f-1)*.038,-.405,.014,.021,.055);
-      const leg=joint('ExplorerLeg'+suffix,body,side*.18,.94,0);
+      const leg=joint('ExplorerLeg'+suffix,body,side*.18,.87,0);
       capsule(leg,pants,0,-.20,0,.14,.28);
       const knee=joint('ExplorerKnee'+suffix,leg,0,-.43,0);
       capsule(knee,pants,0,-.19,0,.115,.28);
@@ -92,15 +92,18 @@
     a.move+=(Number(moving)-a.move)*blend;a.run+=(Number(running&&moving)-a.run)*blend;
     a.action+=((victory?2:interaction?1:0)-a.action)*blend;
     // Advance by actual world distance, so collision stops and different frame rates do not skate.
-    if(moving)a.phase+=distance/(.40+a.run*.15);
+    const strideLength=.24+a.run*.09;
+    if(moving)a.phase+=distance*Math.PI/(2*strideLength);
     const phase=a.phase,weight=a.move;
     j.ExplorerBody.position.y=0;j.ExplorerBody.rotation.set(0,0,0);
     a.torso.scale.y=.49*(1+(reduced?0:Math.sin(time*2)*.009));
     for(let i=0;i<2;i++){
       const s=i?'Right':'Left',p=phase+i*Math.PI;
       const lift=Math.max(0,Math.sin(p))*(.13+a.run*.08)*weight;
-      const z=Math.cos(p)*(.24+a.run*.09)*weight;
-      const down=.86-lift;
+      const cycle=((p%(2*Math.PI))+2*Math.PI)%(2*Math.PI);
+      // Swing returns forward; stance travels backward at the exact ground speed.
+      const z=(cycle<Math.PI?-Math.cos(cycle):3-2*cycle/Math.PI)*strideLength*weight;
+      const down=.79-lift;
       const knee=Math.acos(Math.max(-1,Math.min(1,(down*down+z*z-2*.43*.43)/(2*.43*.43))));
       const hip=Math.atan2(-z,down)-knee*.5;
       j['ExplorerLeg'+s].rotation.x=hip;j['ExplorerKnee'+s].rotation.x=knee;
@@ -121,16 +124,17 @@
     function restore(mesh,entry){mesh.material=entry.original;entry.copies.forEach(m=>m.dispose());}
     return {update(camera,dt){
       elapsed+=dt;if(elapsed<.065)return;const step=Math.min(elapsed,.15);elapsed=0;
-      scene.updateMatrixWorld(true);camera.updateMatrixWorld(true);
+      scene.updateMatrixWorld(true);camera.updateMatrixWorld(true);ray.camera=camera;
       const blocked=new Set();
       // Head and torso rays catch narrow scenery crossing the silhouette.
       for(const height of [.8,1.85]){
-        target.copy(player.position);target.y+=height;direction.subVectors(target,camera.position);
+        player.getWorldPosition(target);target.y+=height;direction.subVectors(target,camera.position);
         ray.set(camera.position,direction.clone().normalize());ray.far=direction.length()-.35;
         for(const hit of ray.intersectObjects(scene.children,true)){
-          const m=hit.object;let parent=m,ours=false;while(parent){if(parent===player)ours=true;parent=parent.parent;}
-          if(ours||!m.isMesh||!m.visible||hit.point.y<player.position.y+.22)continue;
-          const materials=Array.isArray(m.material)?m.material:[m.material];
+          const m=hit.object;let parent=m,ours=false,hidden=false;while(parent){if(parent===player)ours=true;if(!parent.visible)hidden=true;parent=parent.parent;}
+          if(ours||hidden||!m.isMesh||!m.visible||hit.point.y<target.y-height+.22)continue;
+          const original=faded.get(m)?.original||m.material;
+          const materials=Array.isArray(original)?original:[original];
           if(materials.some(mat=>!mat.depthTest||mat.opacity<.5))continue;
           blocked.add(m);
           if(!faded.has(m)){

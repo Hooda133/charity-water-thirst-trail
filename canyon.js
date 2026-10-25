@@ -731,8 +731,8 @@
   }
   function frame(time){
     const dt=lastFrame?clamp((time-lastFrame)/1000,0,.05):0;lastFrame=time;
-    if(state.active){
-      update(dt);
+    if(state.active||(state.finished&&!$("canyonScreen").hidden)){
+      if(state.active)update(dt);
       if(world){
         try{world.draw(time/1000);}
         catch(error){

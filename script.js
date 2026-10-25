@@ -2573,7 +2573,7 @@
     // Slightly larger stylized explorer, visible even at the standard isometric zoom.
     const explorer=new THREE.Group();scene.add(explorer);
     explorer.scale.setScalar(1.19);
-    const characterFill=new THREE.PointLight(0x9fe8e0,.42,6.5,2);
+    const characterFill=new THREE.PointLight(0xffe5ce,.55,6.5,2);
     characterFill.position.set(-1.2,3.6,2.2);
     explorer.add(characterFill);
     const skin=makeMat(0xce9169),shirt=makeMat(0x29a6a0),pants=makeMat(0x335772),
@@ -3028,7 +3028,7 @@
       }
       if(characterModel?.userData.adventure)window.ThirstExplorer.animate(characterModel,{
         time,dt:frameDelta,distance:isMoving?actualDistance/1.19:0,running,
-        interaction:!!state.modal||!!state.nearby,victory:celebrating||state.screen==="complete",reduced:reduceMotion
+        interaction:!!state.modalOpen||!!state.nearby,victory:celebrating||(state.screen==="ended"&&state.effect?.kind==="victory"),reduced:reduceMotion
       });
       explorer.userData.lastX=playerX;explorer.userData.lastZ=playerZ;
       if(!reduceMotion&&effectsEnabled){

@@ -244,9 +244,9 @@
           edge.rotation.y=angle;
         }
         for(let j=0;j<3;j++){
-          const mote=add(new THREE.Mesh(new THREE.IcosahedronGeometry(.035,0),
+          const mote=add(new THREE.IcosahedronGeometry(.035,0),
             new THREE.MeshBasicMaterial({color:0xe7c39b,transparent:true,opacity:.22,depthWrite:false}),
-            midX+(rand()-.5)*.8,.08+rand()*.18,midZ+(rand()-.5)*length*.7));
+            midX+(rand()-.5)*.8,.08+rand()*.18,midZ+(rand()-.5)*length*.7);
           trailDust.push({mesh:mote,material:mote.material,baseX:mote.position.x,baseY:mote.position.y,
             baseZ:mote.position.z,phase:rand()*6.28});
         }
@@ -405,9 +405,9 @@
     }));scene.add(dust);props.push(dust);
     const dustMotes=[];
     for(let i=0;i<38;i++){
-      const mote=add(new THREE.Mesh(new THREE.IcosahedronGeometry(.035+rand()*.035,0),
+      const mote=add(new THREE.IcosahedronGeometry(.035+rand()*.035,0),
         new THREE.MeshBasicMaterial({color:0xf0c89e,transparent:true,opacity:.18,depthWrite:false}),
-        (rand()-.5)*18,.5+rand()*3.2,-15+rand()*30));
+        (rand()-.5)*18,.5+rand()*3.2,-15+rand()*30);
       dustMotes.push({mesh:mote,material:mote.material,phase:rand()*6.28,baseX:mote.position.x,
         baseY:mote.position.y,baseZ:mote.position.z});
     }
