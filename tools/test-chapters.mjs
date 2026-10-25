@@ -52,7 +52,7 @@ function node(id){
  const classes=new Set();
  return {
   id,textContent:"",innerHTML:"",dataset:{},hidden:false,style:{},children:[],listeners:{},
-  classList:{add(n){classes.add(n);},remove(n){classes.delete(n);},contains(n){return classes.has(n);}},
+  classList:{add(n){classes.add(n);},remove(n){classes.delete(n);},contains(n){return classes.has(n);},toggle(n,enabled){if(enabled)classes.add(n);else classes.delete(n);}},
   getContext(){return frameCtx;},focus(){},append(...children){this.children.push(...children);},
   replaceChildren(){this.children=[];},setAttribute(){},
   addEventListener(name,fn){this.listeners[name]=fn;},
@@ -154,7 +154,26 @@ assert.equal(canyon.snapshot().active,false);
 assert.ok(progress.snapshot().completed.includes("canyon"));
 assert.equal(progress.saved("canyon"),null);
 assert.equal(canyon.snapshot().done.length,5);
+// Replaying a completed chapter must preserve both the completion badge and a
+// new resumable checkpoint rather than silently disabling all future saves.
+canyon.launch(true);
+assert.equal(canyon.snapshot().done.length,0);
+assert.ok(progress.saved("canyon"),"A completed chapter replay can save");
+test.get().x=248;test.get().score=75;
+canyon.suspend();canyon.launch();
+assert.equal(canyon.snapshot().x,248);
+assert.equal(canyon.snapshot().score,75);
+assert.ok(progress.snapshot().completed.includes("canyon"));
+// A damaged checkpoint is discarded field by field without crashing launch.
+canyon.suspend(); // Do not overwrite the fixture with the live replay.
+progress.save("canyon",{x:500,y:50,energy:"invalid",score:null,done:"broken",repairStep:Infinity});
+canyon.launch();
+assert.equal(canyon.snapshot().x,170,"A saved position inside the gorge is reset safely");
+assert.equal(canyon.snapshot().done.length,0);
+assert.equal(canyon.snapshot().energy,100);
+assert.equal(canyon.snapshot().repairStep,0);
 console.log("✓ Versioned chapter unlocking and Valley checkpoint storage");
 console.log("✓ Five canyon quests, 69 kPa valve solution, unsafe pressure penalty");
 console.log("✓ Aqueduct repair order, checkpoint restore, safety quiz and chapter completion");
 console.log("✓ Existing Valley JavaScript and new chapter UI references validated");
+console.log("✓ Completed-chapter replay saving, restore and malformed-checkpoint recovery");

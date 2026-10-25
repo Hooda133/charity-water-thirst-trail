@@ -71,16 +71,17 @@
   }
   function restore(saved){
     if(!saved||typeof saved!=="object")return;
-    state.x=clamp(Number(saved.x)||170,45,955);
-    state.y=clamp(Number(saved.y)||425,45,565);
+    const number=(value,fallback)=>value!==null&&value!==undefined&&Number.isFinite(Number(value))?Number(value):fallback;
+    state.x=clamp(number(saved.x,170),45,955);
+    state.y=clamp(number(saved.y,425),45,565);
     if(blocked(state.x,state.y)){state.x=170;state.y=425;}
-    state.energy=clamp(Number(saved.energy)||100,1,100);
-    state.score=Math.max(0,Number(saved.score)||0);
-    state.elapsed=Math.max(0,Number(saved.elapsed)||0);
-    state.done=new Set((saved.done||[]).filter(key=>goals[key]));
+    state.energy=clamp(number(saved.energy,100),1,100);
+    state.score=Math.max(0,number(saved.score,0));
+    state.elapsed=Math.max(0,number(saved.elapsed,0));
+    state.done=new Set((Array.isArray(saved.done)?saved.done:[]).filter(key=>questOrder.includes(key)));
     if(Array.isArray(saved.valves)&&saved.valves.length===3)
       state.valves=saved.valves.map(x=>clamp(Math.trunc(Number(x)||0),0,3));
-    state.repairStep=clamp(Math.trunc(Number(saved.repairStep)||0),0,4);
+    state.repairStep=clamp(Math.trunc(number(saved.repairStep,0)),0,4);
   }
   function completeQuest(key,points){
     if(state.done.has(key))return;
@@ -90,6 +91,7 @@
   }
   function modal(tag,title,text,choices,extra){
     state.modal=true;state.keys.clear();state.path=[];
+    save();
     $("canyonModalTag").textContent=tag;
     $("canyonModalTitle").textContent=title;
     $("canyonModalText").textContent=text;
@@ -103,12 +105,13 @@
       b.addEventListener("click",item.action);actions.append(b);
     }
     $("canyonModalBackdrop").hidden=false;
+    $("canyonModal").classList.toggle("is-victory",state.finished);
     $("canyonModal").scrollTop=0;
     $("canyonModal").focus({preventScroll:true});
   }
   function closeModal(){
     state.modal=false;$("canyonModalBackdrop").hidden=true;
-    canvas.focus({preventScroll:true});
+    (world?.dom||canvas).focus({preventScroll:true});
   }
   function interact(){
     if(!state.active||state.paused||state.modal)return;
@@ -166,7 +169,7 @@
       "Tune three valve settings. The pressure must be in the safe operating range, the regulator must be open, and intake/return flow must stay balanced.",
       [{text:"💧 Test pressure",primary:true,action:()=>{
         if(pressureSafe()){closeModal();completeQuest("valves",250);return;}
-        state.energy=Math.max(15,state.energy-4);
+        state.energy=Math.max(7,state.energy-4);
         toast("Pressure outside safe range or unbalanced · −4 energy");
         valveChallenge();save();
       }},{text:"↩ Continue exploring",action:()=>{save();closeModal();}}],
@@ -206,9 +209,9 @@
       [{text:"Test water quality and follow local treatment and monitoring procedures",primary:true,action:()=>{
         closeModal();completeQuest("cistern",430);finish();
       }},{text:"If the water looks clear, it must be safe",action:()=>{
-        state.energy=Math.max(15,state.energy-5);
+        state.energy=Math.max(7,state.energy-5);
         toast("Appearance does not prove drinking-water safety. −5 energy");
-        cisternChallenge();
+        cisternChallenge();save();
       }},{text:"Return to the canyon",action:closeModal}]);
   }
   function finish(){
@@ -751,6 +754,7 @@
     const saved=!forceNew?progress.saved("canyon"):null;
     if(forceNew)progress.clearSave("canyon");
     state=defaultState();state.active=true;
+    lastFrame=0;
     world?.recenterCamera?.();
     if(saved)restore(saved);
     $("startScreen").hidden=true;$("gameScreen").hidden=true;$("canyonScreen").hidden=false;
@@ -759,7 +763,7 @@
     save();buildWorld();
     if(saved)toast("Canyon checkpoint restored. Welcome back!");
     else toast("Chapter 2 · Reach the canyon surveyor to begin.");
-    canvas.focus({preventScroll:true});
+    (world?.dom||canvas).focus({preventScroll:true});
     window.scrollTo?.(0,0);
   }
   function suspend(){

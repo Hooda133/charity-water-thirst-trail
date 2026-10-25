@@ -28,7 +28,9 @@
   function save(level,value){
     if(!levels.includes(level)||!value||typeof value!=="object")return false;
     const data=read();
-    if(!data.unlocked.includes(level)||data.completed.includes(level))return false;
+    // Completion keeps a chapter unlocked; a later replay still needs its own
+    // resumable checkpoint. Completing that replay clears the checkpoint again.
+    if(!data.unlocked.includes(level))return false;
     data.saves[level]={...value,savedAt:Date.now()};
     data.lastLevel=level;write(data);
     return true;
