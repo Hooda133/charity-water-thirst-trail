@@ -90,6 +90,18 @@ assert.ok(snapshot().screen==="playing","Movement must not end the expedition");
 console.log("✓ Valley player responds to D and W across multiple frames");
 console.log("✓ Movement, frame scheduling and gameplay state remain active");
 
+// The periodic checkpoint must refresh through the real scheduled loop, without
+// a modal, pagehide, chapter switch or direct call to the save function.
+const beforeAutosave=window.TrailProgress.saved('valley');
+assert.notEqual(beforeAutosave.x,snapshot().x,'Travel has advanced past the initial checkpoint');
+for(let i=0;i<170;i++)frame();
+const automaticCheckpoint=window.TrailProgress.saved('valley');
+assert.equal(automaticCheckpoint.x,snapshot().x,'Periodic autosave stores the traveled position');
+assert.equal(automaticCheckpoint.y,snapshot().y);
+assert.ok(automaticCheckpoint.elapsed>=8,'Scheduled frames pass the eight-second autosave interval');
+assert.ok(automaticCheckpoint.elapsed>beforeAutosave.elapsed,'Periodic autosave refreshes expedition time');
+console.log('✓ Automatic checkpoint refresh after eight game seconds through scheduled main-loop frames');
+
 // Checkpoint transitions must preserve a journey even if reloaded immediately.
 nodes.get('valleyChapters').click();
 const checkpoint=window.TrailProgress.saved('valley');
