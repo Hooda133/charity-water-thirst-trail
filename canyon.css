@@ -127,3 +127,55 @@
  .canyon-stage-heading .camera-reset{padding:6px 8px}
  .camera-reset{font-size:9px}
 }
+
+/* Match Valley's readable panel rhythm and keep overlays aligned to the canvas. */
+.canyon-stage{display:grid;grid-template-columns:minmax(0,1fr);background:linear-gradient(160deg,#123740,#071e29)}
+.canyon-stage-heading{grid-column:1;grid-row:1;min-height:58px;line-height:1.45;flex-wrap:wrap}
+.canyon-stage>canvas{grid-column:1;grid-row:2;min-width:0}
+.canyon-overlay-hud{position:relative;grid-column:1;grid-row:2;align-self:start;justify-self:start;top:auto;left:auto;margin:8px 14px;z-index:2}
+.canyon-toast{position:relative;grid-column:1;grid-row:2;align-self:start;justify-self:start;top:auto;left:auto;right:auto;margin:52px 14px 0;max-width:calc(100% - 28px);line-height:1.5}
+.canyon-sidebar h3{font-size:26px;line-height:1.15;letter-spacing:-.5px}
+.canyon-sidebar p{font-size:12px}
+.canyon-quest strong{font-size:12px;line-height:1.45}
+.canyon-quest small{font-size:11px}
+.canyon-destination{font-size:12px;min-height:42px;line-height:1.4}
+.canyon-prompt{max-width:calc(100% - 24px);white-space:normal;line-height:1.4}
+.canyon-prompt button{flex-shrink:0;min-height:40px}
+.canyon-modal-options button{min-height:44px;line-height:1.5}
+.canyon-valve button{min-height:44px}
+.canyon-modal.is-victory{border-color:#ffe39ab0;background:linear-gradient(145deg,#28514f,#102d38)}
+.canyon-modal.is-victory h2{color:#ffe19a}
+.canyon-modal-backdrop:has(.is-victory){background:#041a2399;backdrop-filter:none}
+@media(max-width:950px){
+ .canyon-layout{grid-template-columns:1fr}
+}
+@media(max-width:760px),(pointer:coarse){
+ .canyon-touch-controls{position:relative;grid-column:1;grid-row:4;bottom:auto;left:auto;display:grid;
+  grid-template-columns:repeat(3,44px) 70px;grid-template-rows:repeat(2,44px);gap:5px;width:max-content;margin:10px auto 12px;touch-action:none}
+ .canyon-touch-controls button{min-width:44px;min-height:44px;border:1px solid #a3d0b6;border-radius:10px;
+  background:#12383c;color:#fff;font:800 18px system-ui,sans-serif;touch-action:none;user-select:none}
+ .canyon-touch-controls button:active{background:#37786b}
+ .canyon-touch-controls [data-canyon-move="up"]{grid-column:2;grid-row:1}
+ .canyon-touch-controls [data-canyon-move="left"]{grid-column:1;grid-row:2}
+ .canyon-touch-controls [data-canyon-move="down"]{grid-column:2;grid-row:2}
+ .canyon-touch-controls [data-canyon-move="right"]{grid-column:3;grid-row:2}
+ .canyon-touch-controls #canyonTouchInteract{grid-column:4;grid-row:2;background:var(--yellow);font-size:12px;color:#1b3234}
+ .canyon-prompt{position:relative;grid-column:1;grid-row:3;left:auto;bottom:auto;transform:none;
+  justify-content:space-between;gap:10px;margin:10px auto;width:calc(100% - 20px);max-width:340px;font-size:12px}
+ .canyon-key-hint{display:none}
+ .canyon-overlay-hud{margin:8px}
+ .canyon-overlay-hud span{font-size:9px;padding:7px}
+ .canyon-toast{margin:48px 8px 0;max-width:calc(100% - 16px);padding:9px 11px;font-size:11px}
+}
+@media(max-width:420px){
+ .canyon-stage-heading{padding:10px;gap:8px;font-size:9px}
+ .canyon-stage-heading>span:first-child{max-width:calc(100% - 88px)}
+ .canyon-controls .button{min-height:40px}
+ .canyon-modal-backdrop{padding:12px}
+ .canyon-modal{max-height:calc(100dvh - 24px);padding:18px}
+ .canyon-pressure{padding:12px;gap:11px}
+ .canyon-valve{gap:9px}
+ .canyon-valve strong{font-size:11px}
+ .canyon-valve button{min-width:92px}
+ .canyon-repair-tiles{grid-template-columns:repeat(2,minmax(0,1fr))}
+}

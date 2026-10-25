@@ -104,7 +104,7 @@
               <div class="canvas-top-left"><div class="chapter-pill" id="daypartLabel">☀️ DAY ONE · MORNING</div><div class="chapter-pill supply-pill" id="supplyCount">🧴 SEALED SUPPLIES 0 / 4</div></div>
               <div id="nearbyPrompt" class="nearby-prompt" hidden><span id="nearbyName">Talk to the Elder</span><button id="interactButton" type="button">E · INTERACT</button></div>
               <div class="canvas-bottom"><span><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> MOVE</span><span><kbd>E</kbd> INTERACT</span><span>CLICK TO WALK · DRAG TO EXPLORE · RIGHT DRAG ROTATE · C RECENTER</span></div>
-              <div id="touchControls" class="touch-controls" aria-label="Touch movement controls"><button type="button" class="touch-up" data-dir="up" aria-label="Move up">▲</button><button type="button" class="touch-left" data-dir="left" aria-label="Move left">◀</button><button type="button" class="touch-down" data-dir="down" aria-label="Move down">▼</button><button type="button" class="touch-right" data-dir="right" aria-label="Move right">▶</button><button type="button" class="touch-action" id="touchAction">✦ ACT</button></div>
+              <div id="touchControls" class="touch-controls" aria-label="Touch movement controls"><button type="button" class="touch-up" data-dir="up" aria-label="Move up">▲</button><button type="button" class="touch-left" data-dir="left" aria-label="Move left">◀&#xfe0e;</button><button type="button" class="touch-down" data-dir="down" aria-label="Move down">▼</button><button type="button" class="touch-right" data-dir="right" aria-label="Move right">▶&#xfe0e;</button><button type="button" class="touch-action" id="touchAction" aria-label="Interact with nearby location">✦ ACT</button></div>
             </div>
             <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
             <div class="world-legend"><span><i class="legend-dot legend-gold"></i> Mission locations</span><span><i class="legend-dot legend-blue"></i> Water source</span><span><i class="legend-dot legend-green"></i> Rest stop</span><strong>TIP: Click a mission destination to auto-walk there.</strong></div>
@@ -151,7 +151,7 @@
             <div class="canyon-overlay-hud"><span id="canyonEnergy">⚡ 100% energy</span><span id="canyonScore">✦ 0 impact</span><span id="canyonTimer">◷ 00:00</span></div>
             <div id="canyonPrompt" class="canyon-prompt" hidden><span id="canyonPromptText">Talk to the surveyor</span><button id="canyonInteract" type="button">E · INTERACT</button></div>
             <div class="canyon-key-hint"><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> MOVE <kbd>E</kbd> INTERACT <span>DRAG TO LOOK AROUND · CLICK TO WALK · C RECENTER</span></div>
-            <div class="canyon-touch-controls" aria-label="Canyon movement controls"><button data-canyon-move="up" type="button">▲</button><button data-canyon-move="left" type="button">◀</button><button data-canyon-move="down" type="button">▼</button><button data-canyon-move="right" type="button">▶</button><button id="canyonTouchInteract" type="button">✦ ACT</button></div>
+            <div class="canyon-touch-controls" aria-label="Canyon movement controls"><button data-canyon-move="up" type="button" aria-label="Move up">▲</button><button data-canyon-move="left" type="button" aria-label="Move left">◀&#xfe0e;</button><button data-canyon-move="down" type="button" aria-label="Move down">▼</button><button data-canyon-move="right" type="button" aria-label="Move right">▶&#xfe0e;</button><button id="canyonTouchInteract" type="button" aria-label="Interact with nearby location">✦ ACT</button></div>
             <p id="canyonToast" class="canyon-toast" role="status" aria-live="polite" hidden></p>
           </div>
           <aside class="canyon-sidebar">
@@ -159,7 +159,7 @@
             <p>Survey the canyon, recover parts, regulate water pressure, and restore the cistern.</p>
             <div class="canyon-progress-track"><span id="canyonProgressFill"></span></div>
             <div id="canyonQuestList" class="canyon-quest-list"></div>
-            <span class="overline">FAST TRAVEL · CANYON MAP</span>
+            <span class="overline">EXPLORE THE CANYON</span>
             <div id="canyonDestinations" class="canyon-destinations"></div>
             <p class="canyon-save-note"><span id="canyonSaveStatus">Progress saves automatically.</span></p>
           </aside>
@@ -167,7 +167,7 @@
       </section>
     </main>
     <div id="canyonModalBackdrop" class="canyon-modal-backdrop" hidden>
-      <section id="canyonModal" class="canyon-modal" role="dialog" aria-modal="true" aria-labelledby="canyonModalTitle" tabindex="-1">
+      <section id="canyonModal" class="canyon-modal" role="dialog" aria-modal="true" aria-labelledby="canyonModalTitle" aria-describedby="canyonModalText" tabindex="-1">
         <span id="canyonModalTag" class="canyon-modal-tag">CANYON FIELD NOTES</span>
         <h2 id="canyonModalTitle">The Forgotten Canyon</h2>
         <p id="canyonModalText">Your next adventure begins here.</p>
