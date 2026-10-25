@@ -48,13 +48,32 @@
       box(body,trim,side*.19,1.55,.255,.19,.025,.025);
       for(const y of [1.22,1.39,1.64])ell(body,sole,0,y,.255,.017,.017,.011);
     }
-    // Single molded water jug, attached to the back; straps form continuous loops.
+    // One recognizable yellow water can on the back (the face looks along +Z).
+    // A broad, beveled body reads clearly at the gameplay camera's distance.
     const jug=joint('ExplorerPackFlap',body,0,1.40,-.35);
-    mesh(new THREE.CapsuleGeometry(.28,.37,4,12),yellow,jug,0,-.04,-.12,1,.98,.61);
-    box(jug,yellow,0,.34,-.12,.34,.10,.15);
-    for(const side of [-1,1])box(jug,yellow,side*.15,.29,-.12,.055,.12,.15);
-    mesh(new THREE.CylinderGeometry(.065,.065,.065,12),cap,jug,.18,.245,-.10);
-    for(const x of [-.15,.15])box(jug,cap,x,-.05,-.294,.025,.32,.012);
+    const canOutline=new THREE.Shape();
+    canOutline.moveTo(-.26,-.37);canOutline.lineTo(.26,-.37);
+    canOutline.quadraticCurveTo(.33,-.37,.33,-.30);canOutline.lineTo(.33,.27);
+    canOutline.quadraticCurveTo(.33,.36,.24,.36);canOutline.lineTo(-.24,.36);
+    canOutline.quadraticCurveTo(-.33,.36,-.33,.27);canOutline.lineTo(-.33,-.30);
+    canOutline.quadraticCurveTo(-.33,-.37,-.26,-.37);
+    const canGeometry=new THREE.ExtrudeGeometry(canOutline,{
+      depth:.30,steps:1,bevelEnabled:true,bevelThickness:.025,
+      bevelSize:.025,bevelSegments:2,curveSegments:4
+    });
+    const can=mesh(canGeometry,yellow,jug,0,0,-.27);
+    can.name='ExplorerWaterJug';
+    // Open carrying handle and screw cap belong to the can, never to a hand.
+    box(jug,yellow,-.205,.425,-.12,.055,.16,.10);
+    box(jug,yellow,.035,.425,-.12,.055,.16,.10);
+    box(jug,yellow,-.085,.505,-.12,.295,.055,.10);
+    const lid=mesh(new THREE.CylinderGeometry(.073,.073,.075,12),cap,jug,.215,.40,-.12);
+    lid.name='ExplorerWaterJugCap';
+    // Molded X ribs reinforce the broad rear face rather than resembling a pack.
+    for(const side of [-1,1]){
+      const rib=box(jug,cap,0,-.035,-.306,.028,.48,.018);
+      rib.rotation.z=side*.63;
+    }
     for(const side of [-1,1]){
       const points=[new THREE.Vector3(side*.255,1.10,-.34),new THREE.Vector3(side*.28,1.77,-.32),new THREE.Vector3(side*.25,1.85,.04),new THREE.Vector3(side*.235,1.58,.255),new THREE.Vector3(side*.255,1.10,.18),new THREE.Vector3(side*.255,1.10,-.34)];
       mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(points),28,.035,5,false),strap,body,0,0,0);

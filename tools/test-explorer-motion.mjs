@@ -9,11 +9,22 @@ const THREE=await import(process.argv[2]?pathToFileURL(resolve(process.argv[2]))
   'data:text/javascript;base64,'+Buffer.from(await (await fetch(url)).text()).toString('base64'));
 const window={};runInNewContext(readFileSync(new URL('../explorer.js',import.meta.url),'utf8'),{window});
 const model=window.ThirstExplorer.create(THREE),a=model.userData.adventure;
+const jug=model.getObjectByName('ExplorerWaterJug');
+assert.ok(jug,'One recognizable water jug is attached to the playable character');
+assert.equal(jug.material.color.getHex(),0xf5c928,'The water jug is yellow');
+jug.geometry.computeBoundingBox();
+function checkJugOnBack(){
+  model.updateMatrixWorld(true);
+  const toBody=new THREE.Matrix4().copy(a.joints.ExplorerBody.matrixWorld).invert().multiply(jug.matrixWorld);
+  const bounds=jug.geometry.boundingBox.clone().applyMatrix4(toBody);
+  assert.ok(bounds.max.z<-.245,'Entire jug stays behind the torso, never on the chest');
+}
 let triangles=0,meshes=0;model.traverse(m=>{if(m.isMesh){meshes++;triangles+=(m.geometry.index?.count||m.geometry.attributes.position.count)/3;}});
 assert.ok(triangles<50000);assert.ok(meshes<160);
 for(let frame=0;frame<480;frame++){
   window.ThirstExplorer.animate(model,{time:frame/60,dt:1/60,distance:frame<360?.035:0,running:frame>180&&frame<360});
   model.updateMatrixWorld(true);
+  checkJugOnBack();
   const soles=a.feet.map(f=>f.localToWorld(new THREE.Vector3(0,-.08,0)).y);
   assert.ok(Math.min(...soles)>-.001,'No foot penetrates the floor');
   assert.ok(Math.abs(Math.min(...soles))<.001,'Stance foot stays planted');
@@ -35,6 +46,7 @@ for(let f=0;f<120;f++)window.ThirstExplorer.animate(model,{time:8+f/60,dt:1/60,v
 assert.ok(a.joints.ExplorerArmRight.rotation.z>2,'Victory raises both arms');
 assert.ok(a.joints.ExplorerArmLeft.rotation.z< -2);
 assert.equal(a.joints.ExplorerPackFlap.parent,a.joints.ExplorerBody,'Jug stays on the torso');
+checkJugOnBack();
 // Shared materials must restore by identity, including with a scaled chapter scene.
 for(const scale of [1,1.42]){
  const scene=new THREE.Scene();scene.scale.set(scale,1,scale);scene.add(model);model.position.set(2,0,0);
