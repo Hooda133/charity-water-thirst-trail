@@ -1,3 +1,21 @@
+# Shared adventure character — October 25 upgrade
+
+Both chapters now use the original local procedural model in `../../explorer.js`. It builds immediately from the already-loaded Three.js API and needs no character download. The older glTF below is retained only as a compatibility fallback if the shared module is unavailable.
+
+The active character has dark brown skin, sculpted facial features and ears, cropped curls, a fitted teal overshirt, stitched pockets, rolled cuffs, articulated hands with fingers and thumbs, tailored trousers, and laced boots. His only carried equipment is a yellow molded water jug on his back, supported by two continuous shoulder straps and buckles. There is no hat, scarf, compass, flask, bedroll or extra pack.
+
+The 106-mesh, 28,556-triangle character uses smooth standard PBR materials with different fabric, skin, rubber and plastic roughness. It shares geometry and materials internally, uses the existing chapter lighting, and adds no textures or postprocessing. Valley's existing character fill is warm neutral.
+
+Animation is shared: distance-driven walking/running (running where gameplay supports it), two-link leg solving with a grounded stance foot, counter-swinging arms, idle breathing, blinking, interaction reach and a blended two-arm victory pose. The rigid jug has restrained secondary movement. Turning keeps each chapter's existing smooth heading interpolation. Canyon keeps rendering its victory pose after gameplay ends. Reduced-motion settings suppress secondary motion.
+
+Camera-to-head and camera-to-torso raycasts run at approximately 15 Hz. Scenery blocking either ray fades smoothly; original material objects are restored afterward. Shared scenery materials are cloned only for affected objects. Quest nameplates draw above scenery without writing depth. None of these changes alter collisions, controls, quest state, saved data, audio or camera navigation.
+
+Run `node tools/test-explorer-motion.mjs` to fetch the pinned MIT Three.js module and test the real transforms and raycasting; supply a local Three.js module path as the first argument for offline use.
+
+---
+
+## Retained legacy asset documentation
+
 # The Playable Explorer — 3D Character Asset
 
 **Asset:** [explorer.gltf](explorer.gltf) • Original glTF 2.0 model with an embedded geometry buffer.

@@ -16,6 +16,8 @@ on:
       - 'canyon.css'
       - 'progression.js'
       - 'script.js'
+      - 'explorer.js'
+      - 'tools/test-explorer-motion.mjs'
       - 'index.html'
       - '.github/workflows/village-assets.yml'
   pull_request:
@@ -33,6 +35,8 @@ on:
       - 'canyon.css'
       - 'progression.js'
       - 'script.js'
+      - 'explorer.js'
+      - 'tools/test-explorer-motion.mjs'
       - 'index.html'
       - '.github/workflows/village-assets.yml'
 
@@ -58,3 +62,6 @@ jobs:
         run: node tools/test-valley-movement.mjs
       - name: Validate Forgotten Canyon 3D art and character integration
         run: node tools/test-canyon-visuals.mjs
+
+      - name: Test shared explorer grounding, victory and camera obstruction fading
+        run: node tools/test-explorer-motion.mjs
