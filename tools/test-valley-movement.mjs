@@ -11,6 +11,8 @@ const begin=script.indexOf("  createWorld(canvas, {");
 const end=script.indexOf("  let audioContext = null;",begin);
 assert.ok(begin>=0&&end>begin,"Expected asynchronous renderer initialization");
 script=script.slice(0,begin)+"  // Skip WebGL initialization; exercise genuine gameplay and movement.\n"+script.slice(end);
+// Test-only access to transition state; the shipped source stays read-only.
+script=script.replace('window.ThirstTrail={','window.__valleyRegression={getState:()=>state};window.ThirstTrail={');
 const handlers=new Map(), nodes=new Map(), frames=[];
 let time=1000;
 const context2d=new Proxy({},{
@@ -21,12 +23,12 @@ const context2d=new Proxy({},{
  },set(){return true}
 });
 const node=(id="div")=>{
- const listeners={};
+ const listeners={},attributes=new Map();
  const result={
-  id,hidden:false,value:"",checked:false,textContent:"",innerHTML:"",
-  style:{},dataset:{},children:[],listeners,scrollTop:0,
+  id,hidden:id==='graphicsPanel',value:"",checked:false,textContent:"",innerHTML:"",
+  style:{},dataset:{},children:[],listeners,attributes,scrollTop:0,
   classList:{add(){},remove(){},toggle(){},contains(){return false}},
-  setAttribute(){},removeAttribute(){},
+  setAttribute(k,v){attributes.set(k,String(v))},removeAttribute(k){attributes.delete(k)},
   focus(){},blur(){},click(){listeners.click?.({target:result})},
   getContext(){return context2d},
   getBoundingClientRect(){return {width:1000,height:610,left:0,top:0}},
@@ -49,7 +51,7 @@ const window={
  scrollTo(){},
  matchMedia(){return {matches:false}}
 };
-const values=new Map([["thirstTrailTutorial","true"]]);
+const values=new Map([["thirstTrailTutorial","true"],["thirstTrailSound","false"]]);
 const storage={getItem(k){return values.get(k)||null},setItem(k,v){values.set(k,String(v))},removeItem(k){values.delete(k)}};
 const sandbox={document,window,localStorage:storage,console,
  performance:{now:()=>time},requestAnimationFrame(fn){frames.push(fn);return frames.length},
@@ -57,14 +59,23 @@ const sandbox={document,window,localStorage:storage,console,
 runInNewContext(readFileSync(resolve(root,"progression.js"),"utf8"),sandbox);
 runInNewContext(script,sandbox);
 const snapshot=()=>window.ThirstTrail.snapshot();
+const dispatch=(name,event={})=>{for(const cb of handlers.get(name)||[])cb(event)};
+const press=key=>dispatch('keydown',{key,repeat:false,preventDefault(){}});
+const release=key=>dispatch('keyup',{key});
 const frame=()=>{
  time+=50;
  const next=frames.shift();
  assert.equal(typeof next,"function","Main loop must be scheduled");
  next(time);
 };
+assert.equal(nodes.get('soundButton').attributes.get('aria-pressed'),'false','Saved muted preference is reflected immediately');
+nodes.get('soundButton').click();
+assert.equal(values.get('thirstTrailSound'),'true','Unmuting persists across browser reloads');
+nodes.get('soundButton').click();
+assert.equal(values.get('thirstTrailSound'),'false','Muting persists across browser reloads');
 nodes.get("startButton").listeners.click();
 assert.equal(snapshot().screen,"playing");
+assert.equal(window.TrailProgress.saved('valley')?.x,310,'A new expedition immediately has a checkpoint');
 const initial=snapshot();
 for(const cb of handlers.get("keydown")||[])cb({key:"d",repeat:false,preventDefault(){}});
 for(let i=0;i<8;i++)frame();
@@ -78,6 +89,40 @@ for(const cb of handlers.get("keyup")||[])cb({key:"w"});
 assert.ok(snapshot().screen==="playing","Movement must not end the expedition");
 console.log("✓ Valley player responds to D and W across multiple frames");
 console.log("✓ Movement, frame scheduling and gameplay state remain active");
+
+// Checkpoint transitions must preserve a journey even if reloaded immediately.
+nodes.get('valleyChapters').click();
+const checkpoint=window.TrailProgress.saved('valley');
+assert.equal(checkpoint.x,snapshot().x);
+nodes.get('valleyChapter').click();
+assert.equal(snapshot().x,checkpoint.x,'Continue restores the saved position');
+assert.equal(window.TrailProgress.saved('valley')?.x,checkpoint.x,'Continue does not erase its checkpoint before the next autosave');
+
+// Modal and browser focus transitions must not leave a held direction active.
+press('d');frame();nodes.get('pauseButton').click();
+const paused=snapshot();
+assert.equal(window.__valleyRegression.getState().moving,false);
+nodes.get('modalChoices').children.find(n=>n.textContent.includes('Resume adventure')).click();
+frame();assert.equal(snapshot().x,paused.x,'Closing a modal does not resume stale held-key movement');
+press('d');frame();dispatch('blur');const blurred=snapshot();frame();
+assert.equal(snapshot().x,blurred.x,'Losing focus clears held movement');
+
+// A completed click path settles in the same frame rather than animating in place.
+const state=window.__valleyRegression.getState();
+state.path=[{x:state.x+1,y:state.y}];state.moving=true;frame();
+assert.equal(state.moving,false,'Finishing the final waypoint stops movement immediately');
+
+// Restart establishes a fresh checkpoint without carrying inventory or held keys.
+press('d');nodes.get('resetButton').click();
+nodes.get('modalChoices').children.find(n=>n.textContent.includes('Restart adventure')).click();
+assert.equal(snapshot().x,310);assert.equal(snapshot().y,620);
+assert.equal(window.TrailProgress.saved('valley')?.x,310,'Restart writes its new checkpoint immediately');
+const restarted=snapshot();frame();assert.equal(snapshot().x,restarted.x);
+nodes.get('valleyChapters').click();press('d');
+assert.equal(state.keys.size,0,'Chapter selection does not capture hidden Valley controls');
+release('d');
+console.log('✓ Saved sound preference, initial checkpoint, immediate Continue and restart');
+console.log('✓ Modal, blur, chapter-selection and final-waypoint movement transitions');
 
 
 // Exercise the REAL camera-controller click and release functions in isolation.
