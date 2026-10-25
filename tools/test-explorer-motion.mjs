@@ -74,6 +74,9 @@ for(const scale of [1,1.42]){
  const rock=new THREE.Mesh(new THREE.BoxGeometry(3,4,1),original);rock.position.set(2,1,3);scene.add(rock);
  const camera=new THREE.PerspectiveCamera();camera.position.set(2*scale,2,8*scale);camera.lookAt(2*scale,1,0);
  const fade=window.ThirstExplorer.visibility(THREE,scene,model);
+ fade.update(camera,.07);
+ const firstFade=rock.material.opacity;fade.update(camera,.01);
+ assert.ok(rock.material.opacity<firstFade,'Fade blends between throttled ray queries');
  for(let f=0;f<40;f++)fade.update(camera,.07);
  assert.notEqual(rock.material,original);assert.ok(rock.material.opacity<.22,'Blocker fades without flickering');
  rock.position.x+=20;

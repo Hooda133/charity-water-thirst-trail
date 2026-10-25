@@ -161,26 +161,39 @@
     j.ExplorerPackFlap.rotation.x=reduced?0:Math.sin(phase*2)*weight*.018;
   }
   function visibility(THREE,scene,player){
-    const ray=new THREE.Raycaster(),target=new THREE.Vector3(),direction=new THREE.Vector3(),faded=new Map();let elapsed=1;
+    const ray=new THREE.Raycaster(),target=new THREE.Vector3(),direction=new THREE.Vector3(),faded=new Map();
+    const blocked=new Set(),candidates=[],hits=[];let elapsed=1;
     function restore(mesh,entry){mesh.material=entry.original;entry.copies.forEach(m=>m.dispose());}
+    function collect(object){
+      if(object===player||!object.visible)return;
+      if(object.isMesh){
+        const original=faded.get(object)?.original||object.material;
+        const materials=Array.isArray(original)?original:[original];
+        if(materials.every(mat=>mat.depthTest&&mat.opacity>=.5))candidates.push(object);
+      }
+      for(const child of object.children)collect(child);
+    }
     return {update(camera,dt){
-      elapsed+=dt;if(elapsed<.065)return;const step=Math.min(elapsed,.15);elapsed=0;
-      scene.updateMatrixWorld(true);camera.updateMatrixWorld(true);ray.camera=camera;
-      const blocked=new Set();
-      // Head and torso rays catch narrow scenery crossing the silhouette.
-      for(const height of [.8,1.85]){
-        player.getWorldPosition(target);target.y+=height;direction.subVectors(target,camera.position);
-        ray.set(camera.position,direction.clone().normalize());ray.far=direction.length()-.35;
-        for(const hit of ray.intersectObjects(scene.children,true)){
-          const m=hit.object;let parent=m,ours=false,hidden=false;while(parent){if(parent===player)ours=true;if(!parent.visible)hidden=true;parent=parent.parent;}
-          if(ours||hidden||!m.isMesh||!m.visible||hit.point.y<target.y-height+.22)continue;
-          const original=faded.get(m)?.original||m.material;
-          const materials=Array.isArray(original)?original:[original];
-          if(materials.some(mat=>!mat.depthTest||mat.opacity<.5))continue;
-          blocked.add(m);
-          if(!faded.has(m)){
-            const copies=materials.map(mat=>{const c=mat.clone();c.transparent=true;c.depthWrite=false;return c;});
-            faded.set(m,{original:m.material,copies,opacity:1});m.material=Array.isArray(m.material)?copies:copies[0];
+      const step=Math.min(.1,Math.max(0,Number(dt)||0));elapsed+=step;
+      // Ray queries stay throttled, while the fade itself blends every rendered frame.
+      if(elapsed>=.065){
+        elapsed=0;blocked.clear();candidates.length=0;
+        scene.updateMatrixWorld(true);camera.updateMatrixWorld(true);ray.camera=camera;
+        collect(scene);
+        const ground=player.getWorldPosition(target).y;
+        // Local targets account for Valley's character scale and Canyon's scene scale.
+        for(const height of [1.05,2.1]){
+          player.localToWorld(target.set(0,height,0));direction.subVectors(target,camera.position);
+          ray.far=Math.max(0,direction.length()-.12);ray.set(camera.position,direction.normalize());
+          hits.length=0;ray.intersectObjects(candidates,false,hits);
+          for(const hit of hits){
+            const m=hit.object;if(hit.point.y<ground+.22)continue;
+            blocked.add(m);
+            if(!faded.has(m)){
+              const materials=Array.isArray(m.material)?m.material:[m.material];
+              const copies=materials.map(mat=>{const c=mat.clone();c.transparent=true;c.depthWrite=false;return c;});
+              faded.set(m,{original:m.material,copies,opacity:1});m.material=Array.isArray(m.material)?copies:copies[0];
+            }
           }
         }
       }
