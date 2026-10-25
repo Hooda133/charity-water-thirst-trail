@@ -78,10 +78,26 @@ for(const scale of [1,1.42]){
  const firstFade=rock.material.opacity;fade.update(camera,.01);
  assert.ok(rock.material.opacity<firstFade,'Fade blends between throttled ray queries');
  for(let f=0;f<40;f++)fade.update(camera,.07);
- assert.notEqual(rock.material,original);assert.ok(rock.material.opacity<.22,'Blocker fades without flickering');
+ assert.notEqual(rock.material,original);assert.ok(rock.material.opacity<.1,'Blocker fades deeply enough to preserve character contrast');
  rock.position.x+=20;
  for(let f=0;f<40;f++)fade.update(camera,.07);
  assert.equal(rock.material,original,'Original scenery material restored');
+ fade.dispose();scene.remove(model);
+}
+// A narrow shelf can obscure the chest while both waist and face rays miss it.
+{
+ const scene=new THREE.Scene();scene.add(model);model.position.set(2,0,0);
+ const original=new THREE.MeshStandardMaterial({color:0xa66a48});
+ const shelf=new THREE.Mesh(new THREE.BoxGeometry(.6,.12,.3),original);
+ shelf.position.set(2,1.55,3);scene.add(shelf);
+ const camera=new THREE.PerspectiveCamera();camera.position.set(2,1.55,8);camera.lookAt(2,1.55,0);
+ const fade=window.ThirstExplorer.visibility(THREE,scene,model);
+ for(let f=0;f<40;f++)fade.update(camera,.07);
+ assert.notEqual(shelf.material,original,'Chest-only sandstone shelf is detected');
+ assert.ok(shelf.material.opacity<.1,'Chest blocker fades deeply');
+ shelf.position.x=20;
+ for(let f=0;f<40;f++)fade.update(camera,.07);
+ assert.equal(shelf.material,original,'Chest shelf restores its exact original material');
  fade.dispose();scene.remove(model);
 }
 console.log(`✓ Shared explorer: ${meshes} meshes, ${triangles} triangles`);

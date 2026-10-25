@@ -182,7 +182,7 @@
         collect(scene);
         const ground=player.getWorldPosition(target).y;
         // Local targets account for Valley's character scale and Canyon's scene scale.
-        for(const height of [1.05,2.1]){
+        for(const height of [1.05,1.55,2.1]){
           player.localToWorld(target.set(0,height,0));direction.subVectors(target,camera.position);
           ray.far=Math.max(0,direction.length()-.12);ray.set(camera.position,direction.normalize());
           hits.length=0;ray.intersectObjects(candidates,false,hits);
@@ -197,7 +197,7 @@
           }
         }
       }
-      for(const [m,e] of faded){e.opacity+=((blocked.has(m)?.19:1)-e.opacity)*(1-Math.exp(-step*12));
+      for(const [m,e] of faded){e.opacity+=((blocked.has(m)?.08:1)-e.opacity)*(1-Math.exp(-step*12));
         e.copies.forEach((mat,i)=>{const original=Array.isArray(e.original)?e.original[i]:e.original;mat.opacity=original.opacity*e.opacity;});
         if(!blocked.has(m)&&e.opacity>.995){restore(m,e);faded.delete(m);}
       }
