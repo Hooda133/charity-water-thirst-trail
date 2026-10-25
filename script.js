@@ -2465,7 +2465,7 @@
       ring.rotation.x=-Math.PI/2;ring.position.y=.15;
       const beacon=mesh(new THREE.CylinderGeometry(.07,.45,1.5,12),new THREE.MeshBasicMaterial({color,transparent:true,opacity:.15,depthWrite:false}),g,false);
       beacon.position.y=.90;
-      const badge=new THREE.Sprite(new THREE.SpriteMaterial({map:labelTexture(name),transparent:true,depthTest:false}));
+      const badge=new THREE.Sprite(new THREE.SpriteMaterial({map:labelTexture(name),transparent:true,depthTest:false,depthWrite:false}));
       badge.position.set(0,3.28,0);badge.scale.set(3.45,.86,1);g.add(badge);
       const dot=ball(g,new THREE.MeshBasicMaterial({color}),0,1.72,0,.23,.23,.23,false);
       markers[key]={group:g,ring,beacon,dot,mat};
@@ -2573,7 +2573,7 @@
     // Slightly larger stylized explorer, visible even at the standard isometric zoom.
     const explorer=new THREE.Group();scene.add(explorer);
     explorer.scale.setScalar(1.19);
-    const characterFill=new THREE.PointLight(0x9fe8e0,.42,6.5,2);
+    const characterFill=new THREE.PointLight(0xffe5ce,.55,6.5,2);
     characterFill.position.set(-1.2,3.6,2.2);
     explorer.add(characterFill);
     const skin=makeMat(0xce9169),shirt=makeMat(0x29a6a0),pants=makeMat(0x335772),
@@ -2655,12 +2655,14 @@
       "ExplorerPackFlap"
     ];
     async function loadExplorerModel(){
-      if(options.skipExternalAssets||(!usePinnedThree&&!options.characterLoaderFactory))return;
+      if(!window.ThirstExplorer&&(options.skipExternalAssets||(!usePinnedThree&&!options.characterLoaderFactory)))return;
       characterAssetState.status="loading";
       try{
         let asset;
         const assetUrl="./assets/characters/explorer.gltf";
-        if(options.characterLoaderFactory){
+        if(window.ThirstExplorer){
+          asset={scene:window.ThirstExplorer.create(THREE)};
+        }else if(options.characterLoaderFactory){
           asset=await options.characterLoaderFactory(assetUrl,THREE);
         }else{
           const {GLTFLoader}=await import("three/addons/loaders/GLTFLoader.js");
@@ -2670,7 +2672,7 @@
         if(characterAssetDisposed)return;
         const source=asset?.scene?.getObjectByName("ExplorerCharacter");
         if(!source)throw Error("ExplorerCharacter node missing");
-        const candidate=source.clone(true);
+        const candidate=window.ThirstExplorer&&!options.characterLoaderFactory?source:source.clone(true);
         const joints={};
         for(const name of rigJointNames){
           const part=candidate.getObjectByName(name);
@@ -2766,6 +2768,7 @@
       star.scale.setScalar(.45+rng());
       star.visible=false;stars.push(star);
     }
+    const characterVisibility=window.ThirstExplorer?.visibility(THREE,scene,explorer);
     const camTarget=new THREE.Vector3(),camPos=new THREE.Vector3();
     const freeTarget=new THREE.Vector3();
     let freeCamera=false;
@@ -2955,6 +2958,7 @@
         }
       }
       const playerX=wx(state.x),playerZ=wz(state.y);
+      const actualDistance=Number.isFinite(explorer.userData.lastX)?Math.hypot(playerX-explorer.userData.lastX,playerZ-explorer.userData.lastZ):0;
       const crossing=state.y>530&&state.y<635&&state.x>735&&state.x<967;
       const playerY=crossing?.58:terrainElevation(playerX,playerZ);
       explorer.position.set(playerX,playerY,playerZ);
@@ -3022,6 +3026,10 @@
           explorer.rotation.y+=diff*(1-Math.exp(-10*frameDelta));
         }
       }
+      if(characterModel?.userData.adventure)window.ThirstExplorer.animate(characterModel,{
+        time,dt:frameDelta,distance:isMoving?actualDistance/1.19:0,running,
+        interaction:!!state.modalOpen||!!state.nearby,victory:celebrating||(state.screen==="ended"&&state.effect?.kind==="victory"),reduced:reduceMotion
+      });
       explorer.userData.lastX=playerX;explorer.userData.lastZ=playerZ;
       if(!reduceMotion&&effectsEnabled){
         // Time-based displacement stays consistent across refresh rates.
@@ -3248,6 +3256,7 @@
         camTarget.lerp(aim,.075);
       }
       camera.lookAt(camTarget);
+      characterVisibility?.update(camera,frameDelta);
       renderer.render(scene,camera);
     }
     return {
@@ -3255,6 +3264,7 @@
       focus(){view.focus({preventScroll:true});},
       dispose(){
         villageAssetDisposed=true;
+        characterVisibility?.dispose();
         characterAssetDisposed=true;
         if(characterModel){
           const seenGeo=new Set(),seenMat=new Set();

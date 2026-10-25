@@ -228,3 +228,22 @@ The pipe challenge passed scripted gameplay and modal-class switching checks; re
 - [ ] Confirm closing or switching chapters does not keep the Valley WebGL scene rendering in the background.
 
 Run `node tools/test-chapters.mjs` for repeatable logic tests. GitHub Actions checks both levels, but live browser rendering and mobile performance must still be verified.
+
+## Shared character upgrade — October 25, 2026
+
+Backup: branch `backup/character-before-upgrade` at `fb4727f` (the original main HEAD).
+Implementation is split into incremental commits on `codex/upgrade-shared-adventurer`.
+
+Checks completed:
+
+- All six existing Node regression scripts passed: chapter gates and saves, all Canyon puzzles and completion, Valley movement and click navigation, exhaustive pipe puzzle solving, legacy glTF validation, and Canyon scenery construction.
+- `node tools/test-explorer-motion.mjs` uses actual pinned Three.js geometry, transforms and raycasting. It verifies walk/run/stop grounding over 480 frames, stationary world-space stance contact during straight travel, two-arm victory posing, torso-attached jug hierarchy, and obstruction fade/restore at Valley and Canyon scene scales. Offline alternative: pass a local `three.module.js` path.
+- Chromium with software WebGL: both actual chapter scenes rendered, keyboard D moved the character, Valley elder and Canyon surveyor interaction dialogs opened, and both completion dialogs displayed. Completion was triggered through test-only browser source instrumentation, not by manually playing the entire expedition. Gameplay solution paths were checked by the existing regression scripts. No test hooks are shipped in production.
+- Fixed errors discovered in real WebGL: sprite raycasting needs its camera; scaled Canyon visibility rays need world coordinates; two Canyon dust meshes were incorrectly passed as geometry; Canyon stopped rendering before the victory animation could play.
+- Character budget: 106 meshes and 28,556 triangles, no new textures or network assets. Visibility queries are throttled to about 15 Hz and reuse ray/vector state. Original camera, controls, collision geometry, audio and storage schemas are retained.
+
+Limits: browser tests used low graphics on a software GPU, so they establish functionality rather than a representative laptop FPS measurement. Human listening, touch-device checks and a full manual playthrough remain unverified. The animation uses a lightweight articulated procedural rig rather than motion capture; foot contact is exact on the flat local gait plane, with each chapter retaining its existing terrain-height rules (Canyon decorative relief can vary by a few centimeters). Running is used in Valley, where the existing Shift control supports it; Canyon retains its original walking speed and controls. Complete occluder meshes fade, so an instanced mesh may fade all of its instances together. The original 2D/legacy fallback remains available if WebGL or the shared module is unavailable.
+
+### Yellow jug follow-up
+
+The shared jug is now a recognizable beveled rectangular yellow water can with an open handle, cap and rear X ribs. It remains on the back under both shoulder straps; its named body mesh is `ExplorerWaterJug`. The existing real-Three.js test now verifies the yellow material and that the entire can stays behind the torso throughout walk/run/stop and victory poses. The refined character remains 106 meshes and is 28,384 triangles.
