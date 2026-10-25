@@ -91,7 +91,7 @@
       ell(elbow,skin,0,-.33,.014,.09,.12,.065);
       ell(elbow,skin,-side*.075,-.30,.045,.038,.073,.04);
       for(let f=0;f<3;f++)capsule(elbow,skin,(f-1)*.038,-.405,.014,.021,.055);
-      const leg=joint('ExplorerLeg'+suffix,body,side*.18,.87,0);
+      const leg=joint('ExplorerLeg'+suffix,body,side*.18,.93,0);
       capsule(leg,pants,0,-.20,0,.14,.28);
       const knee=joint('ExplorerKnee'+suffix,leg,0,-.43,0);
       capsule(knee,pants,0,-.19,0,.115,.28);
@@ -101,28 +101,50 @@
       box(foot,sole,0,-.055,.065,.27,.05,.40);
       for(const z of [.06,.11,.16])box(foot,trim,0,.095,z,.15,.014,.02);
     }
-    root.userData.adventure={joints,feet,torso,phase:0,move:0,run:0,action:0,last:null};
+    root.userData.adventure={joints,feet,torso,phase:0,move:0,run:0,interaction:0,victory:0};
     return root;
   }
   function animate(root,{time,dt,distance=0,running=false,interaction=false,victory=false,reduced=false}){
     const a=root.userData.adventure;if(!a)return;
+    dt=Math.min(.05,Math.max(0,Number(dt)||0));
     const j=a.joints,blend=1-Math.exp(-dt*12);
     const moving=distance>.0001&&distance<2;
     a.move+=(Number(moving)-a.move)*blend;a.run+=(Number(running&&moving)-a.run)*blend;
-    a.action+=((victory?2:interaction?1:0)-a.action)*blend;
+    a.interaction+=((interaction&&!moving&&!victory?1:0)-a.interaction)*blend;
+    a.victory+=(Number(victory)-a.victory)*blend;
     // Advance by actual world distance, so collision stops and different frame rates do not skate.
-    const strideLength=.24+a.run*.09;
+    const strideLength=.30+a.run*.10;
     if(moving)a.phase+=distance*Math.PI/(2*strideLength);
     const phase=a.phase,weight=a.move;
-    j.ExplorerBody.position.y=0;j.ExplorerBody.rotation.set(0,0,0);
+    let targets=[];
+    for(let i=0;i<2;i++){
+      const p=phase+i*Math.PI,cycle=((p%(2*Math.PI))+2*Math.PI)%(2*Math.PI);
+      targets.push({p,lift:Math.max(0,Math.sin(p))*(.12+a.run*.07)*weight,
+        z:(cycle<Math.PI?-Math.cos(cycle):3-2*cycle/Math.PI)*strideLength*weight});
+    }
+    if(!moving&&a.wasMoving&&a.targets){
+      a.stopTargets=a.targets.map(t=>({...t}));a.settleTime=0;
+      a.firstStep=a.stopTargets[0].lift>a.stopTargets[1].lift?0:1;
+    }
+    if(moving)a.stopTargets=null;
+    else if(a.stopTargets){
+      a.settleTime+=dt;
+      targets=targets.map((t,i)=>{
+        const from=a.stopTargets[i],u=Math.max(0,Math.min(1,(a.settleTime-(i===a.firstStep?0:.18))/.18));
+        const ease=u*u*(3-2*u);
+        return {...t,z:from.z*(1-ease),lift:from.lift*(1-ease)+Math.sin(Math.PI*u)*.075};
+      });
+    }
+    a.wasMoving=moving;a.targets=targets;
+    // Relaxed knees at rest; lower the pelvis only enough for each stride to reach.
+    const reach=.852;
+    const pelvis=Math.min(0,...targets.map(t=>Math.sqrt(Math.max(0,reach*reach-t.z*t.z))-.85+t.lift));
+    j.ExplorerBody.position.y=pelvis;j.ExplorerBody.rotation.set(0,0,0);
     a.torso.scale.y=.49*(1+(reduced?0:Math.sin(time*2)*.009));
     for(let i=0;i<2;i++){
-      const s=i?'Right':'Left',p=phase+i*Math.PI;
-      const lift=Math.max(0,Math.sin(p))*(.13+a.run*.08)*weight;
-      const cycle=((p%(2*Math.PI))+2*Math.PI)%(2*Math.PI);
+      const s=i?'Right':'Left',{p,lift,z}=targets[i];
       // Swing returns forward; stance travels backward at the exact ground speed.
-      const z=(cycle<Math.PI?-Math.cos(cycle):3-2*cycle/Math.PI)*strideLength*weight;
-      const down=.79-lift;
+      const down=.85+pelvis-lift;
       const knee=Math.acos(Math.max(-1,Math.min(1,(down*down+z*z-2*.43*.43)/(2*.43*.43))));
       const hip=Math.atan2(-z,down)-knee*.5;
       j['ExplorerLeg'+s].rotation.x=hip;j['ExplorerKnee'+s].rotation.x=knee;
@@ -130,11 +152,11 @@
       const arm=j['ExplorerArm'+s],elbow=j['ExplorerElbow'+s];
       arm.rotation.set(-Math.cos(p)*weight*(.38+a.run*.2),0,(i?1:-1)*.08);
       elbow.rotation.x=-.16-a.run*.35;
-      const v=Math.max(0,a.action-1),g=Math.min(1,a.action)*(1-v);
+      const v=a.victory,g=a.interaction*(1-v);
       arm.rotation.z+=(i?1:-1)*v*2.15;
       if(i){arm.rotation.x-=g*.75;elbow.rotation.x-=g*.7;}
     }
-    j.ExplorerHead.rotation.set(victory?-.1:0,reduced?0:Math.sin(time*.65)*.035,0);
+    j.ExplorerHead.rotation.set(-a.victory*.1,reduced?0:Math.sin(time*.65)*.035,0);
     j.ExplorerEyes.scale.y=!reduced&&time%5.1<.12?.12:1;
     j.ExplorerPackFlap.rotation.x=reduced?0:Math.sin(phase*2)*weight*.018;
   }

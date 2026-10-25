@@ -29,6 +29,7 @@ for(let frame=0;frame<480;frame++){
   assert.ok(Math.min(...soles)>-.001,'No foot penetrates the floor');
   assert.ok(Math.abs(Math.min(...soles))<.001,'Stance foot stays planted');
 }
+assert.ok(a.joints.ExplorerKneeLeft.rotation.x<.32,'Idle posture has softly relaxed, not crouched knees');
 // Verify world-space contact during steady, straight travel, not only vertical grounding.
 let previous=[];
 for(let frame=0;frame<180;frame++){
@@ -47,6 +48,25 @@ assert.ok(a.joints.ExplorerArmRight.rotation.z>2,'Victory raises both arms');
 assert.ok(a.joints.ExplorerArmLeft.rotation.z< -2);
 assert.equal(a.joints.ExplorerPackFlap.parent,a.joints.ExplorerBody,'Jug stays on the torso');
 checkJugOnBack();
+// Releasing victory must return directly to idle, without passing through a greeting pose.
+for(let f=0;f<120;f++){
+ window.ThirstExplorer.animate(model,{time:10+f/60,dt:1/60});
+ assert.ok(Math.abs(a.joints.ExplorerArmRight.rotation.x)<.02,'No unintended wave while victory fades');
+}
+// The two short settling steps always keep one support foot planted.
+for(let f=0;f<30;f++)window.ThirstExplorer.animate(model,{time:f/60,dt:1/60,distance:.03,interaction:true});
+assert.ok(a.interaction<.01,'Interaction reach is suppressed while travelling');
+let previousStop=[];
+for(let f=0;f<30;f++){
+ window.ThirstExplorer.animate(model,{time:1+f/60,dt:1/60});model.updateMatrixWorld(true);
+ const feet=a.feet.map(foot=>foot.localToWorld(new THREE.Vector3(0,-.08,0)));
+ assert.ok(Math.abs(Math.min(...feet.map(foot=>foot.y)))<.001,'Stopping retains a support foot');
+ if(previousStop.length)for(let i=0;i<2;i++){
+   if(feet[i].y<1e-6&&previousStop[i].y<1e-6)
+     assert.ok(Math.abs(feet[i].z-previousStop[i].z)<.0001,'Grounded foot does not slide during stopping');
+ }
+ previousStop=feet;
+}
 // Shared materials must restore by identity, including with a scaled chapter scene.
 for(const scale of [1,1.42]){
  const scene=new THREE.Scene();scene.scale.set(scale,1,scale);scene.add(model);model.position.set(2,0,0);
