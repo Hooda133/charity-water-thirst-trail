@@ -1679,10 +1679,15 @@
     const bridgeX=wx(riverCenter(bridgeScreenY)),bridgeZ=wz(bridgeScreenY);
     function bridgeGroundHeight(x,z){
       const offset=x-bridgeX,d=Math.abs(offset);
-      if(Math.abs(z-bridgeZ)>bridgeHalfDepth||d>4)return terrainElevation(x,z);
+      if(Math.abs(z-bridgeZ)>bridgeHalfDepth+1e-6||d>4+1e-6)return terrainElevation(x,z);
       if(d<=3.18)return .57;
-      const edgeHeight=terrainElevation(bridgeX+Math.sign(offset)*4,z);
-      return .57+(edgeHeight-.57)*(d-3.18)/.82;
+      // Use the same two planar triangles as the timber ramp, including its slope.
+      const edgeX=bridgeX+Math.sign(offset)*4,t=Math.min(1,Math.max(0,(d-3.18)/.82));
+      const u=Math.min(1,Math.max(0,(z-bridgeZ+bridgeHalfDepth)/(bridgeHalfDepth*2)));
+      const low=terrainElevation(edgeX,bridgeZ-bridgeHalfDepth);
+      const high=terrainElevation(edgeX,bridgeZ+bridgeHalfDepth);
+      return t+u<=1?.57+(low-.57)*t:
+        low*(1-u)+.57*(1-t)+high*(t+u-1);
     }
     // Hand-set path shoulders and courtyard cobbles break up the broad grass
     // plane while staying decorative and outside the navigation collision map.
