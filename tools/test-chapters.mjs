@@ -120,7 +120,7 @@ assert.equal(test.surface(170,425),0,"Trail foot placement stays at ground level
 assert.ok(test.surface(415,350)>0&&test.surface(415,350)<.29,"Bridge entry rises along its access ramp");
 go("surveyor");select()[0].listeners.click();
 assert.ok(canyon.snapshot().done.includes("surveyor"));
-assert.ok(audioEvents.some(e=>e.frequency===620)&&audioEvents.some(e=>e.frequency===750),"Interactions reuse Chapter 1 feedback tones");
+assert.ok(audioEvents.some(e=>e.frequency===550)&&audioEvents.some(e=>e.frequency===750),"Interactions reuse Chapter 1 feedback tones");
 go("kit");select()[0].listeners.click();
 assert.ok(canyon.snapshot().done.includes("kit"));
 go("valves");assert.equal(test.safe(),false);

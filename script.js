@@ -1674,58 +1674,15 @@
     road([[455,765],[510,870],[560,970]],.67);
     // Timber bridge landmark at the existing collision-safe crossing. The
     // deck is decorative only; navigation remains governed by the 2D route.
-    const bridgeScreenY=(532+635)/2,bridgeHalfDepth=(635-532)/80;
+    const bridgeScreenY=(532+635)/2,bridgeHalfDepth=1.365;
     const bridgeX=wx(riverCenter(bridgeScreenY)),bridgeZ=wz(bridgeScreenY);
     function bridgeGroundHeight(x,z){
       const offset=x-bridgeX,d=Math.abs(offset);
-      if(Math.abs(z-bridgeZ)>bridgeHalfDepth||d>3.7)return terrainElevation(x,z);
-      if(d<=2.9)return .23;
-      const edgeHeight=terrainElevation(bridgeX+Math.sign(offset)*3.7,z);
-      return .23+(edgeHeight-.23)*(d-2.9)/.8;
+      if(Math.abs(z-bridgeZ)>bridgeHalfDepth||d>4)return terrainElevation(x,z);
+      if(d<=3.18)return .57;
+      const edgeHeight=terrainElevation(bridgeX+Math.sign(offset)*4,z);
+      return .57+(edgeHeight-.57)*(d-3.18)/.82;
     }
-    function riverBridge(screenY){
-      const riverX=wx(riverCenter(screenY)),z=wz(screenY);
-      const bridgeGroup=new THREE.Group();bridgeGroup.position.set(riverX,.05,z);scene.add(bridgeGroup);
-      const bridgeWood=makeMat(0x8a5536,.92);
-      const bridgeTrim=makeMat(0xc58b55,.84);
-      const bridgeStone=makeMat(0x71856f,.98);
-      box(bridgeGroup,bridgeWood,0,0,0,5.8,.18,bridgeHalfDepth*2);
-      for(let i=-8;i<=8;i++){
-        const plank=box(bridgeGroup,bridgeTrim,i*.34,.13,0,.27,.10,bridgeHalfDepth*2,false);
-        plank.rotation.y=(i%3-1)*.018;
-      }
-      for(const x of [-2.45,2.45])for(const zOffset of [-1.18,1.18]){
-        box(bridgeGroup,bridgeWood,x,.78,zOffset,.18,1.45,.18);
-        box(bridgeGroup,bridgeTrim,x*.5,1.42,zOffset,4.9,.13,.13);
-      }
-      for(const x of [-2.15,-1.08,0,1.08,2.15])for(const zOffset of [-1.18,1.18])
-        box(bridgeGroup,bridgeTrim,x,.82,zOffset,.10,1.05,.10);
-      for(const x of [-2.05,2.05])for(const zOffset of [-1.15,1.15])
-        cyl(bridgeGroup,bridgeStone,x,-.13,zOffset,.28,.38,.62,7);
-      const ropeMat=new THREE.MeshStandardMaterial({color:0x554438,roughness:1});
-      for(const zOffset of [-1.24,1.24]){
-        const ropeCurve=new THREE.CatmullRomCurve3([
-          new THREE.Vector3(-2.45,1.28,zOffset),
-          new THREE.Vector3(0,1.08,zOffset),
-          new THREE.Vector3(2.45,1.28,zOffset)
-        ]);
-        const rope=new THREE.Mesh(new THREE.TubeGeometry(ropeCurve,12,.035,5,false),ropeMat);
-        bridgeGroup.add(rope);
-      }
-      // Short timber approaches meet the terrain and the same .23-high foot plane.
-      for(const side of [-1,1]){
-        const verts=[];
-        for(const [x,zOffset] of [[side*2.9,-bridgeHalfDepth],[side*2.9,bridgeHalfDepth],
-          [side*3.7,-bridgeHalfDepth],[side*3.7,bridgeHalfDepth]])
-          verts.push(x,bridgeGroundHeight(riverX+x,z+zOffset)-.05,zOffset);
-        const ramp=new THREE.BufferGeometry();
-        ramp.setAttribute("position",new THREE.Float32BufferAttribute(verts,3));
-        ramp.setIndex(side>0?[0,1,2,2,1,3]:[0,2,1,2,3,1]);ramp.computeVertexNormals();
-        mesh(ramp,bridgeTrim,bridgeGroup,false);
-      }
-      contactShadow(riverX,z,2.2,1.25,.16);
-    }
-    riverBridge(bridgeScreenY);
     // Hand-set path shoulders and courtyard cobbles break up the broad grass
     // plane while staying decorative and outside the navigation collision map.
     const cobbleGeo=new THREE.IcosahedronGeometry(1,1);
@@ -1772,7 +1729,8 @@
       light.position.set(0,1.14,0);g.add(light);lanternLights.push(light);
     }
     // The bridge is true geometry: elevated planks, support pillars, railings and posts.
-    const bridge=new THREE.Group();bridge.position.set(wx(850),0,wz(580));scene.add(bridge);
+    // One detailed crossing replaces the two previously overlapping bridge meshes.
+    const bridge=new THREE.Group();bridge.position.set(bridgeX,0,bridgeZ);scene.add(bridge);
     box(bridge,mats.wood,0,.24,0,6.35,.37,2.65);
     for(let i=0;i<25;i++){
       const x=-3.06+i*.255;
@@ -1788,6 +1746,17 @@
       box(bridge,mats.lightWood,0,1.24,side*1.33,6.45,.12,.12);
     }
     for(const x of [-2.75,2.75])for(const z of [-.95,.95])cyl(bridge,mats.wood,x,-.26,z,.21,.27,1.3);
+    for(const side of [-1,1]){
+      const verts=[];
+      for(const [x,z] of [[side*3.18,-bridgeHalfDepth],[side*3.18,bridgeHalfDepth],
+        [side*4,-bridgeHalfDepth],[side*4,bridgeHalfDepth]])
+        verts.push(x,bridgeGroundHeight(bridgeX+x,bridgeZ+z),z);
+      const ramp=new THREE.BufferGeometry();
+      ramp.setAttribute("position",new THREE.Float32BufferAttribute(verts,3));
+      ramp.setIndex(side>0?[0,1,2,2,1,3]:[0,2,1,2,3,1]);ramp.computeVertexNormals();
+      mesh(ramp,mats.wood,bridge,false);
+    }
+    contactShadow(bridgeX,bridgeZ,2.7,1.25,.16);
     // Bridge ropes and extra braces add detail while preserving its safe crossing footprint.
     for(const side of [-1,1]){
       for(let i=0;i<6;i++){
@@ -1970,9 +1939,19 @@
       dummy.scale.setScalar(.55+rng()*1.5);dummy.updateMatrix();instanced.setMatrixAt(i,dummy.matrix);
     }
     instanced.instanceMatrix.needsUpdate=true;scene.add(instanced);
+    const smallFlowerBatches=[
+      new THREE.InstancedMesh(unitSphere,makeMat(0xffffff),48),
+      new THREE.InstancedMesh(unitSphere,flowerMat,47)
+    ];
+    dummy.rotation.set(0,0,0);dummy.scale.set(.085,.09,.085);
     for(let i=0;i<95;i++){
-      const x=(rng()-.5)*43,z=(rng()-.5)*26;
-      ball(scene,i%2?flowerMat:makeMat(0xffffff),x,.16,z,.085,.09,.085,false);
+      // Keep the original two RNG draws and alternating colors at each location.
+      dummy.position.set((rng()-.5)*43,.16,(rng()-.5)*26);dummy.updateMatrix();
+      smallFlowerBatches[i%2].setMatrixAt(Math.floor(i/2),dummy.matrix);
+    }
+    for(const batch of smallFlowerBatches){
+      batch.castShadow=false;batch.receiveShadow=true;
+      batch.instanceMatrix.needsUpdate=true;scene.add(batch);
     }
   
     // Delicate butterflies add motion close to the paths and garden.
@@ -3084,6 +3063,12 @@
         interaction:!!state.modalOpen||!!state.nearby,victory:celebrating||(state.screen==="ended"&&state.effect?.kind==="victory"),reduced:reduceMotion
       });
       explorer.userData.lastX=playerX;explorer.userData.lastZ=playerZ;
+      // Disabled effects leave no frozen water glints or wildlife behind.
+      for(const wave of ripples)wave.visible=effectsEnabled;
+      for(const shine of glints)shine.mesh.visible=effectsEnabled;
+      for(const item of butterflies)item.group.visible=effectsEnabled;
+      for(const bird of birds)bird.group.visible=effectsEnabled;
+      for(const smoke of chimneySmokes)smoke.puff.visible=effectsEnabled;
       if(!reduceMotion&&effectsEnabled){
         // Time-based displacement stays consistent across refresh rates.
         for(let i=0;i<ripples.length;i++){

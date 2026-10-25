@@ -117,6 +117,7 @@
     $("canyonModal").classList.toggle("is-victory",state.finished);
     $("canyonModal").scrollTop=0;
     $("canyonModal").focus({preventScroll:true});
+    sound(550,.07);
   }
   function closeModal(){
     state.modal=false;$("canyonModalBackdrop").hidden=true;
@@ -126,9 +127,9 @@
     if(!state.active||state.paused||state.modal)return;
     const key=closest();
     if(!key)return toast("Walk toward a glowing mission marker and press E.");
-    sound();
     state.path=[];
     if(key==="rest"){
+      sound();
       state.energy=Math.min(100,state.energy+34);
       toast("Rested in the canyon shade · +34 energy");save();refreshUI();
       return;
