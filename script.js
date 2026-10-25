@@ -946,15 +946,16 @@
     const bounce=state.moving?Math.sin(state.walkT*2)*3:Math.sin(time*2.2)*1.3;
     ctx.save();ctx.translate(state.x,state.y+bounce);
     ellipse(0,29,21,9,"#1b484568");
-    // Boots, backpack, jacket and head.
+    // Keep the same dark-skinned explorer and back-mounted yellow jug in 2D.
     const step=state.moving?Math.sin(state.walkT*2)*7:0;
     roundRect(-13,18+step,10,17,3,"#254553");roundRect(4,18-step,10,17,3,"#254553");
-    roundRect(-21,-14,40,38,12,gradient(-21,-14,19,24,[[0,"#e98249"],[.55,"#f8b35a"],[1,"#c9673f"]]));
-    roundRect(state.facing===1?-22:13,-11,10,26,5,"#315666");
-    roundRect(-13,-16,26,29,8,"#3cae99");path([[-6,-10],[5,3]],2,"#a9e1bb");path([[5,-10],[-6,3]],2,"#a9e1bb");
-    ellipse(0,-26,19,19,"#bf7955");
+    roundRect(-21,-14,40,38,6,"#f5c928");
+    roundRect(-8,-20,16,8,3,"#d4a91e");
+    roundRect(-13,-16,26,29,8,"#278e88");
+    path([[-8,-13],[-7,10]],3,"#40372b");path([[8,-13],[7,10]],3,"#40372b");
+    ellipse(0,-26,19,19,"#603820");
     ctx.fillStyle="#1d363a";ctx.beginPath();ctx.arc(state.facing*7,-25,2.5,0,Math.PI*2);ctx.fill();
-    roundRect(-22,-40,40,11,6,"#fbd05b");roundRect(2,-34,24,5,3,"#e3b649");
+    roundRect(-18,-43,36,14,7,"#191719");
     ctx.fillStyle="#f9d69b";ctx.fillRect(-5,-27,3,2);
     ctx.restore();
   }
@@ -1175,7 +1176,7 @@
     scene.fog = new THREE.FogExp2(0x9bc9d1, .009);
     const camera = new THREE.PerspectiveCamera(46, 1, .1, 180);
     const renderer = new THREE.WebGLRenderer({antialias:true, alpha:false, powerPreference:"high-performance"});
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, graphics.resolution * 1.7));
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1,1.7)*graphics.resolution);
     renderer.outputColorSpace = THREE.SRGBColorSpace;
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
     renderer.toneMappingExposure = 1.12;
@@ -1188,7 +1189,7 @@
       effectsEnabled=!!next.effects;
       cameraSensitivity=Math.max(.5,Math.min(1.8,Number(next.sensitivity)||1));
       const scale=Math.max(.65,Math.min(1.5,Number(next.resolution)||1));
-      renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,scale*1.7));
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,1.7)*scale);
       renderer.shadowMap.enabled=!!next.shadows;
       sun.castShadow=!!next.shadows;
       const quality=graphicsPreset==="ultra"?2048:graphicsPreset==="high"?1536:graphicsPreset==="medium"?1024:512;
@@ -1673,27 +1674,36 @@
     road([[455,765],[510,870],[560,970]],.67);
     // Timber bridge landmark at the existing collision-safe crossing. The
     // deck is decorative only; navigation remains governed by the 2D route.
+    const bridgeScreenY=(532+635)/2,bridgeHalfDepth=(635-532)/80;
+    const bridgeX=wx(riverCenter(bridgeScreenY)),bridgeZ=wz(bridgeScreenY);
+    function bridgeGroundHeight(x,z){
+      const offset=x-bridgeX,d=Math.abs(offset);
+      if(Math.abs(z-bridgeZ)>bridgeHalfDepth||d>3.7)return terrainElevation(x,z);
+      if(d<=2.9)return .23;
+      const edgeHeight=terrainElevation(bridgeX+Math.sign(offset)*3.7,z);
+      return .23+(edgeHeight-.23)*(d-2.9)/.8;
+    }
     function riverBridge(screenY){
       const riverX=wx(riverCenter(screenY)),z=wz(screenY);
       const bridgeGroup=new THREE.Group();bridgeGroup.position.set(riverX,.05,z);scene.add(bridgeGroup);
       const bridgeWood=makeMat(0x8a5536,.92);
       const bridgeTrim=makeMat(0xc58b55,.84);
       const bridgeStone=makeMat(0x71856f,.98);
-      box(bridgeGroup,bridgeWood,0,0,0,5.8,.18,1.42);
+      box(bridgeGroup,bridgeWood,0,0,0,5.8,.18,bridgeHalfDepth*2);
       for(let i=-8;i<=8;i++){
-        const plank=box(bridgeGroup,bridgeTrim,i*.34,.13,0,.27,.10,1.52,false);
+        const plank=box(bridgeGroup,bridgeTrim,i*.34,.13,0,.27,.10,bridgeHalfDepth*2,false);
         plank.rotation.y=(i%3-1)*.018;
       }
-      for(const x of [-2.45,2.45])for(const zOffset of [-.55,.55]){
+      for(const x of [-2.45,2.45])for(const zOffset of [-1.18,1.18]){
         box(bridgeGroup,bridgeWood,x,.78,zOffset,.18,1.45,.18);
         box(bridgeGroup,bridgeTrim,x*.5,1.42,zOffset,4.9,.13,.13);
       }
-      for(const x of [-2.15,-1.08,0,1.08,2.15])for(const zOffset of [-.55,.55])
+      for(const x of [-2.15,-1.08,0,1.08,2.15])for(const zOffset of [-1.18,1.18])
         box(bridgeGroup,bridgeTrim,x,.82,zOffset,.10,1.05,.10);
-      for(const x of [-2.05,2.05])for(const zOffset of [-.52,.52])
+      for(const x of [-2.05,2.05])for(const zOffset of [-1.15,1.15])
         cyl(bridgeGroup,bridgeStone,x,-.13,zOffset,.28,.38,.62,7);
       const ropeMat=new THREE.MeshStandardMaterial({color:0x554438,roughness:1});
-      for(const zOffset of [-.60,.60]){
+      for(const zOffset of [-1.24,1.24]){
         const ropeCurve=new THREE.CatmullRomCurve3([
           new THREE.Vector3(-2.45,1.28,zOffset),
           new THREE.Vector3(0,1.08,zOffset),
@@ -1702,9 +1712,20 @@
         const rope=new THREE.Mesh(new THREE.TubeGeometry(ropeCurve,12,.035,5,false),ropeMat);
         bridgeGroup.add(rope);
       }
-      contactShadow(riverX,z,2.2,.72,.16);
+      // Short timber approaches meet the terrain and the same .23-high foot plane.
+      for(const side of [-1,1]){
+        const verts=[];
+        for(const [x,zOffset] of [[side*2.9,-bridgeHalfDepth],[side*2.9,bridgeHalfDepth],
+          [side*3.7,-bridgeHalfDepth],[side*3.7,bridgeHalfDepth]])
+          verts.push(x,bridgeGroundHeight(riverX+x,z+zOffset)-.05,zOffset);
+        const ramp=new THREE.BufferGeometry();
+        ramp.setAttribute("position",new THREE.Float32BufferAttribute(verts,3));
+        ramp.setIndex(side>0?[0,1,2,2,1,3]:[0,2,1,2,3,1]);ramp.computeVertexNormals();
+        mesh(ramp,bridgeTrim,bridgeGroup,false);
+      }
+      contactShadow(riverX,z,2.2,1.25,.16);
     }
-    riverBridge(580);
+    riverBridge(bridgeScreenY);
     // Hand-set path shoulders and courtyard cobbles break up the broad grass
     // plane while staying decorative and outside the navigation collision map.
     const cobbleGeo=new THREE.IcosahedronGeometry(1,1);
@@ -2486,7 +2507,8 @@
       c.strokeStyle="rgba(255,229,148,.8)";c.lineWidth=4;c.stroke();
       c.fillStyle="#fff5d6";c.font="bold 40px system-ui";c.textAlign="center";
       c.fillText(title,256,80,450);
-      return new THREE.CanvasTexture(cn);
+      const texture=new THREE.CanvasTexture(cn);texture.colorSpace=THREE.SRGBColorSpace;
+      return texture;
     }
     const markers={};
     for(const [key,sx,sy,name,color] of spots){
@@ -2496,8 +2518,9 @@
       ring.rotation.x=-Math.PI/2;ring.position.y=.15;
       const beacon=mesh(new THREE.CylinderGeometry(.07,.45,1.5,12),new THREE.MeshBasicMaterial({color,transparent:true,opacity:.15,depthWrite:false}),g,false);
       beacon.position.y=.90;
-      const badge=new THREE.Sprite(new THREE.SpriteMaterial({map:labelTexture(name),transparent:true,depthTest:false,depthWrite:false}));
-      badge.position.set(0,3.28,0);badge.scale.set(3.45,.86,1);g.add(badge);
+      const badge=new THREE.Sprite(new THREE.SpriteMaterial({map:labelTexture(name),transparent:true,depthTest:false,depthWrite:false,fog:false}));
+      badge.renderOrder=1000;
+      badge.position.set(0,3.4,0);badge.scale.set(4.1,1.03,1);g.add(badge);
       const dot=ball(g,new THREE.MeshBasicMaterial({color}),0,1.72,0,.23,.23,.23,false);
       markers[key]={group:g,ring,beacon,dot,mat};
     }
@@ -2937,7 +2960,7 @@
           view.style.width="100%";view.style.height="auto";
           view.style.aspectRatio="1000 / 610";
         }
-        lastParent=parent;lastWidth=0;lastHeight=0;
+        lastParent=parent;lastWidth=0;lastHeight=0;firstFrame=true;
       }
       const rect=parent===hero?hero.getBoundingClientRect():host.getBoundingClientRect();
       const width=Math.max(200,Math.floor(rect.width||1000));
@@ -2990,8 +3013,7 @@
       }
       const playerX=wx(state.x),playerZ=wz(state.y);
       const actualDistance=Number.isFinite(explorer.userData.lastX)?Math.hypot(playerX-explorer.userData.lastX,playerZ-explorer.userData.lastZ):0;
-      const crossing=state.y>530&&state.y<635&&state.x>735&&state.x<967;
-      const playerY=crossing?.58:terrainElevation(playerX,playerZ);
+      const playerY=bridgeGroundHeight(playerX,playerZ);
       explorer.position.set(playerX,playerY,playerZ);
       const isMoving=!!state.moving&&state.screen==="playing";
       const effect=state.effect;
@@ -3283,8 +3305,8 @@
       if(firstFrame){
         camera.position.copy(camPos);camTarget.copy(aim);firstFrame=false;
       }else{
-        camera.position.lerp(camPos,.055);
-        camTarget.lerp(aim,.075);
+        camera.position.lerp(camPos,1-Math.exp(-3.4*cameraFrameDelta));
+        camTarget.lerp(aim,1-Math.exp(-4.7*cameraFrameDelta));
       }
       camera.lookAt(camTarget);
       characterVisibility?.update(camera,frameDelta);
