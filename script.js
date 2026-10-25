@@ -89,20 +89,23 @@
   }
   function continueValley(){
     const saved=chapters?.saved("valley");
-    start();
+    start({resume:!!saved});
     if(!saved)return;
     closeModal(true);
-    state.x=Math.max(50,Math.min(W-50,Number(saved.x)||310));
-    state.y=Math.max(50,Math.min(H-50,Number(saved.y)||620));
-    state.energy=Math.max(1,Math.min(100,Number(saved.energy)||100));
-    state.score=Math.max(0,Number(saved.score)||0);
-    state.elapsed=Math.max(0,Number(saved.elapsed)||0);
+    const number=(value,fallback)=>Number.isFinite(Number(value))?Number(value):fallback;
+    state.x=Math.max(50,Math.min(W-50,number(saved.x,310)));
+    state.y=Math.max(50,Math.min(H-50,number(saved.y,620)));
+    if(blocked(state.x,state.y)){state.x=310;state.y=620;}
+    state.energy=Math.max(1,Math.min(100,number(saved.energy,100)));
+    state.score=Math.max(0,number(saved.score,0));
+    state.elapsed=Math.max(0,number(saved.elapsed,0));
     lastValleySaveTime=state.elapsed;
-    state.done=new Set((saved.done||[]).filter(k=>spots[k]));
-    state.inventory=new Set((saved.inventory||[]).filter(x=>typeof x==="string"));
-    state.supplies=new Set((saved.supplies||[]).filter(x=>supplyCaches.some(s=>s.id===x)));
+    state.done=new Set((Array.isArray(saved.done)?saved.done:[]).filter(k=>spots[k]));
+    state.inventory=new Set((Array.isArray(saved.inventory)?saved.inventory:[]).filter(x=>typeof x==="string"));
+    state.supplies=new Set((Array.isArray(saved.supplies)?saved.supplies:[]).filter(x=>supplyCaches.some(s=>s.id===x)));
     state.campUses=Math.max(0,Math.min(2,Number(saved.campUses)||0));
     state.lastStatus="";updateNearby();updateUI();notify("Welcome back — valley progress restored.");
+    saveValley();
   }
   // The 3D world is loaded without blocking startup. If Three.js cannot be reached,
   // the original Canvas 2D renderer remains available as a playable fallback.
@@ -138,14 +141,21 @@
       const AudioClass = window.AudioContext || window.webkitAudioContext;
       if (!AudioClass) return;
       audioContext = audioContext || new AudioClass();
+      if(audioContext.state==="suspended")audioContext.resume()?.catch(()=>{});
+      duration=Math.max(.03,Math.min(.35,duration));
       const o=audioContext.createOscillator(),g=audioContext.createGain();
       o.type="sine";o.frequency.setValueAtTime(freq,audioContext.currentTime);
       o.frequency.exponentialRampToValueAtTime(Math.max(100,freq*.7),audioContext.currentTime+duration);
-      g.gain.setValueAtTime(.032,audioContext.currentTime);
+      g.gain.setValueAtTime(.001,audioContext.currentTime);
+      g.gain.linearRampToValueAtTime(.032,audioContext.currentTime+.006);
       g.gain.exponentialRampToValueAtTime(.001,audioContext.currentTime+duration);
       o.connect(g).connect(audioContext.destination);o.start();o.stop(audioContext.currentTime+duration);
+      o.onended=()=>{o.disconnect();g.disconnect();};
     }catch{/* Audio is optional */}
   }
+  // Both chapters share short interaction cues and the same persisted mute setting.
+  // No ambient oscillator, sound loop or background track is created.
+  window.ThirstAudio=Object.freeze({tone,get enabled(){return state.sound;}});
   // One gentle dawn-to-dusk cycle lasts eight in-game minutes. Exploration
   // remains fully playable after sunset; nothing changes collision or quests.
   function timeOfDay(elapsed){
@@ -338,20 +348,21 @@
       b.title=`Walk to ${sp.name}`;b.addEventListener("click",()=>navigateTo(key));ds.append(b);
     }
   }
-  function start(){
+  function start({resume=false}={}){
     lastValleySaveTime=0;
     Object.assign(state,{screen:"playing",energy:100,score:0,elapsed:0,x:310,y:620,walkT:0,
-      path:[],goal:null,destination:null,nearby:null,campUses:0,ended:false,lastStatus:"",cameraX:0,cameraY:0,effect:null,scenic:false});
+      path:[],goal:null,destination:null,nearby:null,campUses:0,ended:false,moving:false,lastStatus:"",cameraX:0,cameraY:0,effect:null,scenic:false});
     $("scenicViewButton").setAttribute("aria-pressed","false");
     $("scenicViewButton").textContent="◈ SCENIC VIEW";
     state.keys.clear();state.touch.clear();state.done.clear();state.inventory.clear();state.supplies.clear();
     if(state.impactTimer)clearTimeout(state.impactTimer);
     state.impactTimer=null;$("impactBurst").hidden=true;
     world3d?.recenter?.();
-    chapters?.clearSave("valley");
+    if(!resume)chapters?.clearSave("valley");
     $("startScreen").hidden=true;$("gameScreen").hidden=false;$("toast").hidden=true;
     setRenderLoading(!world3d,"Preparing the 2D expedition fallback…");
     closeModal(true);updateUI();
+    if(!resume)saveValley();
     if(world3d)world3d.focus();else canvas.focus({preventScroll:true});
     notify("MISSION STARTED · Visit the Village Elder to begin.");tone(480,.18);
     if(!safeStore.tutorialSeen())help();
@@ -419,7 +430,7 @@
     let dx=Number(key("arrowright","d","right"))-Number(key("arrowleft","a","left"));
     let dy=Number(key("arrowdown","s","down"))-Number(key("arrowup","w","up"));
     const direct=!!(dx||dy);if(direct){state.path=[];state.destination=null;state.goal=null;}
-    else if(state.path.length){const t=state.path[0],dd=dist(state,t);if(dd<11){state.path.shift();if(!state.path.length){state.goal=null;state.destination=null;updateNearby();return;}}
+    else if(state.path.length){const t=state.path[0],dd=dist(state,t);if(dd<11){state.path.shift();if(!state.path.length){state.moving=false;state.goal=null;state.destination=null;updateNearby();return;}}
       const to=state.path[0];if(to){dx=to.x-state.x;dy=to.y-state.y;}}
     if(!dx&&!dy){state.moving=false;return;}
     const length=Math.hypot(dx,dy);dx/=length;dy/=length;
@@ -435,6 +446,8 @@
     drain(speed*dt*(sprint?.020:.014));
   }
   function openModal({tag="FIELD NOTES",icon="💧",title,description,choices=[],progress=0,total=0,tip="",kind="dialog",allowClose=true,celebrateWin=false}){
+    saveValley();
+    state.keys.clear();state.touch.clear();state.moving=false;
     state.modalOpen=true;state.modalKind=kind;
     $("dialog").classList.toggle("is-victory",celebrateWin);
     // The pipe challenge uses a wider two-column workshop layout, while
@@ -465,6 +478,7 @@
     if(state.modalKind==="end"&&!silent)return;
     $("modalBackdrop").hidden=true;$("pipePuzzle").hidden=true;$("rainPanel").hidden=true;$("marshPanel").hidden=true;
     state.modalOpen=false;state.modalKind="";
+    if(!silent)saveValley();
     if(!silent&&state.screen==="playing"){
       if(world3d)world3d.focus();else canvas.focus({preventScroll:true});
     }
@@ -868,8 +882,9 @@
     openModal({tag:"GAME PAUSED",icon:"⏸️",title:"Take your time",description:"Your energy won't change while paused. Ready to continue your expedition?",kind:"pause",choices:[{text:"▶ Resume adventure",primary:true,action:()=>closeModal()},{text:"↻ Start a new expedition",action:start}]});
   }
   function help(){
+    if(window.TrailCanyon?.snapshot().active){window.TrailCanyon.pause?.();return;}
     safeStore.markTutorialSeen();
-    openModal({tag:"HOW TO PLAY",icon:"🧭",title:"Your adventure guide",description:"Move using WASD or arrow keys. On phones, use the on-screen directional buttons. Click the 3D world once to walk; hold and drag with the left button to pan the camera without moving, or right-drag to rotate around the landscape. Use the mouse wheel to zoom, and press C to return the camera to your explorer. The live mini-map shows your location and route; click one of its markers to travel there, or press M to hide or show it. Press V or select SCENIC VIEW above the world to see the full valley, and press it again to follow your explorer. When you're near a glowing marker, press E or tap INTERACT. Solve challenges, collect items, rotate the pipe sections during the pump repair, and restore water before your energy runs out. Raincatch Ridge is an optional hands-on collection activity. Rest at the camp to recharge. Press Shift to sprint (uses more energy).",kind:"help",choices:[{text:"Got it — let's go!",primary:true,action:()=>closeModal()}],tip:"BONUS ROUTES: Earn a test kit at the River Bank to survey Hill Spring, or inspect the collection station at Raincatch Ridge. Your current run resets on refresh; only your best score is saved."});
+    openModal({tag:"HOW TO PLAY",icon:"🧭",title:"Your adventure guide",description:"Move using WASD or arrow keys. On phones, use the on-screen directional buttons. Click the 3D world once to walk; hold and drag with the left button to pan the camera without moving, or right-drag to rotate around the landscape. Use the mouse wheel to zoom, and press C to return the camera to your explorer. The live mini-map shows your location and route; click one of its markers to travel there, or press M to hide or show it. Press V or select SCENIC VIEW above the world to see the full valley, and press it again to follow your explorer. When you're near a glowing marker, press E or tap INTERACT. Solve challenges, collect items, rotate the pipe sections during the pump repair, and restore water before your energy runs out. Raincatch Ridge is an optional hands-on collection activity. Rest at the camp to recharge. Press Shift to sprint (uses more energy).",kind:"help",choices:[{text:"Got it — let's go!",primary:true,action:()=>closeModal()}],tip:"BONUS ROUTES: Earn a test kit at the River Bank to survey Hill Spring, or inspect the collection station at Raincatch Ridge. Progress saves automatically on this device. Choose Continue from chapter selection after a refresh."});
   }
   const plants=[];
   let seed=24521;function random(){seed=(1664525*seed+1013904223)>>>0;return seed/4294967296;}
@@ -1002,7 +1017,9 @@
   }
   window.addEventListener("keydown",e=>{
     if(e.key==="Escape"&&state.modalOpen&&state.modalKind!=="end"){closeModal();return;}
-    if(state.modalOpen)return;
+    if(state.screen!=="playing"||state.modalOpen||!$("graphicsPanel").hidden)return;
+    if(e.target?.closest?.('input,select,textarea,[contenteditable="true"]'))return;
+    if((e.key===" "||e.key==="Enter")&&e.target?.closest?.('button,a'))return;
     const k=e.key.toLowerCase();if(["arrowup","arrowdown","arrowleft","arrowright"," "].includes(k))e.preventDefault();
     if(["arrowup","arrowdown","arrowleft","arrowright","w","a","s","d","shift"].includes(k))state.keys.add(k);
     if((k==="e"||k===" ")&&!e.repeat&&state.screen==="playing")interact();
@@ -1062,7 +1079,16 @@
   $("resetButton").addEventListener("click",()=>openModal({tag:"NEW EXPEDITION",icon:"↻",title:"Restart this journey?",description:"Your current expedition progress and inventory will reset. Your best score will be kept.",choices:[{text:"Restart adventure",primary:true,action:start},{text:"Keep playing",action:()=>closeModal()}]}));
   $("modalClose").addEventListener("click",()=>closeModal());
   $("modalBackdrop").addEventListener("click",e=>{if(e.target===$("modalBackdrop")&&state.modalKind!=="end")closeModal();});
-  $("soundButton").addEventListener("click",()=>{state.sound=!state.sound;$("soundButton").setAttribute("aria-pressed",String(state.sound));$("soundButton").textContent=state.sound?"♫":"♪̸";if(state.sound)tone();});
+  function syncSoundButton(){
+    $("soundButton").setAttribute("aria-pressed",String(state.sound));
+    $("soundButton").setAttribute("aria-label",state.sound?"Mute interaction sounds":"Enable interaction sounds");
+    $("soundButton").textContent=state.sound?"♫":"♪̸";
+  }
+  $("soundButton").addEventListener("click",()=>{
+    state.sound=!state.sound;safeStore.setSound(state.sound);syncSoundButton();
+    if(state.sound)tone();
+  });
+  syncSoundButton();
   const graphicsPanel=$("graphicsPanel"),qualityPreset=$("qualityPreset");
   function syncGraphicsPanel(){
     qualityPreset.value=graphicsPresets[graphicsPreset]?graphicsPreset:"medium";
@@ -1077,10 +1103,15 @@
     world3d?.setGraphicsSettings(graphics);
     safeStore.setGraphics(graphicsProfile());
     syncGraphicsPanel();
+    window.dispatchEvent(new CustomEvent("trail:graphics",{detail:graphicsProfile()}));
   }
   $("graphicsButton").addEventListener("click",()=>{
     graphicsPanel.hidden=!graphicsPanel.hidden;
-    if(!graphicsPanel.hidden)syncGraphicsPanel();
+    if(!graphicsPanel.hidden){
+      if(window.TrailCanyon?.snapshot().active)window.TrailCanyon.pause?.();
+      else if(state.screen==="playing"&&!state.modalOpen)pause();
+      syncGraphicsPanel();
+    }
   });
   $("graphicsClose").addEventListener("click",()=>{graphicsPanel.hidden=true;});
   qualityPreset.addEventListener("change",()=>{
