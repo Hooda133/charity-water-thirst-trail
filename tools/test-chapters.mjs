@@ -44,7 +44,7 @@ for(const source of [scripts.canyon,scripts.valley]){
  const refs=[...new Set([...source.matchAll(/\$\("([^"]+)"\)/g)].map(m=>m[1]))];
  assert.deepEqual(refs.filter(name=>!ids.has(name)),[],"Missing referenced HTML element");
 }
-const values=new Map(),events={},registry=new Map();
+const values=new Map(),events={},registry=new Map(),audioEvents=[];
 const Event=class{constructor(type){this.type=type;}};
 const storage={getItem(k){return values.get(k)||null;},setItem(k,v){values.set(k,String(v));}};
 const frameCtx=new Proxy({createLinearGradient(){return {addColorStop(){}};}},{get(obj,k){return obj[k]||(()=>{});}});
@@ -64,6 +64,7 @@ const document={
  createElement:node,querySelectorAll(){return [];},addEventListener(){}
 };
 const window={
+ ThirstAudio:{tone(frequency,duration){audioEvents.push({frequency,duration});}},
  addEventListener(name,fn){(events[name]??=[]).push(fn);},
  dispatchEvent(event){for(const fn of events[event.type]||[])fn(event);},
  scrollTo(){}
@@ -84,7 +85,7 @@ assert.equal(progress.unlocked("canyon"),true);
 // Replace the graphics invocation in this isolated test copy, never in the game.
 const noGraphics=scripts.canyon.replace("save();buildWorld();","save(); /* isolated deterministic test */");
 const testCode=noGraphics.replace(/\}\)\(\);\s*$/,
-  'window.canyonTest={get:()=>state,interact,pressure:currentPressure,safe:pressureSafe};\n})();');
+  'window.canyonTest={get:()=>state,interact,pressure:currentPressure,safe:pressureSafe,surface:surfaceHeight};\n})();');
 runInNewContext(testCode,sandbox);
 const canyon=window.TrailCanyon,test=window.canyonTest;
 const select=()=>document.getElementById("canyonModalOptions").children;
@@ -108,8 +109,13 @@ for(let i=1;i<=9;i++){
 }
 test.get().keys.delete("d");
 assert.ok(canyon.snapshot().x>startX+15,"Canyon player must move on D key");
+assert.equal(audioEvents.length,0,"Launching and walking in Canyon stay quiet");
+assert.equal(test.surface(500,350),.29,"The character stands on the bridge deck");
+assert.equal(test.surface(170,425),0,"Trail foot placement stays at ground level");
+assert.ok(test.surface(415,350)>0&&test.surface(415,350)<.29,"Bridge entry rises along its access ramp");
 go("surveyor");select()[0].listeners.click();
 assert.ok(canyon.snapshot().done.includes("surveyor"));
+assert.ok(audioEvents.some(e=>e.frequency===620)&&audioEvents.some(e=>e.frequency===750),"Interactions reuse Chapter 1 feedback tones");
 go("kit");select()[0].listeners.click();
 assert.ok(canyon.snapshot().done.includes("kit"));
 go("valves");assert.equal(test.safe(),false);
