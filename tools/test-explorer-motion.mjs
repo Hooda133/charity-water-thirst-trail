@@ -103,3 +103,31 @@ for(const scale of [1,1.42]){
 console.log(`✓ Shared explorer: ${meshes} meshes, ${triangles} triangles`);
 console.log('✓ Walk/run/stop feet remain grounded; victory pose and attached jug');
 console.log('✓ Rocks fade and restore original materials in both chapter scales');
+
+// Check the actual rendered ramp triangles against the foot-height plane. In particular,
+// adding world and local Z must not round an inner corner outside the bridge boundary.
+const valleySource=readFileSync(new URL('../script.js',import.meta.url),'utf8');
+const terrainFunction=valleySource.match(/function terrainElevation\(x,z\)\{[\s\S]*?\n    \}/)[0];
+const bridgeFunction=valleySource.match(/function bridgeGroundHeight\(x,z\)\{[\s\S]*?\n    \}/)[0];
+const bridgeHalfDepth=1.365,bridgeX=(850+44*Math.sin(583.5/195+.35)-900)/40,bridgeZ=(583.5-550)/40;
+const bridgeHeight=new Function('bridgeX','bridgeZ','bridgeHalfDepth',
+ `${terrainFunction}\n${bridgeFunction}\nreturn bridgeGroundHeight;`)(bridgeX,bridgeZ,bridgeHalfDepth);
+for(const side of [-1,1]){
+ const vertices=[];
+ for(const [x,z] of [[side*3.18,-bridgeHalfDepth],[side*3.18,bridgeHalfDepth],
+   [side*4,-bridgeHalfDepth],[side*4,bridgeHalfDepth]])
+   vertices.push(x,bridgeHeight(bridgeX+x,bridgeZ+z),z);
+ assert.ok(Math.abs(vertices[1]-.57)<1e-6&&Math.abs(vertices[4]-.57)<1e-6,'Both inner ramp corners join the deck');
+ const geometry=new THREE.BufferGeometry();geometry.setAttribute('position',new THREE.Float32BufferAttribute(vertices,3));
+ geometry.setIndex(side>0?[0,1,2,2,1,3]:[0,2,1,2,3,1]);
+ const material=new THREE.MeshBasicMaterial({side:THREE.DoubleSide});
+ const ramp=new THREE.Mesh(geometry,material);ramp.position.set(bridgeX,0,bridgeZ);ramp.updateMatrixWorld(true);
+ const ray=new THREE.Raycaster(new THREE.Vector3(),new THREE.Vector3(0,-1,0),0,20);
+ for(let i=1;i<100;i++)for(let k=1;k<100;k++){
+   const x=bridgeX+side*(3.18+.82*i/100),z=bridgeZ-bridgeHalfDepth+2*bridgeHalfDepth*k/100;
+   ray.ray.origin.set(x,10,z);const hit=ray.intersectObject(ramp)[0];
+   assert.ok(hit&&Math.abs(bridgeHeight(x,z)-hit.point.y)<1e-5,'Foot plane follows the ramp mesh without floating or clipping');
+ }
+ geometry.dispose();material.dispose();
+}
+console.log('✓ Bridge foot heights match 19,602 real ramp raycasts and both deck-edge corners');

@@ -247,3 +247,30 @@ Limits: browser tests used low graphics on a software GPU, so they establish fun
 ### Yellow jug follow-up
 
 The shared jug is now a recognizable beveled rectangular yellow water can with an open handle, cap and rear X ribs. It remains on the back under both shoulder straps; its named body mesh is `ExplorerWaterJug`. The existing real-Three.js test now verifies the yellow material and that the entire can stays behind the torso throughout walk/run/stop and victory poses. The refined character remains 106 meshes and is 28,384 triangles.
+
+## Final refinement pass — October 25, 2026
+
+Baseline: merged main `400cdfe`. Before edits, that version was backed up locally and on GitHub as `backup/before-final-polish`. Changes are on `codex/final-polish` in small commits, with scoped tests after each meaningful change. No dependencies or external art were added.
+
+### Improvements
+
+- Shared explorer: relaxed standing proportions, longer grounded strides, two-step settling instead of retracting both feet across the ground, and separate interaction/victory blend weights. Moving no longer triggers a greeting pose. Dark skin, teal clothing, snug shoulder straps and the single yellow back-mounted jug are preserved. Character geometry remains 106 meshes / 28,384 triangles.
+- Visibility: waist, chest and face obstruction samples, throttled queries over visible opaque scenery, stronger fading through stacked Canyon strata, and smooth per-frame restoration of original materials. Labels retain their depth-independent rendering, with Valley labels given more screen space and fog-independent contrast.
+- Feet/camera: removed duplicate overlapping Valley bridge geometry; both chapters' visible deck/ramp heights now match their character ground heights. Camera follow uses time-based interpolation and resets cleanly on launch. Both collision functions are unchanged from the backed-up version.
+- Saves/controls: sound preference persists and is reflected on initial load; both chapters use the same short interaction tones. Canyon has no ambient track, walking sound loop or background-noise oscillator. Starting, continuing, pausing, restarting and replaying preserve the appropriate checkpoints; malformed saves recover safely. Held inputs clear on dialogs and chapter changes; toolbar focus no longer blocks Canyon WASD. Chapter cards show Continue for saved replays.
+- Presentation: matching touch pads with 44px targets below both scenes, phone overflow fixed, Canyon tablet layout widened, HUD aligned to the actual canvas row, clearer typography and labels, scrollable completion cards and calmer victory styling. Victory poses keep rendering after completion.
+- Performance: removed redundant Canyon canvas resizes, made live graphics settings affect both renderers, fixed resolution scaling on DPR1 displays, instanced 95 scattered flowers into two draws, and hid optional effects when disabled. No postprocessing or new textures were added.
+
+### Actually tested
+
+All seven Node scripts pass. This includes all 262,144 pipe orientations; actual Valley quest/dialog/pipe-rotation/safety-quiz callbacks through victory and Canyon unlock; Canyon pressure, repair, safety and completion paths; completed-chapter replay saves; malformed saves; sound preference; modal/blur/toolbar keyboard transitions; and scheduled automatic saving after eight game seconds. Travel is accelerated through test-only coordinate access in the quest integration tests; no test hooks are shipped.
+
+The actual pinned Three.js module tests check walk/run/stop foot contact, a fixed support foot, relaxed idle knees, settling, independent victory transitions, no reach while walking, yellow jug placement entirely behind the torso, smooth blocker fades, exact material restoration at both chapter scales, a thin chest-height ledge missed by the former two samples, and 19,602 real ramp raycasts plus both deck-edge corners matching the foot-height plane.
+
+Chromium with software WebGL checked both real chapter renderers, keyboard movement, river/gorge collision blocking, bridge contact heights, elder/surveyor interactions, saved quest restoration after reload, persisted mute, absence of ongoing Canyon audio events, shared enabled interaction cues, live graphics changes in both renderers, and both completion poses/dialogs. Final combined run had no console errors or warnings. Completion screens were triggered via test-only source instrumentation; the complete puzzle/quest paths were covered separately by the deterministic integrations. A separate stable-camera capture checked the overlapping rocks at the Canyon surveyor.
+
+Responsive layout checks covered 320×640, 390×844, 768×1024, 1024×600 and 1366×768: no horizontal overflow, reachable completion choices and a fitting graphics panel. Actual WebGL integration also checked 390-, 768- and 1024-pixel viewport widths. Layout-only tests disabled game scripts to isolate CSS; browser gameplay tests used real renderers at low graphics and verified live resolution changes.
+
+### Remaining limits
+
+The available browser uses a software GPU, so these are functionality and rendering checks, not a representative regular-laptop FPS benchmark. Medium/high quality, physical touch devices, human audio listening and an uninterrupted manual playthrough on a real laptop still need checking. Short audio events were verified programmatically. Full terrain IK, per-instance fading inside instanced scenery and new collision geometry were deliberately not introduced: decorative uneven ground retains the original terrain rules, and an affected instanced mesh may fade its instances together. The regular-laptop Low preset now actually reduces resolution and optional draw work.
