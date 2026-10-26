@@ -18,7 +18,8 @@
   const defaultState=()=>({
     active:false,paused:false,finished:false,x:170,y:425,
     energy:100,score:0,elapsed:0,done:new Set(),keys:new Set(),
-    path:[],nearby:null,modal:false,valves:[0,0,0],repairStep:0,
+    path:[],nearby:null,modal:false,modalVersion:0,valves:[0,0,0],repairStep:0,
+    failedValveTests:new Set(),cisternMistake:false,
     lastSave:0,toastUntil:0,toast:""
   });
   let state=defaultState(),world=null,creating=false,lastFrame=0,raf=0;
@@ -27,11 +28,20 @@
   // only short action cues: no oscillator, timer or ambient sound loop of its own.
   const sound=(frequency=620,duration=.09)=>window.ThirstAudio?.tone(frequency,duration);
   const pointDistance=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y);
+  // Keep the Canyon's nonlethal recovery floor without ever granting energy
+  // when a damaged or externally restored state starts below that floor.
+  const spendEnergy=amount=>{state.energy=Math.max(0,Math.min(state.energy,Math.max(7,state.energy-amount)));};
   const wX=x=>(x-500)/24,wZ=y=>(y-305)/24;
-  const leftSide=x=>x<480,rightSide=x=>x>550;
+  const approaches={valves:{x:390,y:223},span:{x:700,y:397},cistern:{x:820,y:235}};
+  // Collision footprints include the explorer's body, so tanks and aqueduct
+  // masonry cannot swallow the character. Markers remain at their landmarks.
+  const solidCircles=[{x:390,y:165,r:46},{x:820,y:175,r:49}];
+  const solidSpan={left:638,right:762,top:332,bottom:374};
   function blocked(x,y){
     if(x<39||x>961||y<43||y>567)return true;
-    return x>459&&x<558&&(y<316||y>392);
+    if(x>451&&x<566&&(y<324||y>384))return true;
+    if(solidCircles.some(circle=>Math.hypot(x-circle.x,y-circle.y)<circle.r))return true;
+    return x>solidSpan.left&&x<solidSpan.right&&y>solidSpan.top&&y<solidSpan.bottom;
   }
   function surfaceHeight(x,y){
     if(y<316||y>392)return 0;
@@ -40,13 +50,43 @@
   }
   function pathTo(point){
     if(!state.active||state.paused||state.modal)return;
-    if(blocked(point.x,point.y))return toast("The canyon gorge blocks this route. Use the bridge.");
-    const p=[];
-    if((leftSide(state.x)&&rightSide(point.x))||(rightSide(state.x)&&leftSide(point.x))){
-      p.push({x:state.x<520?447:569,y:350});
-      p.push({x:state.x<520?569:447,y:350});
+    const goalKey=questOrder.find(key=>point===goals[key]);
+    const target=approaches[goalKey]||point;
+    if(blocked(target.x,target.y))return toast("That spot is blocked. Choose open trail or a mission marker.");
+    const nodes=[{x:state.x,y:state.y},target,{x:438,y:350},{x:579,y:350}];
+    for(const circle of solidCircles)for(let i=0;i<8;i++){
+      const angle=i*Math.PI/4;
+      nodes.push({x:circle.x+Math.cos(angle)*(circle.r+12),y:circle.y+Math.sin(angle)*(circle.r+12)});
     }
-    p.push({x:point.x,y:point.y});state.path=p;
+    for(const x of [solidSpan.left-10,solidSpan.right+10])
+      for(const y of [solidSpan.top-10,solidSpan.bottom+10])nodes.push({x,y});
+    const clear=(a,b)=>{
+      const steps=Math.max(1,Math.ceil(pointDistance(a,b)/4));
+      for(let i=1;i<=steps;i++){
+        const t=i/steps;
+        if(blocked(a.x+(b.x-a.x)*t,a.y+(b.y-a.y)*t))return false;
+      }
+      return true;
+    };
+    // The small visibility graph routes around solid landmarks and through the
+    // bridge from either bank, including a click made mid-crossing.
+    const distance=nodes.map(()=>Infinity),previous=nodes.map(()=>-1),visited=new Set();distance[0]=0;
+    for(let step=0;step<nodes.length;step++){
+      let next=-1;
+      for(let i=0;i<nodes.length;i++)if(!visited.has(i)&&(next<0||distance[i]<distance[next]))next=i;
+      if(next<0||!Number.isFinite(distance[next]))break;
+      if(next===1)break;
+      visited.add(next);
+      for(let i=1;i<nodes.length;i++){
+        if(visited.has(i)||!clear(nodes[next],nodes[i]))continue;
+        const cost=distance[next]+pointDistance(nodes[next],nodes[i]);
+        if(cost<distance[i]){distance[i]=cost;previous[i]=next;}
+      }
+    }
+    if(!Number.isFinite(distance[1]))return toast("No clear trail there. Choose a nearby open spot.");
+    const route=[];
+    for(let i=1;i>0;i=previous[i])route.unshift(nodes[i]);
+    state.path=route;
     toast("Following the canyon trail…");
   }
   function closest(){
@@ -68,13 +108,16 @@
   }
   function save(){
     if(!state.active||state.finished||!progress)return;
-    progress.save("canyon",{
+    const saved=progress.save("canyon",{
       x:Math.round(state.x),y:Math.round(state.y),
       energy:Math.round(state.energy*10)/10,score:state.score,
       elapsed:Math.round(state.elapsed),
-      done:[...state.done],valves:[...state.valves],repairStep:state.repairStep
+      done:[...state.done],valves:[...state.valves],repairStep:state.repairStep,
+      failedValveTests:[...state.failedValveTests],cisternMistake:state.cisternMistake
     });
-    $("canyonSaveStatus").textContent="✓ Checkpoint saved in this browser";
+    $("canyonSaveStatus").textContent=saved?"✓ Checkpoint saved in this browser":
+      progress.storageStatus?.().reason==="newer-save"?"Session checkpoint ready · newer browser save preserved":
+      "Session checkpoint ready · browser storage unavailable";
     state.lastSave=state.elapsed;
   }
   function restore(saved){
@@ -82,17 +125,38 @@
     const number=(value,fallback)=>value!==null&&value!==undefined&&Number.isFinite(Number(value))?Number(value):fallback;
     state.x=clamp(number(saved.x,170),45,955);
     state.y=clamp(number(saved.y,425),45,565);
-    if(blocked(state.x,state.y)){state.x=170;state.y=425;}
-    state.energy=clamp(number(saved.energy,100),1,100);
+    if(blocked(state.x,state.y)){
+      const landmark=questOrder.find(key=>approaches[key]&&pointDistance(state,goals[key])<78);
+      state.x=landmark?approaches[landmark].x:170;
+      state.y=landmark?approaches[landmark].y:425;
+    }
+    state.energy=clamp(number(saved.energy,100),7,100);
     state.score=Math.max(0,number(saved.score,0));
     state.elapsed=Math.max(0,number(saved.elapsed,0));
     state.done=new Set((Array.isArray(saved.done)?saved.done:[]).filter(key=>questOrder.includes(key)));
     if(Array.isArray(saved.valves)&&saved.valves.length===3)
       state.valves=saved.valves.map(x=>clamp(Math.trunc(Number(x)||0),0,3));
     state.repairStep=clamp(Math.trunc(number(saved.repairStep,0)),0,4);
+    state.failedValveTests=new Set((Array.isArray(saved.failedValveTests)?saved.failedValveTests:[])
+      .filter(value=>typeof value==="string"&&/^[0-3],[0-3],[0-3]$/.test(value)));
+    state.cisternMistake=saved.cisternMistake===true;
+    // Completed later work proves that its prerequisites were completed. Keep
+    // earned work when repairing an older or interrupted checkpoint.
+    const lastDone=Math.max(-1,...[...state.done].map(key=>questOrder.indexOf(key)));
+    for(let i=0;i<=lastDone;i++)state.done.add(questOrder[i]);
+    if(state.done.has("valves")&&!pressureSafe())state.valves=[2,2,1];
+    if(state.done.has("span"))state.repairStep=4;
+    // Step four used to be saved before the span flag, leaving no clickable
+    // repair step after a reload. Reconcile it without giving a second reward.
+    if(state.repairStep===4&&state.done.has("valves")&&!state.done.has("span")){
+      state.done.add("span");state.score+=310;
+    }
+    if(!state.done.has("valves"))state.repairStep=0;
   }
   function completeQuest(key,points){
-    if(state.done.has(key))return;
+    if(!state.active||state.finished||state.done.has(key))return;
+    const index=questOrder.indexOf(key);
+    if(index<0||questOrder.slice(0,index).some(previous=>!state.done.has(previous)))return;
     state.done.add(key);state.score+=points;
     if(key!=="cistern")sound(750,.13);
     save();refreshUI();
@@ -100,6 +164,8 @@
   }
   function modal(tag,title,text,choices,extra){
     state.modal=true;state.keys.clear();state.path=[];
+    const owner=state,version=++state.modalVersion;
+    refreshUI();
     save();
     $("canyonModalTag").textContent=tag;
     $("canyonModalTitle").textContent=title;
@@ -111,7 +177,9 @@
       const b=document.createElement("button");
       b.type="button";b.textContent=item.text;
       if(item.primary)b.classList.add("primary");
-      b.addEventListener("click",item.action);actions.append(b);
+      b.addEventListener("click",()=>{
+        if(state===owner&&state.modal&&state.modalVersion===version)item.action();
+      });actions.append(b);
     }
     $("canyonModalBackdrop").hidden=false;
     $("canyonModal").classList.toggle("is-victory",state.finished);
@@ -121,6 +189,7 @@
   }
   function closeModal(){
     state.modal=false;$("canyonModalBackdrop").hidden=true;
+    refreshUI();
     (world?.dom||canvas).focus({preventScroll:true});
   }
   function interact(){
@@ -129,9 +198,11 @@
     if(!key)return toast("Walk toward a glowing mission marker and press E.");
     state.path=[];
     if(key==="rest"){
+      if(state.energy>=100)return toast("You are fully rested and ready for the next mission.");
       sound();
+      const before=state.energy;
       state.energy=Math.min(100,state.energy+34);
-      toast("Rested in the canyon shade · +34 energy");save();refreshUI();
+      toast("Rested in the canyon shade · +"+(Math.round((state.energy-before)*10)/10)+" energy");save();refreshUI();
       return;
     }
     if(key==="surveyor"){
@@ -151,6 +222,7 @@
         }},{text:"Return to trail",action:closeModal}]);return;
     }
     if(!state.done.has("kit"))return toast("Recover the seal kit first.");
+    if(state.done.has(key))return toast("✓ "+goals[key].title+" is already complete. Follow the next mission marker.");
     if(key==="valves"){valveChallenge();return;}
     if(!state.done.has("valves"))return toast("Balance the pressure valves before repairing the crossing.");
     if(key==="span"){bridgeChallenge();return;}
@@ -161,28 +233,57 @@
     function redraw(root){
       root.replaceChildren();
       const heading=document.createElement("div");heading.className="canyon-pressure-hint";
-      heading.textContent="Adjust each valve from 0 to 3. Target: 65–73 kPa. Intake and return valves must differ by no more than one setting.";
+      heading.textContent="Adjust each valve from 0 to 3. Target: 65–73 kPa. Keep the regulator at 1 or higher; intake and return must differ by no more than one setting.";
       root.append(heading);
       for(let i=0;i<3;i++){
         const row=document.createElement("div");row.className="canyon-valve";
         const label=document.createElement("strong");label.textContent=["Intake · +16 kPa","Regulator · +13 kPa","Return · +11 kPa"][i];
-        const btn=document.createElement("button");btn.type="button";btn.textContent="OPEN "+state.valves[i]+" / 3";
-        btn.addEventListener("click",()=>{state.valves[i]=(state.valves[i]+1)%4;sound(430,.045);redraw(root);save();});
-        row.append(label,btn);root.append(row);
+        const owner=state,version=state.modalVersion;
+        const adjust=amount=>{
+          if(state!==owner||!state.modal||state.modalVersion!==version||state.done.has("valves"))return;
+          state.valves[i]=clamp(state.valves[i]+amount,0,3);sound(430,.045);redraw(root);save();
+        };
+        const name=["intake","regulator","return"][i];
+        const btn=document.createElement("button");btn.type="button";btn.textContent="+ OPEN "+state.valves[i]+" / 3";
+        btn.disabled=state.valves[i]===3;btn.setAttribute("aria-label","Increase "+name+" valve · current setting "+state.valves[i]);
+        btn.addEventListener("click",()=>adjust(1));
+        const lower=document.createElement("button");lower.type="button";lower.textContent="−";
+        lower.disabled=state.valves[i]===0;lower.setAttribute("aria-label","Decrease "+name+" valve · current setting "+state.valves[i]);
+        lower.addEventListener("click",()=>adjust(-1));
+        row.append(label,btn,lower);root.append(row);
       }
       const meter=document.createElement("div");meter.className="canyon-pressure-meter";
-      const fill=document.createElement("span");fill.style.width=clamp(currentPressure()/100*100,0,100)+"%";
+      meter.setAttribute("role","meter");meter.setAttribute("aria-label","System pressure in kPa");
+      meter.setAttribute("aria-valuemin","0");meter.setAttribute("aria-valuemax","120");meter.setAttribute("aria-valuenow",String(currentPressure()));
+      const fill=document.createElement("span");fill.style.width=clamp(currentPressure()/120*100,0,100)+"%";
       meter.append(fill);root.append(meter);
       const value=document.createElement("strong");value.textContent="System pressure: "+currentPressure()+" kPa";
       value.className="canyon-pressure-hint";root.append(value);
+      const feedback=document.createElement("p");feedback.className="canyon-pressure-hint";
+      feedback.setAttribute("role","status");
+      const issues=[];
+      if(currentPressure()<65)issues.push("Increase pressure to at least 65 kPa.");
+      if(currentPressure()>73)issues.push("Reduce pressure to 73 kPa or less.");
+      if(state.valves[1]<1)issues.push("Open the regulator.");
+      if(Math.abs(state.valves[0]-state.valves[2])>1)issues.push("Bring intake and return within one setting.");
+      feedback.textContent=issues.join(" ")||"✓ All operating conditions are safe. Test pressure to complete calibration.";
+      root.append(feedback);
+      if(state.failedValveTests.size>=2){
+        const hint=document.createElement("p");hint.className="canyon-pressure-hint";
+        hint.textContent="Nia’s field note: Intake 2 + Regulator 2 + Return 1 gives 69 kPa and balanced flow.";
+        root.append(hint);
+      }
     }
     modal("CONTROL STATION · PRESSURE PUZZLE","Balance the canyon valves",
       "Tune three valve settings. The pressure must be in the safe operating range, the regulator must be open, and intake/return flow must stay balanced.",
       [{text:"💧 Test pressure",primary:true,action:()=>{
         if(pressureSafe()){closeModal();completeQuest("valves",250);return;}
-        state.energy=Math.max(7,state.energy-4);
+        const setting=state.valves.join(",");
+        if(!state.failedValveTests.has(setting)){
+          state.failedValveTests.add(setting);spendEnergy(4);
+        }
         sound(180,.10);
-        toast("Pressure outside safe range or unbalanced · −4 energy");
+        toast("Unsafe configuration. Check the conditions shown below the pressure meter.");
         valveChallenge();save();
       }},{text:"↩ Continue exploring",action:()=>{save();closeModal();}}],
       el=>{const root=document.createElement("div");root.className="canyon-pressure";el.append(root);redraw(root);});
@@ -194,16 +295,19 @@
       for(let i=0;i<4;i++){
         const btn=document.createElement("button");btn.type="button";
         btn.className=i<state.repairStep?"selected":"";
+        btn.disabled=i<state.repairStep;
         btn.textContent=["⚓","🪵","🔩","🧪"][i];
         const label=document.createElement("small");label.textContent=repairOrder[i];btn.append(label);
         btn.addEventListener("click",()=>{
           if(i===state.repairStep){
-            state.repairStep++;sound(620,.06);save();
+            state.repairStep++;sound(620,.06);
             if(state.repairStep===4){closeModal();completeQuest("span",310);return;}
-            draw(root);
+            save();draw(root);
           }else{
             sound(180,.08);
-            toast("Secure the components in a safe construction order.");
+            const warning="Next: "+repairOrder[state.repairStep]+". Supports first, then braces, pipe, and seal. Completed work stays in place.";
+            $("canyonModalText").textContent=warning;
+            toast(warning);
           }
         });board.append(btn);
       }
@@ -218,18 +322,19 @@
   }
   function cisternChallenge(){
     modal("FINAL INSPECTION","Is the repaired water safe?",
-      "Water is reaching the cistern. What must the team do before distributing it to households?",
+      (state.cisternMistake?"Clear water can still contain invisible contamination. ":"")+"Water is reaching the cistern. What must the team do before distributing it to households?",
       [{text:"Test water quality and follow local treatment and monitoring procedures",primary:true,action:()=>{
         closeModal();completeQuest("cistern",430);finish();
       }},{text:"If the water looks clear, it must be safe",action:()=>{
-        state.energy=Math.max(7,state.energy-5);
+        if(!state.cisternMistake)spendEnergy(5);
+        state.cisternMistake=true;
         sound(180,.10);
-        toast("Appearance does not prove drinking-water safety. −5 energy");
+        toast("Appearance does not prove drinking-water safety. Test and treat the water before use.");
         cisternChallenge();save();
       }},{text:"Return to the canyon",action:closeModal}]);
   }
   function finish(){
-    if(state.finished)return;
+    if(state.finished||questOrder.some(key=>!state.done.has(key)))return;
     state.finished=true;state.active=false;state.score+=Math.round(state.energy)*2;
     sound(990,.18);
     progress?.complete("canyon");refreshUI();
@@ -269,7 +374,7 @@
     restBtn.textContent="⛺ Shaded rest shelter · +34 energy";restBtn.addEventListener("click",()=>pathTo(rest));dest.append(restBtn);
     }
     const nearby=closest();state.nearby=nearby;
-    $("canyonPrompt").hidden=!nearby||!state.active||state.paused;
+    $("canyonPrompt").hidden=!nearby||!state.active||state.paused||state.modal;
     if(nearby)$("canyonPromptText").textContent=nearby==="rest"?"Rest at shelter":goals[nearby].title;
   }
   function update(dt){
@@ -283,17 +388,18 @@
     if(manual)state.path=[];
     else if(state.path.length){
       let target=state.path[0];
-      if(pointDistance(state,target)<9){state.path.shift();target=state.path[0];}
+      if(pointDistance(state,target)<2){state.path.shift();target=state.path[0];}
       if(target){dx=target.x-state.x;dy=target.y-state.y;}
     }
     const len=Math.hypot(dx,dy);
     if(len){
-      const step=Math.min(185*dt,manual?185*dt:Math.max(0,len));
+      const speed=state.keys.has("shift")?250:185;
+      const step=Math.min(speed*dt,manual?speed*dt:Math.max(0,len));
       dx=dx/len*step;dy=dy/len*step;
       let nx=state.x+dx,ny=state.y+dy;
       if(!blocked(nx,state.y))state.x=nx;
       if(!blocked(state.x,ny))state.y=ny;
-      state.energy=Math.max(7,state.energy-dt*.12);
+      spendEnergy(dt*(state.keys.has("shift")?.24:.12));
       if(state.energy<=12 && state.elapsed%20<dt)toast("Low energy · rest at the shelter.");
     }
     state.elapsed+=dt;
@@ -396,8 +502,11 @@
       // Terraced sandstone mesas and layered cliffs at the skyline.
       let seed=31415;const rng=()=>((seed=(Math.imul(seed,1664525)+1013904223)>>>0)/4294967296);
       for(let i=0;i<44;i++){
-        const x=(i%2?-1:1)*(10+rng()*24),z=-24+rng()*52;
+        let x=(i%2?-1:1)*(10+rng()*24);const z=-24+rng()*52;
         const radius=1.1+rng()*2.5,height=2.5+rng()*7;
+        // Skyline scenery belongs beyond the walkable floor. The former seeded
+        // scatter placed a solid mesa directly over Surveyor Nia's mission.
+        if(Math.abs(x)-radius<22.8)x=Math.sign(x)*(22.8+radius);
         const column=put(new THREE.CylinderGeometry(radius*.70,radius,height,7,1),rock[i%4],x,height/2-.20,z,false);
         column.rotation.y=rng()*6.28;
         for(let layer=0;layer<3;layer++)
@@ -406,9 +515,9 @@
       }
       // Distinct winding desert roads.
       const roads=[
-        [[165,270],[305,455],[442,350]],
-        [[390,165],[420,280],[445,350]],
-        [[570,350],[700,365],[820,175]]
+        [[165,270],[305,455],[438,350]],
+        [[390,223],[420,280],[438,350]],
+        [[579,350],[625,397],[700,397],[772,397],[820,235]]
       ];
       for(const stops of roads)for(let i=0;i<stops.length-1;i++){
         const a=stops[i],b=stops[i+1];
@@ -816,6 +925,7 @@
     closeModal();refreshUI();
     $("canyonToast").hidden=true;
     save();buildWorld();
+    if(questOrder.every(key=>state.done.has(key))){finish();return;}
     if(saved)toast("Canyon checkpoint restored. Welcome back!");
     else toast("Chapter 2 · Reach the canyon surveyor to begin.");
     (world?.dom||canvas).focus({preventScroll:true});
@@ -872,7 +982,7 @@
     if(["BUTTON","A"].includes(event.target?.tagName)&&[" ","Enter"].includes(event.key))return;
     const key=event.key.toLowerCase();
     if(["arrowup","arrowdown","arrowleft","arrowright"," "].includes(key))event.preventDefault();
-    if(["w","a","s","d","arrowup","arrowdown","arrowleft","arrowright"].includes(key))state.keys.add(key);
+    if(["w","a","s","d","arrowup","arrowdown","arrowleft","arrowright","shift"].includes(key))state.keys.add(key);
     if((key==="e"||key===" ")&&!event.repeat)interact();
     if(key==="p"&&!event.repeat)pause();
     if(key==="c"&&!event.repeat)recenterCanyonCamera();

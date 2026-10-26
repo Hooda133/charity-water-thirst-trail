@@ -122,8 +122,34 @@ assert.equal(typeof art.update,"function");
 assert.equal(typeof art.dispose,"function");
 art.update(1);done.add("span");art.update(2.5);
 assert.ok(scene.children.some(o=>o.isInstancedMesh),"Scatter detail should be instanced");
+// Sample the actual rendered trail inlays against the playable gorge. A former
+// road led straight through the impassable southern riverbank instead of bridge.
+const trails=scene.children.filter(o=>o.userData.canyonTrail);
+assert.ok(trails.length>=8,"Connected mission trail inlays are rendered");
+const blockedSource=canyonSource.match(/function blocked\(x,y\)\{[\s\S]*?\n  \}/)?.[0];
+const solidsSource=canyonSource.match(/const solidCircles=[\s\S]*?;\n  const solidSpan=[^;]+;/)?.[0];
+assert.ok(blockedSource&&solidsSource,"Real Canyon collision footprint is available");
+const isBlocked=new Function(`${solidsSource}\n${blockedSource}\nreturn blocked;`)();
+for(const mesh of trails){
+ const {from,to}=mesh.userData.canyonTrail;
+ for(let step=0;step<=200;step++){
+  const u=step/200,x=from[0]+(to[0]-from[0])*u,y=from[1]+(to[1]-from[1])*u;
+  assert.ok(!isBlocked(x,y),`Visible trail must avoid blocked banks and landmarks, got ${x},${y}`);
+ }
+}
+const atmosphericDust=scene.children.find(o=>o.isPoints);
+assert.ok(atmosphericDust,"Atmospheric dust is available for timing regression");
+art.update(17);
+const dustAt17=Array.from(atmosphericDust.geometry.getAttribute("position").array);
+for(let frame=0;frame<120;frame++)art.update(17);
+assert.deepEqual(Array.from(atmosphericDust.geometry.getAttribute("position").array),dustAt17,
+ "Paused/repeated draws cannot drift atmospheric particles");
+art.update(19);art.update(17);
+assert.deepEqual(Array.from(atmosphericDust.geometry.getAttribute("position").array),dustAt17,
+ "Dust placement depends on time, not frame history");
 art.dispose();
 assert.ok(scene.children.length===0,"Art resources should detach on disposal");
 console.log("✓ Canyon art builds, animates and disposes using simulated Three.js geometry");
 console.log("✓ Original Canyon interaction, collision and chapter progression code preserved");
 console.log("✓ Authored explorer asset and playable fallback both remain wired");
+console.log("✓ Rendered trails avoid blocked banks; dust is independent of frame rate and pause redraws");

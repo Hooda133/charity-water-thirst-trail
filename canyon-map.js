@@ -69,6 +69,9 @@
     map.addEventListener("keydown",event=>{
       if(event.key==="Enter"||event.key===" "){
         event.preventDefault();
+        // Space belongs to this focused map control; the chapter's global
+        // interact shortcut must not open a nearby objective and cancel travel.
+        event.stopPropagation();
         const done=new Set(window.TrailCanyon.snapshot().done);
         const next=stops.findIndex((s,i)=>i===5||!done.has(["surveyor","kit","valves","span","cistern"][i]));
         route(Math.max(0,next));

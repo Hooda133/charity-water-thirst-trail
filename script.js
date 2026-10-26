@@ -54,7 +54,8 @@
     walkT:0, facing:1, keys:new Set(), touch:new Set(), path:[], goal:null, destination:null,
     done:new Set(), inventory:new Set(), campUses:0, quizStep:0, modalOpen:false, modalKind:"",
     sound:safeStore.getSound(), cameraX:0, cameraY:0, nearby:null, ended:false, lastStatus:"",
-    toastTimeout:null, effect:null, impactTimer:null, supplies:new Set(), scenic:false
+    toastTimeout:null, effect:null, impactTimer:null, supplies:new Set(), scenic:false,
+    pipeReady:false,pumpQuizStep:0
   };
 
   const chapters=window.TrailProgress;
@@ -65,7 +66,8 @@
       energy:Math.round(state.energy*10)/10,score:state.score,
       elapsed:Math.round(state.elapsed),x:Math.round(state.x),y:Math.round(state.y),
       done:[...state.done],inventory:[...state.inventory],
-      supplies:[...state.supplies],campUses:state.campUses
+      supplies:[...state.supplies],campUses:state.campUses,
+      pipeTurns:[...pipeTurns],pipeReady:state.pipeReady,pumpQuizStep:state.pumpQuizStep
     });
   }
   function refreshChapters(){
@@ -93,24 +95,36 @@
     start({resume:!!saved});
     if(!saved)return;
     closeModal(true);
-    const number=(value,fallback)=>Number.isFinite(Number(value))?Number(value):fallback;
+    const number=(value,fallback)=>value!==null&&value!==""&&
+      (typeof value==="number"||typeof value==="string")&&Number.isFinite(Number(value))?Number(value):fallback;
     state.x=Math.max(50,Math.min(W-50,number(saved.x,310)));
     state.y=Math.max(50,Math.min(H-50,number(saved.y,620)));
     if(blocked(state.x,state.y)){state.x=310;state.y=620;}
     state.energy=Math.max(1,Math.min(100,number(saved.energy,100)));
-    state.score=Math.max(0,number(saved.score,0));
-    state.elapsed=Math.max(0,number(saved.elapsed,0));
+    state.score=Math.max(0,Math.min(10000000,Math.floor(number(saved.score,0))));
+    state.elapsed=Math.max(0,Math.min(604800,number(saved.elapsed,0)));
     lastValleySaveTime=state.elapsed;
     state.done=new Set((Array.isArray(saved.done)?saved.done:[]).filter(k=>spots[k]));
-    state.inventory=new Set((Array.isArray(saved.inventory)?saved.inventory:[]).filter(x=>typeof x==="string"));
+    const rewardItems={elder:"fieldNotes",toolkit:"toolkit",gasket:"gasket",river:"testKit",ridge:"rainNotes",marsh:"habitatBadge"};
+    state.inventory=new Set((Array.isArray(saved.inventory)?saved.inventory:[]).filter(x=>Object.values(rewardItems).includes(x)));
+    // A checkpoint may come from an older version or an interrupted write. Restore
+    // both sides of a known reward together so an empty workshop cannot lock repairs.
+    for(const [quest,item] of Object.entries(rewardItems)){
+      if(state.done.has(quest)||state.inventory.has(item)){state.done.add(quest);state.inventory.add(item);}
+    }
+    if(state.done.has("pump")&&!["elder","toolkit","gasket"].every(k=>state.done.has(k)))state.done.delete("pump");
+    pipeTurns=Array.isArray(saved.pipeTurns)&&saved.pipeTurns.length===9&&saved.pipeTurns.every(n=>Number.isInteger(n)&&n>=0&&n<4)?[...saved.pipeTurns]:[...PIPE_START];
+    state.pipeReady=saved.pipeReady===true&&pipeFlow().solved;
+    state.pumpQuizStep=state.pipeReady?Math.max(0,Math.min(2,Math.floor(number(saved.pumpQuizStep,0)))):0;
     state.supplies=new Set((Array.isArray(saved.supplies)?saved.supplies:[]).filter(x=>supplyCaches.some(s=>s.id===x)));
-    state.campUses=Math.max(0,Math.min(2,Number(saved.campUses)||0));
+    state.campUses=Math.max(0,Math.min(2,Math.floor(number(saved.campUses,0))));
     state.lastStatus="";updateNearby();updateUI();notify("Welcome back — valley progress restored.");
     saveValley();
+    if(state.done.has("pump"))end(true,"Your restored checkpoint confirms the pump repair. The Forgotten Canyon is ready for your next expedition.","THE LAST WELL RESTORED");
   }
   // The 3D world is loaded without blocking startup. If Three.js cannot be reached,
   // the original Canvas 2D renderer remains available as a playable fallback.
-  let world3d = null;
+  let world3d = null,worldLoading=true;
   function setRenderLoading(visible, message="Loading the 3D expedition view…"){
     const loading=$("renderLoading");
     if(!loading)return;
@@ -128,13 +142,13 @@
           if(distance<best){nearestKey=key;best=distance;}
         }
         if(nearestKey){
-          if(dist(state,spots[nearestKey])<88)interact();
+          if(dist(state,spots[nearestKey])<85)interact();
           else navigateTo(nearestKey);
         } else navToPosition({x,y});
       }
     })
-    .then(engine => {world3d=engine;world3d.render(state,performance.now()/1000);setRenderLoading(false);})
-    .catch(error => {setRenderLoading(false);console.warn("3D graphics unavailable; using the original 2D game.", error);});
+    .then(engine => {worldLoading=false;world3d=engine;world3d.render(state,performance.now()/1000);setRenderLoading(false);})
+    .catch(error => {worldLoading=false;setRenderLoading(false);console.warn("3D graphics unavailable; using the original 2D game.", error);});
   let audioContext = null;
   function tone(freq=620,duration=.09){
     if (!state.sound) return;
@@ -266,7 +280,17 @@
     button.setAttribute("aria-expanded",String(!hidden));
     if(!hidden)lastMapDraw=-1;
   }
+  // Core footprints include the explorer's body clearance. Interaction approach
+  // points stay outside the scenery while remaining within the 85px use radius.
+  const solidBounds=[
+    {x:150,y:400,hx:86,hy:75},{x:345,y:270,hx:68,hy:59},
+    {x:270,y:830,hx:60,hy:53},{x:460,y:760,hx:68,hy:59},
+    {x:540,y:350,hx:68,hy:55},{x:1190,y:835,hx:50,hy:48},
+    {x:1540,y:690,hx:34,hy:38}
+  ];
+  const approaches={toolkit:{x:535,y:765},camp:{x:540,y:425},gasket:{x:1120,y:825},pump:{x:1470,y:690}};
   function blocked(x,y){
+    if(solidBounds.some(b=>Math.abs(x-b.x)<b.hx&&Math.abs(y-b.y)<b.hy))return true;
     if(x<39||y<42||x>W-40||y>H-42)return true;
     return y<532||y>635 ? Math.abs(x-riverCenter(y))<94 : false;
   }
@@ -287,6 +311,7 @@
   }
   function drain(n){
     state.energy=Math.max(0,state.energy-n);
+    if(state.modalOpen&&state.energy>0)saveValley();
     if(state.energy<=0 && state.screen==="playing")end(false,"Your energy ran out before the expedition was complete. Rest at the camp, choose a shorter route, and try again.");
   }
   function notify(msg){
@@ -324,7 +349,7 @@
     $("questsCompleted").textContent=`${completed} / 4`;
     $("progressLabel").textContent=`${completed} / 4 completed`;
     $("progressBar").style.width=`${completed/4*100}%`;
-    $("chapterLabel").innerHTML=`<span class="live-dot"></span> ${completed>=4?"CHAPTER 02 / WATER STEWARDSHIP":"CHAPTER 01 / THE VALLEY"}`;
+    $("chapterLabel").innerHTML=`<span class="live-dot"></span> CHAPTER 01 / GREENWATER VALLEY`;
     const goals={elder:"Talk to the village elder.",toolkit:"Find the workshop and get your toolkit.",gasket:"Travel across the bridge to the supply depot.",pump:"Restore the pump to help the village."};
     const next=questDefs.find(q=>!state.done.has(q.key));
     const status=next?goals[next.key]:"You completed the main mission!";
@@ -352,7 +377,8 @@
   function start({resume=false}={}){
     lastValleySaveTime=0;
     Object.assign(state,{screen:"playing",energy:100,score:0,elapsed:0,x:310,y:620,walkT:0,
-      path:[],goal:null,destination:null,nearby:null,campUses:0,ended:false,moving:false,lastStatus:"",cameraX:0,cameraY:0,effect:null,scenic:false});
+      path:[],goal:null,destination:null,nearby:null,campUses:0,ended:false,moving:false,lastStatus:"",cameraX:0,cameraY:0,effect:null,scenic:false,pipeReady:false,pumpQuizStep:0});
+    pipeTurns=[...PIPE_START];pipeTests=0;
     $("scenicViewButton").setAttribute("aria-pressed","false");
     $("scenicViewButton").textContent="◈ SCENIC VIEW";
     state.keys.clear();state.touch.clear();state.done.clear();state.inventory.clear();state.supplies.clear();
@@ -361,7 +387,7 @@
     world3d?.recenter?.();
     if(!resume)chapters?.clearSave("valley");
     $("startScreen").hidden=true;$("gameScreen").hidden=false;$("toast").hidden=true;
-    setRenderLoading(!world3d,"Preparing the 2D expedition fallback…");
+    setRenderLoading(worldLoading,"Preparing the expedition view…");
     closeModal(true);updateUI();
     if(!resume)saveValley();
     if(world3d)world3d.focus();else canvas.focus({preventScroll:true});
@@ -378,6 +404,7 @@
   }
   function navToPosition(target,spotKey=null){
     if(state.screen!=="playing"||state.modalOpen)return;
+    target=approaches[spotKey]||target;
     if(blocked(target.x,target.y)){
       notify("That spot is across the water or outside the safe trail. Select a land destination.");
       return;
@@ -400,9 +427,44 @@
       else if(end===1)path.push(rightBridge);
     }
     path.push({x:target.x,y:target.y});
-    state.path=path;state.goal={x:target.x,y:target.y};state.destination=spotKey;
+    const route=[];
+    let origin={x:state.x,y:state.y};
+    for(const waypoint of path){
+      const leg=walkableRoute(origin,waypoint);
+      if(!leg){notify("Choose a nearby open trail or use the bridge crossing.");return;}
+      route.push(...leg);origin=waypoint;
+    }
+    state.path=route;state.goal={x:target.x,y:target.y};state.destination=spotKey;
     if(spotKey)notify(`Walking to ${spots[spotKey].name}…`);
     tone(500,.06);
+  }
+  function walkableRoute(start,target){
+    const clear=(a,b)=>{
+      const steps=Math.ceil(Math.hypot(b.x-a.x,b.y-a.y)/6);
+      for(let i=1;i<=steps;i++)if(blocked(a.x+(b.x-a.x)*i/steps,a.y+(b.y-a.y)*i/steps))return false;
+      return true;
+    };
+    if(clear(start,target))return [target];
+    // A small visibility graph routes around the fixed landmark footprints;
+    // it is built only on destination clicks, never in the animation loop.
+    const nodes=[start,target];
+    for(const b of solidBounds)for(const dx of [-1,1])for(const dy of [-1,1]){
+      const p={x:b.x+dx*(b.hx+6),y:b.y+dy*(b.hy+6)};
+      if(!blocked(p.x,p.y))nodes.push(p);
+    }
+    const distances=nodes.map(()=>Infinity),previous=nodes.map(()=>-1),visited=new Set();distances[0]=0;
+    while(visited.size<nodes.length){
+      let current=-1;
+      for(let i=0;i<nodes.length;i++)if(!visited.has(i)&&(current<0||distances[i]<distances[current]))current=i;
+      if(current<0||!Number.isFinite(distances[current]))return null;
+      if(current===1){const result=[];for(let at=1;at!==0;at=previous[at])result.unshift(nodes[at]);return result;}
+      visited.add(current);
+      for(let next=1;next<nodes.length;next++)if(!visited.has(next)&&clear(nodes[current],nodes[next])){
+        const distance=distances[current]+dist(nodes[current],nodes[next]);
+        if(distance<distances[next]){distances[next]=distance;previous[next]=current;}
+      }
+    }
+    return null;
   }
   function navigateTo(key){const sp=spots[key];if(sp)navToPosition(sp,key);}
   function recenterValleyCamera(){
@@ -431,7 +493,7 @@
     let dx=Number(key("arrowright","d","right"))-Number(key("arrowleft","a","left"));
     let dy=Number(key("arrowdown","s","down"))-Number(key("arrowup","w","up"));
     const direct=!!(dx||dy);if(direct){state.path=[];state.destination=null;state.goal=null;}
-    else if(state.path.length){const t=state.path[0],dd=dist(state,t);if(dd<11){state.path.shift();if(!state.path.length){state.moving=false;state.goal=null;state.destination=null;updateNearby();return;}}
+    else if(state.path.length){const t=state.path[0],dd=dist(state,t);if(dd<11){state.x=t.x;state.y=t.y;state.path.shift();if(!state.path.length){state.moving=false;state.goal=null;state.destination=null;updateNearby();return;}}
       const to=state.path[0];if(to){dx=to.x-state.x;dy=to.y-state.y;}}
     if(!dx&&!dy){state.moving=false;return;}
     const length=Math.hypot(dx,dy);dx/=length;dy/=length;
@@ -444,10 +506,12 @@
       state.moving=false;if(state.path.length){state.path=[];state.goal=null;state.destination=null;notify("Trail blocked. Try walking toward the bridge.");}return;
     }
     state.moving=true;state.walkT+=dt*10;state.facing=dx<-.05?-1:dx>.05?1:state.facing;
-    drain(speed*dt*(sprint?.020:.014));
+    drain(Math.hypot(state.x-oldX,state.y-oldY)*(sprint?.020:.014));
   }
+  let modalRevision=0;
   function openModal({tag="FIELD NOTES",icon="💧",title,description,choices=[],progress=0,total=0,tip="",kind="dialog",allowClose=true,celebrateWin=false}){
     saveValley();
+    const revision=++modalRevision;
     state.keys.clear();state.touch.clear();state.moving=false;
     state.modalOpen=true;state.modalKind=kind;
     $("dialog").classList.toggle("is-victory",celebrateWin);
@@ -466,7 +530,7 @@
     for(const c of choices){const b=document.createElement("button");b.type="button";b.className="choice"+(c.primary?" primary":"");b.textContent=c.text;
       const arrow=document.createElement("span");arrow.textContent="↗";b.append(arrow);
       if(c.disabled)b.disabled=true;
-      b.addEventListener("click",c.action);list.append(b);
+      b.addEventListener("click",()=>{if(state.modalOpen&&modalRevision===revision)c.action();});list.append(b);
     }
     $("modalBackdrop").hidden=false;
     // Reopening a puzzle should start at the top even after scrolling another
@@ -477,6 +541,7 @@
   }
   function closeModal(silent=false){
     if(state.modalKind==="end"&&!silent)return;
+    modalRevision++;
     $("modalBackdrop").hidden=true;$("pipePuzzle").hidden=true;$("rainPanel").hidden=true;$("marshPanel").hidden=true;
     state.modalOpen=false;state.modalKind="";
     if(!silent)saveValley();
@@ -503,10 +568,10 @@
         openModal({tag:"THE VILLAGE",icon:"👵",title:"A promise to the village",description:"‘Our only pump stopped working,’ says Amina, the village elder. ‘The children deserve reliable water. Visit the workshop for tools, cross the bridge for a replacement gasket, and come back to restore the pump.’",choices:[{text:state.done.has("elder")?"Review my mission":"I promise to help! (+80 impact)",primary:true,action:()=>{doneOnce("elder","fieldNotes",80);closeModal();updateUI();notify("Quest updated · The village is counting on you.");}}]});break;
       case "toolkit":
         if(state.done.has("toolkit")){openModal({icon:"🧰",title:"The workshop is empty",description:"You've already packed the repair toolkit. Take it to the old pump.",choices:[{text:"Back to the trail",primary:true,action:()=>closeModal()}]});break;}
-        openModal({tag:"SUPPLIES FOUND",icon:"🧰",title:"Repair toolkit discovered!",description:"Inside the workshop you find a wrench, screwdriver, and sturdy pair of gloves. They'll help you fix the broken pump.",choices:[{text:"Pack the tools (+100 impact)",primary:true,action:()=>{doneOnce("toolkit","toolkit",100);drain(2);closeModal();updateUI();notify("🧰 Toolkit added to your backpack.");}}]});break;
+        openModal({tag:"SUPPLIES FOUND",icon:"🧰",title:"Repair toolkit discovered!",description:"Inside the workshop you find a wrench, screwdriver, and sturdy pair of gloves. They'll help you fix the broken pump.",choices:[{text:"Pack the tools (+100 impact)",primary:true,action:()=>{drain(2);if(state.ended)return;doneOnce("toolkit","toolkit",100);closeModal();updateUI();notify("🧰 Toolkit added to your backpack.");}}]});break;
       case "gasket":
         if(state.done.has("gasket")){openModal({icon:"📦",title:"Supply depot",description:"You've already found the replacement gasket. You're ready for the pump repair puzzle.",choices:[{text:"Continue",primary:true,action:()=>closeModal()}]});break;}
-        openModal({tag:"EQUIPMENT FOUND",icon:"📦",title:"A missing piece",description:"You search the storage crates and discover a new pump gasket. This small seal might be the key to restoring water flow.",choices:[{text:"Take the gasket (+100 impact)",primary:true,action:()=>{doneOnce("gasket","gasket",100);drain(3);closeModal();updateUI();notify("🔩 Replacement gasket collected.");}}]});break;
+        openModal({tag:"EQUIPMENT FOUND",icon:"📦",title:"A missing piece",description:"You search the storage crates and discover a new pump gasket. This small seal might be the key to restoring water flow.",choices:[{text:"Take the gasket (+100 impact)",primary:true,action:()=>{drain(3);if(state.ended)return;doneOnce("gasket","gasket",100);closeModal();updateUI();notify("🔩 Replacement gasket collected.");}}]});break;
       case "camp":restAtCamp();break;
       case "river":riverChallenge();break;
       case "pump":pumpChallenge();break;
@@ -530,22 +595,26 @@
     {q:"You fit the new seal. What should you do before turning the repaired pump back on?",answers:["Skip the checks and leave.","Check and tighten the fittings using the tools.","Remove the gasket again."],right:1,feedback:"Good work! The repair is secure and ready for an inspection."},
     {q:"Water starts flowing! What matters before calling it safe drinking water?",answers:["It looks clear, so it's fine.","The pump makes a nice sound.","Qualified water-quality verification and continuing maintenance."],right:2,feedback:"Exactly. Reliable safe access requires verification and maintenance."}
   ];
-  function quiz({tag,icon,title,questions,onWin,step=0}){
+  function quiz({tag,icon,title,questions,onWin,step=0,onProgress=null}){
     const q=questions[step];
     openModal({tag,icon,title:`${title} · ${step+1}/${questions.length}`,description:q.q,progress:step,total:questions.length,kind:"quiz",tip:"Think carefully: wrong answers cost 6 energy.",choices:q.answers.map((answer,i)=>({text:answer,action:()=>{
-      if(i!==q.right){drain(6);if(state.ended)return;quiz({tag,icon,title,questions,onWin,step});$("modalTip").textContent="Not quite. That choice may put people at risk. Try again (−6 energy).";tone(190,.16);updateUI();return;}
+      if(i!==q.right){drain(6);if(state.ended)return;quiz({tag,icon,title,questions,onWin,step,onProgress});$("modalTip").textContent="Not quite. That choice may put people at risk. Try again (−6 energy).";tone(190,.16);updateUI();return;}
       tone(850,.13);
-      if(step+1<questions.length){quiz({tag,icon,title,questions,onWin,step:step+1});$("modalTip").textContent=q.feedback;}
+      onProgress?.(step+1);
+      if(step+1<questions.length){quiz({tag,icon,title,questions,onWin,step:step+1,onProgress});$("modalTip").textContent=q.feedback;}
       else{closeModal();onWin();}
     }}))});
   }
   function riverChallenge(){
-    if(state.inventory.has("testKit")){openModal({tag:"RIVER RESEARCH",icon:"🔬",title:"You studied the river",description:"You already collected the water test kit. Take it to Hill Spring if you want to explore an alternate route to victory.",choices:[{text:"Continue",primary:true,action:()=>closeModal()}]});return;}
-    quiz({tag:"WATER KNOWLEDGE",icon:"🔬",title:"The River Test",questions:riverQuestions,onWin:()=>{addItem("testKit");addScore(130);drain(4);celebrate("river",130);updateUI();notify("🧪 Water test kit earned! Explore Hill Spring to use it.");}});
+    if(state.inventory.has("testKit")){openModal({tag:"RIVER RESEARCH",icon:"🔬",title:"You studied the river",description:"You already collected the water test kit. Take it to Hill Spring if you want to complete an optional source survey.",choices:[{text:"Continue",primary:true,action:()=>closeModal()}]});return;}
+    quiz({tag:"WATER KNOWLEDGE",icon:"🔬",title:"The River Test",questions:riverQuestions,onWin:()=>{drain(4);if(state.ended)return;doneOnce("river","testKit",130);updateUI();notify("🧪 Water test kit earned! Explore Hill Spring to use it.");}});
   }
   function springChallenge(){
+    if(state.done.has("spring")){
+      openModal({tag:"SPRING FIELD NOTES",icon:"🏔️",title:"Spring survey complete",description:"Your source assessment is recorded. Restore the village pump to complete Chapter 1 and unlock the Forgotten Canyon.",choices:[{text:"Continue exploring",primary:true,action:()=>closeModal()}]});return;
+    }
     if(!state.inventory.has("testKit")){openModal({tag:"HILL SPRING",icon:"💧",title:"A promising discovery",description:"The mountain spring looks beautiful, but appearance doesn't guarantee safety. Visit the River Bank to learn about testing and collect a test kit.",choices:[{text:"Go to the River Bank",primary:true,action:()=>{closeModal();navigateTo("river");}},{text:"Keep exploring",action:()=>closeModal()}]});return;}
-    quiz({tag:"BONUS CHALLENGE",icon:"🏔️",title:"Spring Survey",questions:springQuestions,onWin:()=>{addScore(350);end(true,"You helped the village identify and responsibly evaluate a possible alternative water source! Your careful decisions earned a community impact bonus.","SPRING DISCOVERY");}});
+    quiz({tag:"BONUS CHALLENGE",icon:"🏔️",title:"Spring Survey",questions:springQuestions,onWin:()=>{doneOnce("spring",null,350);updateUI();notify("🏔️ Spring survey complete · +350 impact. Restore the village pump to finish Chapter 1.");}});
   }
 
 
@@ -808,12 +877,13 @@
   function rotatePipe(index){
     if(state.modalKind!=="pipe")return;
     pipeTurns[index]=(pipeTurns[index]+1)%4;
+    state.pipeReady=false;state.pumpQuizStep=0;saveValley();
     tone(440+index*24,.045);
     renderPipePuzzle();
   }
   function finalPumpSafetyQuiz(){
     quiz({tag:"THE FINAL CHALLENGE",icon:"🔧",title:"Repair the Pump",
-      questions:pumpQuestions,onWin:()=>{
+      questions:pumpQuestions,step:state.pumpQuizStep,onProgress:step=>{state.pumpQuizStep=Math.min(step,2);saveValley();},onWin:()=>{
         doneOnce("pump",null,520);
         end(true,"Water is flowing again! By listening to the village, gathering the right supplies, and checking your work, you restored the village's path toward reliable safe water.","THE LAST WELL RESTORED");
       }});
@@ -822,6 +892,7 @@
     if(state.modalKind!=="pipe")return;
     pipeTests++;
     if(pipeFlow().solved){
+      state.pipeReady=true;state.pumpQuizStep=0;
       tone(960,.17);
       closeModal();
       finalPumpSafetyQuiz();
@@ -839,7 +910,7 @@
     tone(210,.15);
   }
   function beginPipePuzzle(){
-    pipeTurns=[...PIPE_START];pipeTests=0;
+    pipeTests=0;
     openModal({tag:"PUMP REPAIR • STEP 1 OF 2",icon:"🔧",
       title:"Reconnect the water pipeline",
       description:"Connect all nine pipe sections. Water enters from middle LEFT and exits middle RIGHT. Turn the T-junctions to feed the branches and use the end caps to prevent leaks.",
@@ -855,11 +926,24 @@
     if(state.done.has("pump"))return;
     const need=[!state.done.has("elder")&&"Talk to the elder",!state.inventory.has("toolkit")&&"Collect the toolkit",!state.inventory.has("gasket")&&"Find the gasket"].filter(Boolean);
     if(need.length){openModal({tag:"REPAIR STATION",icon:"⚙️",title:"The pump needs your help",description:`You can't start repairs yet. You still need: ${need.join(" · ")}.`,choices:[{text:"Show me the next stop",primary:true,action:()=>{closeModal();navigateTo(!state.done.has("elder")?"elder":!state.inventory.has("toolkit")?"toolkit":"gasket");}},{text:"Back to map",action:()=>closeModal()}]});return;}
-    beginPipePuzzle();
+    if(state.pipeReady&&pipeFlow().solved)finalPumpSafetyQuiz();
+    else beginPipePuzzle();
+  }
+  function recoverAtCamp(){
+    if(!state.ended||state.screen!=="ended")return;
+    // Recovery preserves the work already completed without awarding another
+    // camp rest, replenishing supplies or changing the expedition timer/score.
+    Object.assign(state,{screen:"playing",ended:false,energy:50,x:approaches.camp.x,y:approaches.camp.y,
+      path:[],goal:null,destination:null,moving:false,effect:null,lastStatus:""});
+    state.keys.clear();state.touch.clear();
+    closeModal(true);world3d?.recenter?.();
+    updateNearby();updateUI();saveValley();
+    notify("Recovered at camp · 50 energy restored. Your mission progress is safe.");
+    if(world3d)world3d.focus();else canvas.focus({preventScroll:true});
   }
   function end(won,description,headline="EXPEDITION ENDED"){
     if(state.ended)return;
-    state.ended=true;state.screen="ended";state.path=[];
+    state.ended=true;state.screen="ended";state.path=[];state.goal=null;state.destination=null;state.moving=false;state.keys.clear();state.touch.clear();
     if(!won){
       // A failed expedition must never leave a previous quest's victory effects visible.
       state.effect=null;
@@ -870,7 +954,7 @@
     const best=safeStore.get();$("highScoreStart").textContent=best?best.toLocaleString():"—";
     updateUI();
     if(won)celebrate(state.done.has("pump")?"pump":"spring",0,true);
-    openModal({tag:won?"✦ MISSION COMPLETE":"MISSION PAUSED FOREVER",icon:won?"🏆":"🌵",title:won?headline:"Out of energy!",description:`${description}  •  FINAL IMPACT: ${state.score.toLocaleString()}  •  TIME: ${fmtTime(state.elapsed)}  •  BEST: ${best.toLocaleString()}`,kind:"end",allowClose:false,celebrateWin:won,choices:[...(won?[{text:"🏜️ Enter the Forgotten Canyon",primary:true,action:()=>{showChapters();window.TrailCanyon?.launch();}}]:[]),{text:"↻ Play a new expedition",primary:!won,action:start},{text:"↩ Chapter selection",action:showChapters}]});
+    openModal({tag:won?"✦ MISSION COMPLETE":"RECOVERY AVAILABLE",icon:won?"🏆":"🌵",title:won?headline:"Out of energy!",description:`${description}  •  FINAL IMPACT: ${state.score.toLocaleString()}  •  TIME: ${fmtTime(state.elapsed)}  •  BEST: ${best.toLocaleString()}`,kind:"end",allowClose:false,celebrateWin:won,choices:[...(won?[{text:"🏜️ Enter the Forgotten Canyon",primary:true,action:()=>{showChapters();window.TrailCanyon?.launch();}}]:[{text:"⛺ Recover at camp (50 energy)",primary:true,action:recoverAtCamp}]),{text:"↻ Play a new expedition",action:start},{text:"↩ Chapter selection",action:showChapters}]});
     if(won){
       // A short three-note flourish, using the existing optional Web Audio system.
       tone(620,.13);
@@ -1015,7 +1099,7 @@
     const x=(event.clientX-rect.left)*(scenic2d?W:VW)/rect.width+(scenic2d?0:state.cameraX);
     const y=(event.clientY-rect.top)*(scenic2d?H:VH)/rect.height+(scenic2d?0:state.cameraY);
     let key=null,d=75;for(const [k,sp] of Object.entries(spots)){const n=dist({x,y},sp);if(n<d){d=n;key=k;}}
-    if(key){if(dist(state,spots[key])<90)interact();else navigateTo(key);}else navToPosition({x:Math.min(W-50,Math.max(50,x)),y:Math.min(H-50,Math.max(50,y))});
+    if(key){if(dist(state,spots[key])<85)interact();else navigateTo(key);}else navToPosition({x:Math.min(W-50,Math.max(50,x)),y:Math.min(H-50,Math.max(50,y))});
   }
   window.addEventListener("keydown",e=>{
     if(e.key==="Escape"&&state.modalOpen&&state.modalKind!=="end"){closeModal();return;}
@@ -2837,7 +2921,6 @@
       cameraYaw=Math.atan2(10.2,20);
       cameraPitch=Math.atan2(16.3,Math.hypot(10.2,20));
       cameraDistanceTarget=.82;
-      firstFrame=true;
     }
     function clampFreeTarget(){
       freeTarget.x=Math.max(-20,Math.min(20,freeTarget.x));
@@ -2908,7 +2991,7 @@
     });
     function finishCameraGesture(event){
       const gesture=cameraGesture;
-      if(!gesture)return;
+      if(!gesture||event.pointerId!==gesture.pointerId)return;
       cameraGesture=null;
       view.releasePointerCapture?.(event.pointerId);
       if(gesture.dragged){
@@ -2919,7 +3002,12 @@
       }
     }
     view.addEventListener("pointerup",finishCameraGesture);
-    view.addEventListener("pointercancel",event=>{cameraGesture=null;view.releasePointerCapture?.(event.pointerId);});
+    view.addEventListener("pointercancel",event=>{
+      if(cameraGesture?.pointerId!==event.pointerId)return;
+      cameraGesture=null;view.releasePointerCapture?.(event.pointerId);
+    });
+    view.addEventListener("lostpointercapture",event=>{if(cameraGesture?.pointerId===event.pointerId)cameraGesture=null;});
+    window.addEventListener("blur",()=>{cameraGesture=null;});
     view.addEventListener("contextmenu",event=>event.preventDefault());
     view.addEventListener("click",event=>{
       if(suppressNextClick){suppressNextClick=false;event.preventDefault();}
