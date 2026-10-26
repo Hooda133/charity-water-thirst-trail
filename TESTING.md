@@ -1,5 +1,7 @@
 # Thirst Trail — Browser QA Checklist
 
+Current repair evidence: [October 26 gameplay audit](GAMEPLAY_AUDIT.md). It records bugs, root causes, executed Node/browser checks and limitations for `codex/gameplay-audit-2026-10-26`. Historical entries below remain records of their respective earlier passes; unchecked manual checklist items are not claimed as completed by this pass.
+
 This project is a static HTML/CSS/JavaScript game. Run it from a local HTTP server (for example `python3 -m http.server 8000`) and open the site in Chrome or Edge. Open DevTools → Console to spot JavaScript and WebGL errors.
 
 ## Phase 1 — Graphics

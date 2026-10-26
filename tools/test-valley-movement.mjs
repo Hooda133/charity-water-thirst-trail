@@ -12,7 +12,7 @@ const end=script.indexOf("  let audioContext = null;",begin);
 assert.ok(begin>=0&&end>begin,"Expected asynchronous renderer initialization");
 script=script.slice(0,begin)+"  // Skip WebGL initialization; exercise genuine gameplay and movement.\n"+script.slice(end);
 // Test-only access to transition state; the shipped source stays read-only.
-script=script.replace('window.ThirstTrail={','window.__valleyRegression={getState:()=>state};window.ThirstTrail={');
+script=script.replace('window.ThirstTrail={','window.__valleyRegression={getState:()=>state,navigateTo,blocked};window.ThirstTrail={');
 const handlers=new Map(), nodes=new Map(), frames=[];
 let time=1000;
 const context2d=new Proxy({},{
@@ -147,12 +147,68 @@ assert.deepEqual(Array.from(snapshot().items),[]);
 assert.equal(snapshot().x,310,'A checkpoint inside the river restores to the safe starting bank');
 assert.equal(snapshot().y,620);
 
+// Navigate through every landmark using the genuine click-route planner and
+// scheduled movement. Buildings must have safe approaches rather than interior goals.
+nodes.get('startButton').click();
+for(const key of ['toolkit','camp','elder','gasket','pump','spring','ridge','river','marsh']){
+ state.energy=100;
+ window.__valleyRegression.navigateTo(key);
+ assert.ok(state.path.length,`${key} has a reachable walking route`);
+ for(let guard=0;state.path.length&&guard<700;guard++)frame();
+ assert.equal(state.path.length,0,`${key} route settles without trapping the explorer`);
+ assert.equal(state.nearby,key,`${key} approach stays within interaction range`);
+ assert.equal(window.__valleyRegression.blocked(state.x,state.y),false,`${key} does not end inside scenery`);
+}
+state.x=530;state.y=760;press('a');frame();release('a');
+assert.equal(state.x,530,'Keyboard movement cannot enter the workshop wall');
+console.log('✓ All nine landmark routes reach safe interaction approaches; keyboard respects solid scenery');
+
+const choose=index=>nodes.get('modalChoices').children[index].click();
+const go=(x,y)=>{state.x=x;state.y=y;press('e');};
+// Reward/inventory pairs recover together and unrecognized items stay discarded.
+nodes.get('valleyChapters').click();
+window.TrailProgress.save('valley',{done:['toolkit'],inventory:['gasket','not-a-real-item'],campUses:1.9});
+nodes.get('valleyChapter').click();
+assert.ok(state.inventory.has('toolkit'),'A completed workshop restores its missing toolkit');
+assert.ok(state.done.has('gasket'),'A saved gasket restores the corresponding objective');
+assert.equal(state.inventory.has('not-a-real-item'),false);
+assert.equal(state.campUses,1,'A damaged fractional rest count is normalized');
+
+// A lethal collection cost cannot award an item, dismiss the fail screen or
+// replace failure with a reward animation. Stale modal callbacks become inert.
+nodes.get('startButton').click();state.energy=1;
+go(455,765);const lethalReward=nodes.get('modalChoices').children[0];lethalReward.click();
+assert.equal(state.screen,'ended');assert.equal(state.modalKind,'end');
+assert.equal(state.done.has('toolkit'),false);assert.equal(state.effect,null);
+const deathScore=state.score;lethalReward.click();
+assert.equal(state.score,deathScore);assert.equal(state.modalKind,'end');
+nodes.get('startButton').click();go(540,350);
+const staleRest=nodes.get('modalChoices').children[0];staleRest.click();
+const restedScore=state.score;staleRest.click();
+assert.equal(state.campUses,1,'An obsolete rest button cannot consume another use');
+assert.equal(state.score,restedScore,'An obsolete reward button cannot repeat its award');
+
+// Optional research remains optional: it saves once and cannot bypass the pump.
+nodes.get('startButton').click();go(705,610);
+const staleUnsafe=nodes.get('modalChoices').children[0];
+choose(1);const energyAfterCorrect=state.energy;staleUnsafe.click();
+assert.equal(state.energy,energyAfterCorrect,'A previous quiz question cannot apply another penalty');
+choose(0);
+assert.ok(state.inventory.has('testKit'));
+assert.equal(window.TrailProgress.saved('valley').energy,state.energy,'River reward and energy cost save together');
+assert.ok(window.TrailProgress.saved('valley').inventory.includes('testKit'));
+go(1460,265);choose(1);choose(1);
+assert.equal(state.screen,'playing','The optional spring survey keeps the main expedition running');
+assert.ok(state.done.has('spring'));
+assert.equal(window.TrailProgress.unlocked('canyon'),false,'Spring research cannot skip the Chapter 1 pump');
+const springScore=state.score;go(1460,265);choose(0);
+assert.equal(state.score,springScore,'Spring survey is rewarded only once');
+console.log('✓ Corrupted inventory reconciliation, lethal costs, stale modal callbacks and optional-source progression');
+
 // Exercise the actual quest, pipe-tile and safety-quiz callbacks end to end.
 // Only travel is accelerated through test-only coordinate access; no solver state
 // or completion function is replaced.
 nodes.get('startButton').click();
-const choose=index=>nodes.get('modalChoices').children[index].click();
-const go=(x,y)=>{state.x=x;state.y=y;press('e');};
 for(const [key,x,y,item] of [
  ['elder',280,490,'fieldNotes'],['toolkit',455,765,'toolkit'],['gasket',1190,825,'gasket']
 ]){
@@ -166,6 +222,10 @@ assert.equal(state.modalKind,'pipe');
 const beforeBadFlow=state.energy;choose(0);
 assert.equal(state.energy,beforeBadFlow-2,'An incomplete pipe network cannot skip to the final quiz');
 assert.equal(state.modalKind,'pipe');
+nodes.get('pipeGrid').children[0].click();
+const partialTurns=Array.from(window.TrailProgress.saved('valley').pipeTurns);
+press('Escape');go(1540,690);
+assert.deepEqual(Array.from(window.TrailProgress.saved('valley').pipeTurns),partialTurns,'Leaving and reopening preserves partial pipe rotations');
 for(let hint=0;hint<10;hint++){
  nodes.get('pipeHint').click();
  const text=nodes.get('pipeStatus').textContent;
@@ -179,8 +239,39 @@ assert.ok(nodes.get('pipeStatus').className.includes('is-success'),'Actual tile 
 choose(0);assert.equal(state.modalKind,'quiz');
 const beforeWrongSafety=state.energy;choose(1);
 assert.equal(state.energy,beforeWrongSafety-6,'Unsafe pump answer costs energy and keeps the quiz open');
+assert.equal(window.TrailProgress.saved('valley').energy,state.energy,'Wrong-answer penalty is immediately saved');
 assert.equal(state.modalKind,'quiz');
-for(const answer of [0,1,2])choose(answer);
+choose(0);
+assert.equal(window.TrailProgress.saved('valley').pumpQuizStep,1,'A correct safety answer saves the next question');
+assert.equal(window.TrailProgress.saved('valley').pipeReady,true,'The verified pipeline checkpoint remains complete');
+nodes.get('valleyChapters').click();nodes.get('valleyChapter').click();go(1540,690);
+assert.equal(state.modalKind,'quiz','Continue skips the already completed pipe puzzle');
+assert.match(nodes.get('modalTitle').textContent,/2\/3/,'Continue resumes the next unanswered safety question');
+// Actual wrong-answer depletion offers a progress-preserving camp recovery.
+const beforeRecovery={score:state.score,elapsed:state.elapsed,done:[...state.done],items:[...state.inventory],
+ turns:[...window.TrailProgress.saved('valley').pipeTurns],campUses:state.campUses};
+state.energy=5;choose(0);
+assert.equal(state.screen,'ended');assert.equal(state.modalKind,'end');
+assert.equal(state.energy,0);assert.equal(state.effect,null);
+const recoveryButton=nodes.get('modalChoices').children.find(n=>n.textContent.includes('Recover at camp'));
+assert.ok(recoveryButton,'Game over presents an explicit camp recovery');recoveryButton.click();
+assert.equal(state.screen,'playing');assert.equal(state.ended,false);assert.equal(state.modalOpen,false);
+assert.equal(state.energy,50);assert.equal(state.x,540);assert.equal(state.y,425);
+assert.equal(state.score,beforeRecovery.score,'Recovery awards no points');
+assert.equal(state.elapsed,beforeRecovery.elapsed,'Recovery preserves expedition time');
+assert.equal(state.campUses,beforeRecovery.campUses,'Recovery does not use or reward an optional camp rest');
+assert.deepEqual([...state.done],beforeRecovery.done);assert.deepEqual([...state.inventory],beforeRecovery.items);
+assert.equal(state.pipeReady,true);assert.equal(state.pumpQuizStep,1);
+assert.deepEqual([...window.TrailProgress.saved('valley').pipeTurns],beforeRecovery.turns);
+assert.equal(window.TrailProgress.saved('valley').energy,50,'Recovered checkpoint is written immediately');
+assert.equal(state.keys.size,0);assert.equal(state.touch.size,0);assert.equal(state.path.length,0);assert.equal(state.effect,null);
+recoveryButton.click();assert.equal(state.energy,50);assert.equal(state.score,beforeRecovery.score,'Obsolete recovery button cannot reward again');
+window.__valleyRegression.navigateTo('pump');
+for(let guard=0;state.path.length&&guard<700;guard++)frame();
+assert.equal(state.nearby,'pump','Recovered player can genuinely walk back to the repair');press('e');
+assert.equal(state.modalKind,'quiz');assert.match(nodes.get('modalTitle').textContent,/2\/3/);
+console.log('✓ Actual energy depletion → camp recovery preserves work and allows walking back to finish');
+for(const answer of [1,2])choose(answer);
 assert.equal(snapshot().screen,'ended');
 assert.ok(snapshot().quests.includes('pump'));
 assert.equal(state.effect.kind,'victory');
@@ -241,5 +332,7 @@ assert.deepEqual(selected,[[980,590]],"Short click should select a walking desti
 const moved={button:0,dragged:true,pointerId:7};
 assert.equal(cameraController.release(moved,releaseEvent),true);
 assert.equal(selected.length,1,"Dragging should not trigger click-to-walk");
+cameraController.release(tap,{pointerId:99});
+assert.equal(selected.length,1,'A mismatched pointer never walks the character');
 console.log("✓ Actual 3D click release selects a destination without stale camera ReferenceErrors");
 console.log("✓ Mouse dragging does not trigger walking");

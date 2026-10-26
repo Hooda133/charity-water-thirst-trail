@@ -19,6 +19,8 @@ on:
       - 'script.js'
       - 'explorer.js'
       - 'tools/test-explorer-motion.mjs'
+      - 'tools/**'
+      - 'canyon-map.js'
       - 'index.html'
       - '.github/workflows/village-assets.yml'
   pull_request:
@@ -39,6 +41,8 @@ on:
       - 'script.js'
       - 'explorer.js'
       - 'tools/test-explorer-motion.mjs'
+      - 'tools/**'
+      - 'canyon-map.js'
       - 'index.html'
       - '.github/workflows/village-assets.yml'
 
@@ -60,6 +64,10 @@ jobs:
         run: node tools/test-pipes.mjs
       - name: Test Valley unlock and Forgotten Canyon quest progression
         run: node tools/test-chapters.mjs
+      - name: Verify save recovery, migration and storage-denied play
+        run: node tools/test-progression.mjs
+      - name: Verify Canyon checkpoint, puzzle and navigation regressions
+        run: node tools/test-canyon-regressions.mjs
       - name: Verify character movement controls after graphics merges
         run: node tools/test-valley-movement.mjs
       - name: Validate Forgotten Canyon 3D art and character integration
@@ -67,3 +75,28 @@ jobs:
 
       - name: Test shared explorer grounding, victory and camera obstruction fading
         run: node tools/test-explorer-motion.mjs
+
+  browser-gameplay:
+    # Playwright 1.58 supports 24.04; ubuntu-latest has advanced to 26.04.
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install browser test driver
+        # The runner includes Chrome and its OS libraries; reuse those instead
+        # of downloading a second browser and reinstalling system packages.
+        run: python -m pip install playwright==1.58.0
+      - name: Play both chapters through the real interface in 2D fallback
+        run: python tools/test-browser.py --browser "$(command -v google-chrome)"
+      - name: Preserve browser screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: gameplay-screenshots
+          path: work/browser-qa/
+          if-no-files-found: ignore

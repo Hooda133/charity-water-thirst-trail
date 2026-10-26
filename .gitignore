@@ -1,0 +1,4 @@
+# Local QA downloads, screenshots and scratch artifacts.
+work/
+__pycache__/
+*.pyc

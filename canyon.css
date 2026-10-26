@@ -85,6 +85,10 @@
 .canyon-modal-options button:hover{filter:brightness(1.1)}
 .canyon-pressure{display:grid;gap:13px;padding:17px;margin-top:15px;background:#0a2e3b78;border:1px solid #9dc6ae6e;border-radius:13px}
 .canyon-valve{display:flex;align-items:center;justify-content:space-between;gap:16px}
+.canyon-valve{display:grid;grid-template-columns:minmax(0,1fr) minmax(108px,auto) 44px;gap:10px}
+.canyon-valve button:last-child{min-width:44px;padding:10px 8px;font-size:20px}
+.canyon-valve button:disabled,.canyon-repair-tiles button:disabled{cursor:default;opacity:.65;filter:saturate(.5)}
+.canyon-valve button:focus-visible,.canyon-repair-tiles button:focus-visible,.canyon-modal-options button:focus-visible{outline:3px solid #ffe39a;outline-offset:3px}
 .canyon-valve strong{font-size:12px}
 .canyon-valve button{min-width:110px;border-radius:9px;background:#e4b873;color:#233741;padding:10px;border:0;font-weight:900;cursor:pointer}
 .canyon-pressure-meter{height:13px;background:#597272;border-radius:50px;overflow:hidden}
@@ -177,5 +181,7 @@
  .canyon-valve{gap:9px}
  .canyon-valve strong{font-size:11px}
  .canyon-valve button{min-width:92px}
+ .canyon-valve{grid-template-columns:minmax(0,1fr) 100px 44px;gap:7px}
+ .canyon-valve button:last-child{min-width:44px}
  .canyon-repair-tiles{grid-template-columns:repeat(2,minmax(0,1fr))}
 }

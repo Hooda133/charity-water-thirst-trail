@@ -224,9 +224,9 @@
     const trailMat=new THREE.MeshStandardMaterial({map:terrainMap,color:0xb88769,roughness:.98});
     const trailEdgeMat=new THREE.MeshStandardMaterial({color:0x8f6258,roughness:1,flatShading:true});
     const trailRoutes=[
-      [[165,270],[250,315],[305,455],[390,365],[390,165]],
-      [[305,455],[430,470],[570,430],[700,365],[820,175]],
-      [[390,365],[520,330],[700,365]],
+      [[165,270],[250,315],[305,455],[390,365],[390,223]],
+      [[305,455],[430,410],[438,350],[579,350],[625,397],[700,397],[772,397],[820,235]],
+      [[390,365],[438,350]],
       [[305,455],[290,520]]
     ];
     const trailDust=[];
@@ -238,6 +238,7 @@
         const angle=Math.atan2(dx,dz),midX=(ax+bx)/2,midZ=(az+bz)/2;
         const path=add(new THREE.PlaneGeometry(1.22,length,1,8),trailMat,midX,-.015,midZ);
         path.rotation.x=-Math.PI/2;path.rotation.z=angle;
+        path.userData.canyonTrail={from:[...route[i]],to:[...route[i+1]]};
         for(const side of [-1,1]){
           const edge=add(new THREE.BoxGeometry(.055,length,.055),trailEdgeMat,
             midX+Math.cos(angle)*side*.63,-.005,midZ+Math.sin(angle)*side*.63);
@@ -399,6 +400,7 @@
       particles[i*3+2]=-15+rand()*30;
     }
     sprayGeo.setAttribute("position",new THREE.BufferAttribute(particles,3));
+    const dustOrigins=particles.slice();
     const dust=new THREE.Points(sprayGeo,new THREE.PointsMaterial({
       color:0xffe2ba,size:.085,transparent:true,opacity:.32,
       depthWrite:false,depthTest:true,sizeAttenuation:true
@@ -424,9 +426,10 @@
         if(!reduced){
           const xyz=sprayGeo.getAttribute("position");
           for(let i=0;i<155;i++){
-            let x=xyz.getX(i)+Math.sin(t*.31+i)*.002;
-            let y=xyz.getY(i)+.0006;
-            if(y>4.48)y=.20;
+            // Derive positions from time and immutable origins. Repeated draws
+            // while paused and different refresh rates must not accumulate drift.
+            const x=dustOrigins[i*3]+Math.sin(t*.31+i)*.12;
+            const y=.20+((dustOrigins[i*3+1]-.20+t*.036)%4.28);
             xyz.setXY(i,x,y);
           }
           xyz.needsUpdate=true;

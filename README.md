@@ -95,9 +95,18 @@ Run from the repository root:
 
 ```bash
 node tools/test-chapters.mjs
+node tools/test-canyon-regressions.mjs
+node tools/test-progression.mjs
 node tools/test-pipes.mjs
+node tools/test-valley-movement.mjs
+node tools/test-canyon-visuals.mjs
+node tools/test-explorer-motion.mjs
 node tools/validate-village.mjs
 node tools/validate-explorer.mjs
 ```
 
 GitHub Actions runs these checks when gameplay source changes. The chapter integration test covers unlocking, autosaves, both canyon puzzles, wrong-answer penalties, final completion and checkpoint resume. **Actual WebGL visual appearance, sound and laptop frame rate still require testing in a browser.**
+
+For the real-interface Chromium walkthrough, install the optional QA tools (`python -m pip install playwright==1.58.0`, then `python -m playwright install chromium`) and run `python tools/test-browser.py`. It deliberately blocks CDN loading to test the 2D fallback. `python tools/test-browser.py --3d` tests the actual WebGL scenes and requires access to the existing Three.js CDN, or exact r170 test modules supplied with `--offline-three DIRECTORY`. Use `--browser PATH` to select a system Chromium. These are test tools; the game itself still needs no installation or build.
+
+See [GAMEPLAY_AUDIT.md](GAMEPLAY_AUDIT.md) for the October 26 repair report, executed checks and remaining manual-test limits. Canyon now has safe landmark approaches, bidirectional valve controls and recoverable construction checkpoints. Valley saves pipe/safety progress and offers **Recover at camp** after energy depletion while retaining completed work. Storage restrictions display an honest status and keep the current session playable.
