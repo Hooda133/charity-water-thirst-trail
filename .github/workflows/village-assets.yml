@@ -77,7 +77,8 @@ jobs:
         run: node tools/test-explorer-motion.mjs
 
   browser-gameplay:
-    runs-on: ubuntu-latest
+    # Playwright 1.58 supports 24.04; ubuntu-latest has advanced to 26.04.
+    runs-on: ubuntu-24.04
     timeout-minutes: 15
     permissions:
       contents: read
