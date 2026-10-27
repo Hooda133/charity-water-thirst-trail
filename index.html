@@ -18,6 +18,7 @@
   </script>
   <script src="progression.js" defer></script>
   <script src="explorer.js" defer></script>
+  <script src="valley-restoration.js" defer></script>
   <script src="script.js" defer></script>
   <script src="canyon-visuals.js" defer></script>
   <script src="canyon.js" defer></script>
@@ -105,6 +106,10 @@
               <div id="nearbyPrompt" class="nearby-prompt" hidden><span id="nearbyName">Talk to the Elder</span><button id="interactButton" type="button">E · INTERACT</button></div>
               <div class="canvas-bottom"><span><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> MOVE</span><span><kbd>E</kbd> INTERACT</span><span>CLICK TO WALK · DRAG TO EXPLORE · RIGHT DRAG ROTATE · C RECENTER</span></div>
               <div id="touchControls" class="touch-controls" aria-label="Touch movement controls"><button type="button" class="touch-up" data-dir="up" aria-label="Move up">↑</button><button type="button" class="touch-left" data-dir="left" aria-label="Move left">←</button><button type="button" class="touch-down" data-dir="down" aria-label="Move down">↓</button><button type="button" class="touch-right" data-dir="right" aria-label="Move right">→</button><button type="button" class="touch-action" id="touchAction" aria-label="Interact with nearby location">✦ ACT</button></div>
+              <div id="valleyCelebration" class="valley-celebration" hidden>
+                <div role="status"><span>✦ GREENWATER VALLEY RESTORED</span><strong>You brought the water home!</strong><small>The village fountain is flowing. Celebrate with your community.</small></div>
+                <div class="valley-celebration-actions"><button id="valleyCelebrate" type="button">✦ Celebrate with villagers</button><button id="valleyViewResults" type="button">View results</button><button id="valleyContinueCanyon" type="button">Chapter 2 →</button></div>
+              </div>
             </div>
             <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
             <div class="world-legend"><span><i class="legend-dot legend-gold"></i> Mission locations</span><span><i class="legend-dot legend-blue"></i> Water source</span><span><i class="legend-dot legend-green"></i> Rest stop</span><strong>TIP: Click a mission destination to auto-walk there.</strong></div>
@@ -188,6 +193,13 @@
       <div class="modal-illustration" id="modalIllustration" aria-hidden="true">💧</div>
       <h2 id="modalTitle">Welcome to the valley</h2>
       <p id="modalDescription">Your mission begins here.</p>
+      <div id="valleyVictoryScene" class="valley-victory-scene" aria-hidden="true" hidden>
+        <span class="village-sun"></span><span class="village-hill"></span>
+        <span class="village-home home-left"></span><span class="village-home home-right"></span>
+        <span class="village-fountain"></span><span class="village-stream"></span><span class="village-pool"></span>
+        <i class="village-spark spark-one">✦</i><i class="village-spark spark-two">✦</i><i class="village-spark spark-three">✦</i>
+        <span class="village-scene-caption">CLEAN WATER. A NEW BEGINNING.</span>
+      </div>
       <section id="pipePuzzle" class="pipe-puzzle" aria-label="Interactive pipeline repair" hidden>
         <div class="pipe-endpoints"><span>💧 WATER IN</span><span>VILLAGE OUTLET →</span></div>
         <div id="pipeGrid" class="pipe-grid" role="group" aria-label="Rotate the nine pipe tiles to connect the water supply"></div>

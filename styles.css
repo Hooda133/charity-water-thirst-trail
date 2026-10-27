@@ -568,6 +568,49 @@
 .modal-card.is-victory{overflow-x:hidden;overflow-y:auto}
 .modal-card.is-victory .modal-illustration{animation:none}
 .modal-backdrop:has(.is-victory){background:#041a2399;backdrop-filter:none}
+.valley-celebration{grid-column:1;grid-row:3;position:relative;z-index:3;padding:17px 18px;
+ background:linear-gradient(120deg,#26594b,#123d43);border-top:1px solid #99dbb86b;display:grid;gap:13px}
+.valley-celebration>div:first-child{display:grid;gap:5px}
+.valley-celebration span{font-size:9px;font-weight:900;letter-spacing:1.3px;color:#ffe29a}
+.valley-celebration strong{font-size:22px;line-height:1.2;color:#eff9e7}
+.valley-celebration small{font-size:11px;line-height:1.5;color:#bfe5d1}
+.valley-celebration-actions{display:flex;flex-wrap:wrap;gap:8px}
+.valley-celebration button{min-height:44px;padding:10px 13px;border:1px solid #b5dec173;border-radius:9px;
+ background:#294f52;color:#e8f7e9;font:800 11px system-ui;line-height:1.4}
+.valley-celebration button:first-child{background:#f7d77a;color:#173a39;border-color:#ffe6a4}
+.valley-celebration button:hover{filter:brightness(1.12)}
+.world-frame:has(.valley-celebration:not([hidden])) .canvas-bottom,
+.world-frame:has(.valley-celebration:not([hidden])) .touch-controls{display:none}
+.valley-victory-scene{height:156px;position:relative;isolation:isolate;overflow:hidden;border-radius:13px;margin:-3px 0 18px;
+ border:1px solid #a9dfb56b;background:linear-gradient(#8dccc5,#d9e6bb 65%,#8fba71 66%)}
+.valley-victory-scene>span,.valley-victory-scene>i{position:absolute;display:block}
+.village-sun{width:41px;height:41px;top:14px;left:16%;border-radius:50%;background:#fff1b8;box-shadow:0 0 32px #ffeaa099}
+.village-hill{left:-15%;right:-15%;top:65px;height:100px;border-radius:50%;background:#8bb67b;transform:rotate(-5deg)}
+.village-home{width:62px;height:43px;bottom:32px;background:#f1d2a1;border:3px solid #9b775b;border-top:0;border-radius:3px;box-shadow:5px 6px 0 #315d4430}
+.village-home::before{content:"";position:absolute;left:-9px;right:-9px;top:-26px;height:28px;background:#a25f49;clip-path:polygon(0 100%,50% 0,100% 100%)}
+.village-home::after{content:"";position:absolute;width:14px;height:25px;left:21px;bottom:0;background:#805438;box-shadow:-20px -5px 0 -3px #a4d0bc,19px -5px 0 -3px #a4d0bc}
+.village-home.home-left{left:10%}.village-home.home-right{right:10%;transform:scale(.85)}
+.village-fountain{left:calc(50% - 11px);top:63px;width:22px;height:48px;background:linear-gradient(90deg,#a4bda6,#f3ebc8,#91a99b);border-radius:5px}
+.village-fountain::before{content:"";position:absolute;left:-15px;top:-4px;width:52px;height:12px;background:#e9dfbd;border:2px solid #8ca995;border-radius:50%}
+.village-stream{left:calc(50% - 4px);top:52px;width:8px;height:57px;border-radius:50% 50% 4px 4px;
+ background:repeating-linear-gradient(#bbfff3 0 6px,#4ed9d7 7px 14px);transform-origin:bottom;animation:village-water-start 1s ease-out both,village-water-flow .7s linear infinite}
+.village-pool{left:calc(50% - 50px);bottom:24px;width:100px;height:24px;border-radius:50%;border:5px solid #dfd8b6;
+ background:repeating-radial-gradient(ellipse,#b2ffe8 0 5px,#59d2c6 6px 12px);box-shadow:0 6px 0 #94a580;animation:village-pool-fill 1.5s .3s ease-out both}
+.village-spark{font-style:normal;color:#fff0a9;font-size:19px;animation:village-sparkle 2.8s ease-in-out 3}
+.village-spark.spark-one{left:29%;top:24px}.village-spark.spark-two{right:27%;top:42px;animation-delay:.4s}.village-spark.spark-three{left:47%;top:16px;animation-delay:.9s}
+.village-scene-caption{bottom:5px;left:0;right:0;text-align:center;color:#315d46;font-size:8px;font-weight:900;letter-spacing:1.4px}
+@keyframes village-water-start{from{scale:1 0}to{scale:1 1}}
+@keyframes village-water-flow{to{background-position:0 -28px}}
+@keyframes village-pool-fill{from{scale:.1;opacity:0}to{scale:1;opacity:1}}
+@keyframes village-sparkle{0%,100%{opacity:0;transform:translateY(5px) rotate(-12deg)}50%{opacity:1;transform:translateY(-5px) rotate(12deg)}}
+@media(max-width:600px){
+ .valley-celebration{padding:13px;gap:11px}
+ .valley-celebration strong{font-size:19px}
+ .valley-celebration-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}
+ .valley-celebration button:first-child{grid-column:1/-1}
+ .valley-victory-scene{height:138px}
+}
+@media(prefers-reduced-motion:reduce){.valley-victory-scene *{animation:none!important}.village-spark{display:none!important}}
 .graphics-panel{z-index:900;max-height:calc(100dvh - 96px);overflow-y:auto;overscroll-behavior:contain}
 @media(max-width:680px),(pointer:coarse){
  .touch-controls{grid-column:1;grid-row:4;grid-template-columns:repeat(3,44px) 70px;grid-template-rows:repeat(2,44px)}
