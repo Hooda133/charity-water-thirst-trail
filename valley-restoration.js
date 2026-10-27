@@ -36,6 +36,16 @@
     upperWater.rotation.x=-Math.PI/2;
     cylinder(metal,0,1.87,0,.08,.12,.30,12);
     const jets=new THREE.Group();root.add(jets);
+    // New repair stages leave visible evidence before the final release:
+    // parts arrive, then the tested feed line holds water behind the valve.
+    const feed=new THREE.Group();root.add(feed);
+    const feedWindows=[];
+    for(let i=0;i<3;i++){
+      const casing=add(new THREE.CylinderGeometry(.12,.12,.68,10),metal,-2.8+i*.65,.18,-.35,feed);
+      casing.rotation.z=Math.PI/2;
+      const window=add(new THREE.BoxGeometry(.46,.035,.10),water,-2.8+i*.65,.30,-.35,feed);
+      feedWindows.push(window);
+    }
     const jet=add(new THREE.CylinderGeometry(.065,.085,.73,10),water,0,2.22,0,jets);
     const crown=add(new THREE.SphereGeometry(.12,10,6),foam,0,2.61,0,jets);
     for(let i=0;i<4;i++){
@@ -93,6 +103,8 @@
     return {
       update(state,time,{reduced=false,effects=true}={}){
         const active=restored(state),t=age(state,time,"villageWaterAt");
+        feed.visible=state.screen!=="start"&&(active||state.done?.has("gasket")&&state.done?.has("toolkit"));
+        for(let i=0;i<feedWindows.length;i++)feedWindows[i].visible=active||!!state.pipeReady;
         const fill=reduced?1:clamp(t/1.9),cheerAge=age(state,time,"villageCheerAt");
         const cheering=active&&(t<5||(Number(state.villageCheerAt)>0&&cheerAge<3));
         jets.visible=basinWater.visible=upperWater.visible=channel.visible=poolWater.visible=active;

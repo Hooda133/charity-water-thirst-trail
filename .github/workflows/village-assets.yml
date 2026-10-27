@@ -18,6 +18,10 @@ on:
       - 'progression.js'
       - 'script.js'
       - 'valley-restoration.js'
+      - 'village-life.*'
+      - 'expedition-mode.js'
+      - 'coast*.js'
+      - 'coast.css'
       - 'explorer.js'
       - 'tools/test-explorer-motion.mjs'
       - 'tools/**'
@@ -41,6 +45,10 @@ on:
       - 'progression.js'
       - 'script.js'
       - 'valley-restoration.js'
+      - 'village-life.*'
+      - 'expedition-mode.js'
+      - 'coast*.js'
+      - 'coast.css'
       - 'explorer.js'
       - 'tools/test-explorer-motion.mjs'
       - 'tools/**'
@@ -77,6 +85,12 @@ jobs:
 
       - name: Test shared explorer grounding, victory and camera obstruction fading
         run: node tools/test-explorer-motion.mjs
+      - name: Verify play-style preferences and village resource persistence
+        run: |
+          node tools/test-expedition-mode.mjs
+          node tools/test-village-life.mjs
+      - name: Verify Coast puzzles, navigation, saves and replay
+        run: node tools/test-coast.mjs
 
   browser-gameplay:
     # Playwright 1.58 supports 24.04; ubuntu-latest has advanced to 26.04.
@@ -95,10 +109,16 @@ jobs:
         run: python -m pip install playwright==1.58.0
       - name: Play both chapters through the real interface in 2D fallback
         run: python tools/test-browser.py --browser "$(command -v google-chrome)"
+      - name: Play Village Life and Stormbreak Coast through the interface
+        run: python tools/test-expansion-browser.py --browser "$(command -v google-chrome)"
+      - name: Verify expansion mobile layout and touch controls
+        run: python tools/test-expansion-browser.py --mobile --browser "$(command -v google-chrome)"
       - name: Preserve browser screenshots
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: gameplay-screenshots
-          path: work/browser-qa/
+          path: |
+            work/browser-qa/
+            work/expansion-qa/
           if-no-files-found: ignore

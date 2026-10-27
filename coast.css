@@ -1,0 +1,87 @@
+/* Stormbreak Coast chapter; scoped to the coast interface. */
+#coastScreen{padding:22px 0 35px}
+.coast-header{display:flex;align-items:center;justify-content:space-between;gap:20px;padding:22px;margin-bottom:17px;border:1px solid #91bec46b;border-radius:18px;background:linear-gradient(120deg,#254b57,#173f4c)}
+.coast-header h2{font-size:clamp(26px,3.5vw,38px);line-height:1.1;margin:7px 0;color:#fff0ce;letter-spacing:-1px}
+.coast-header p{margin:0;font-size:12px;color:#b9d9d6;line-height:1.5}
+.coast-header-actions{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.coast-header-actions span{font-size:10px;font-weight:900;color:#ffe3a1;border:1px solid #8dbbb273;border-radius:30px;padding:8px 11px}
+.coast-header button,.coast-stage-label button,.coast-celebration button{border:1px solid #91bbbd7a;border-radius:8px;background:#224c58;color:#edf8ed;padding:10px 13px;min-height:40px;font:800 11px system-ui;cursor:pointer}
+.coast-layout{display:grid;grid-template-columns:minmax(0,1fr) 304px;gap:16px;align-items:start}
+.coast-stage{position:relative;overflow:hidden;border:1px solid #719fa576;border-radius:17px;background:#184554;display:grid;grid-template-columns:minmax(0,1fr);box-shadow:0 22px 48px #001f2d6b}
+.coast-stage-label{grid-row:1;grid-column:1;display:flex;align-items:center;justify-content:space-between;padding:11px 15px;gap:12px;background:linear-gradient(100deg,#23434b,#305b63);font-size:10px;font-weight:900;letter-spacing:1px;color:#ffe1a1;min-height:58px}
+#coastCanvas,.coast-webgl{grid-row:2;grid-column:1;display:block;width:100%;height:auto;aspect-ratio:1000/610;outline:none;touch-action:none;background:#8abfc5}
+.coast-hud{grid-row:2;grid-column:1;align-self:start;justify-self:start;z-index:2;display:flex;gap:6px;flex-wrap:wrap;margin:11px;pointer-events:none}
+.coast-hud span{background:#153a46e8;border:1px solid #b3d0b363;color:#fff3d5;padding:8px 10px;border-radius:8px;font-size:10px;font-weight:900;box-shadow:0 3px 9px #0023315c}
+.coast-prompt{grid-column:1;grid-row:3;display:flex;align-items:center;justify-content:space-between;gap:10px;padding:11px 15px;background:#15434de8;color:#ffedbc;border-top:1px solid #accfac61;font-size:12px;font-weight:900}
+.coast-prompt button{border:0;border-radius:7px;background:#f7d678;color:#173b43;min-height:42px;padding:9px 13px;font:900 11px system-ui;flex-shrink:0}
+.coast-toast{grid-column:1;grid-row:2;align-self:start;justify-self:start;z-index:4;margin:56px 12px 0;padding:11px 13px;max-width:calc(100% - 24px);background:#133c48ed;border:1px solid #d6cc9082;border-radius:10px;font-size:12px;line-height:1.5;color:#fcebb7;pointer-events:none}
+.coast-sidebar{border:1px solid #779f9e70;border-radius:17px;background:linear-gradient(145deg,#173d48,#102d39);padding:22px}
+.coast-sidebar h3{font-size:29px;letter-spacing:-.8px;line-height:1.1;margin:8px 0 13px;color:#f4efda}
+.coast-sidebar p{font-size:12px;line-height:1.7;color:#b6cfcc;margin:0 0 15px}
+.coast-progress{height:7px;border-radius:10px;background:#3d6264;overflow:hidden;margin:17px 0 8px}
+.coast-progress i{display:block;height:100%;width:0;background:linear-gradient(90deg,#55c5bd,#ffdc8c);transition:width .25s}
+#coastProgressLabel{font-size:11px;color:#ead99d}
+.coast-quests{display:grid;gap:8px;margin:17px 0 25px}
+.coast-quest{display:flex;align-items:center;gap:11px;border:1px solid #5c8d8b68;background:#204953;border-radius:10px;padding:11px}
+.coast-quest>span{font-size:19px;min-width:24px;text-align:center;color:#bbf4d2}
+.coast-quest div{display:grid;gap:5px}.coast-quest strong{font-size:12px;line-height:1.35}.coast-quest small{font-size:10px;line-height:1.4;color:#a9c9c3}
+.coast-quest.done{border-color:#69b68b85;background:#214f49}.coast-quest.done strong{text-decoration:line-through;color:#b4d4b6}
+.coast-destinations{display:grid;gap:7px;margin:13px 0 16px}
+.coast-destinations button{min-height:42px;padding:10px 12px;text-align:left;border:1px solid #56878c70;border-radius:8px;background:#193e4c;color:#e5f3e7;font:800 11px system-ui;line-height:1.4;cursor:pointer}
+.coast-destinations button:hover{background:#2c6066;border-color:#e9ce86}
+.coast-sidebar .coast-save-note{font-size:10px;color:#bdd6b6}.coast-sidebar .coast-controls-note{font-size:10px;color:#82aeac}
+.coast-bonus{padding:12px;border:1px solid #d7c07f70;border-radius:10px;font-size:10px;line-height:1.6;color:#f6df9d;background:#8a9d5019}
+.coast-touch{display:none;grid-column:1;grid-row:4;justify-content:center;padding:11px;background:#133b47;gap:6px}
+.coast-touch button{width:44px;height:44px;min-width:44px;border:1px solid #b5d4c287;border-radius:9px;background:#245361;color:#fff0cd;font:900 20px system-ui;touch-action:none}
+.coast-touch button:last-child{width:66px;background:#f4d37b;color:#1a3d47;font-size:12px}
+.coast-celebration{grid-column:1;grid-row:3;padding:18px;background:linear-gradient(110deg,#2c6056,#184553);border-top:1px solid #a5dfbd73;display:grid;gap:13px}
+.coast-celebration>div:first-child{display:grid;gap:5px}.coast-celebration span{font-size:9px;font-weight:900;letter-spacing:1.5px;color:#ffe1a0}
+.coast-celebration strong{font-size:22px;line-height:1.2;color:#f7f9df}.coast-celebration small{font-size:11px;color:#c1e7d3;line-height:1.5}
+.coast-celebration>div:last-child{display:flex;flex-wrap:wrap;gap:8px}.coast-celebration button:first-child{background:#f5d17a;color:#1d4147}
+.coast-stage:has(.coast-celebration:not([hidden])) .coast-touch{display:none}
+.coast-modal-backdrop{position:fixed;inset:0;display:grid;place-items:center;background:#062535c9;backdrop-filter:blur(6px);z-index:70;padding:16px}
+.coast-modal{width:min(100%,620px);max-height:calc(100dvh - 32px);overflow:auto;overscroll-behavior:contain;border:1px solid #b4d0b980;border-radius:20px;background:linear-gradient(140deg,#2d5660,#123643);padding:27px;color:#f3f6e5;box-shadow:0 30px 90px #001a2abf;outline:none}
+.coast-modal-tag{font-size:10px;letter-spacing:1.4px;font-weight:900;color:#f4d58c}
+.coast-modal h2{font-size:clamp(25px,4vw,34px);line-height:1.12;letter-spacing:-.7px;margin:13px 0}
+.coast-modal>p{font-size:13px;line-height:1.7;color:#c8e0d7;margin:0 0 15px}
+.coast-modal-options{display:grid;gap:9px;margin-top:18px}
+.coast-modal-options button{min-height:44px;padding:12px 14px;background:#2d5861;color:#f1f7e7;border:1px solid #96beb280;border-radius:9px;text-align:left;font:800 12px system-ui;line-height:1.4;cursor:pointer}
+.coast-modal-options button.primary{background:linear-gradient(100deg,#f1c46d,#ffe4a2);color:#173b45;border-color:#ffe2a6}
+.coast-modal button:hover:not(:disabled){filter:brightness(1.12)}
+.coast-modal button:focus-visible,.coast-header button:focus-visible,.coast-stage button:focus-visible{outline:3px solid #ffe7a7;outline-offset:3px}
+.coast-modal button:disabled{opacity:.55;cursor:default}
+.coast-circuit,.coast-counterweights,.coast-sluices,.coast-tank-repair{display:grid;gap:12px;padding:17px;border-radius:12px;border:1px solid #7eafa477;background:#103842}
+.coast-service-lights{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px}
+.coast-service-lights span{font-size:11px;text-align:center;font-weight:800;padding:10px 4px;border:1px solid #668a8a;border-radius:7px;background:#193d48;color:#95afb0}
+.coast-service-lights span.on{background:#285d4e;border-color:#90ddac;color:#caffd8;box-shadow:inset 0 0 15px #8fffbd16}
+.coast-switches{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+.coast-switches button{min-height:68px;background:linear-gradient(#546b70,#243f4c);border:2px solid #82a5a1;border-radius:10px;color:#b4cac6;font:900 13px system-ui}
+.coast-switches button.on{background:linear-gradient(#64a986,#33664f);border-color:#d8f3b1;color:#f9ffe3}
+.coast-balance-beam{padding:14px;text-align:center;font-size:14px;font-weight:900;letter-spacing:.7px;color:#ffdf9a;background:#6c766344;border:1px solid #c2b987;border-radius:9px;transition:transform .2s}
+.coast-weight-row{display:grid;grid-template-columns:90px 42px minmax(0,1fr) 42px;align-items:center;gap:7px;font-size:11px}
+.coast-weight-row strong{font-size:11px}.coast-weight-row output{font-size:11px;text-align:center;color:#d5ecd7}
+.coast-weight-row button{height:42px;border:1px solid #8ebbb1;border-radius:8px;background:#38636a;color:#ffe7ab;font-size:23px;font-weight:900}
+.coast-puzzle-status{font-size:12px;line-height:1.55;color:#d0ead0;margin:0;padding:10px;background:#285048;border-radius:8px}
+.coast-tank-repair button{min-height:62px;border:1px solid #88b1a5;border-radius:9px;background:#315963;color:#f1eaca;font:800 13px system-ui;text-align:left;padding:13px}
+.coast-tank-repair button.done{background:#416e55;border-color:#c2d3a4}
+.coast-sluice{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:center;padding:11px;background:#244b55;border-radius:9px}
+.coast-sluice span{font-size:12px;font-weight:800}.coast-sluice output{font-size:13px;color:#ffe0a0;font-weight:900;font-variant-numeric:tabular-nums}
+.coast-sluice input{grid-column:1/-1;width:100%;min-height:30px;accent-color:#6cd8c3;cursor:pointer}
+.coast-modal.is-victory{text-align:center;border-color:#ffe0a3;background:radial-gradient(ellipse at top,#4b8072,#153d4b 75%)}
+.coast-modal.is-victory h2{color:#ffe2a1}.coast-modal.is-victory .coast-modal-options{text-align:left}
+.coast-victory-art{height:145px;border:1px solid #a9d7bd80;border-radius:13px;background:linear-gradient(#aad2cf 0 48%,#d8d1a4 49% 68%,#43a5b3 69%);display:grid;place-items:center;gap:0;padding:10px;overflow:hidden}
+.coast-victory-art span{font-size:49px;color:#f7edbd;text-shadow:0 0 20px #ffe3a6;transform:rotate(-8deg)}
+.coast-victory-art strong{font-size:28px;color:#c6fff0;letter-spacing:10px;animation:coast-current 2s ease-in-out infinite}
+.coast-victory-art small{font-size:8px;letter-spacing:1.3px;font-weight:900;color:#194653}
+@keyframes coast-current{50%{transform:translateX(10px)}}
+@media(max-width:1050px){.coast-layout{grid-template-columns:1fr}.coast-sidebar{padding:18px}}
+@media(max-width:600px){
+ .coast-header{flex-direction:column;align-items:flex-start;padding:17px;gap:14px}.coast-header h2{font-size:29px}
+ .coast-hud{margin:8px;gap:4px}.coast-hud span{font-size:8px;padding:6px 7px}.coast-toast{font-size:11px;margin:43px 8px 0;max-width:calc(100% - 16px)}
+ .coast-touch{display:flex}.coast-modal{padding:19px}.coast-modal h2{font-size:27px}.coast-modal>p{font-size:12px;line-height:1.6}
+ .coast-circuit,.coast-counterweights,.coast-sluices,.coast-tank-repair{padding:12px;gap:10px}.coast-service-lights span{font-size:9px;padding:9px 3px}
+ .coast-switches{gap:5px}.coast-switches button{min-height:60px;font-size:11px}.coast-weight-row{grid-template-columns:62px 36px minmax(0,1fr) 36px;gap:5px}.coast-weight-row strong,.coast-weight-row output{font-size:10px}
+ .coast-celebration{padding:14px}.coast-celebration strong{font-size:19px}.coast-celebration button:first-child{width:100%}
+ .coast-prompt{padding:10px;font-size:11px}.coast-prompt button{padding:8px 10px;font-size:10px}
+}
+@media(prefers-reduced-motion:reduce){.coast-progress i,.coast-balance-beam{transition:none}.coast-victory-art strong{animation:none}}

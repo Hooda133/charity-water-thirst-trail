@@ -33,7 +33,7 @@
   const pointDistance=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y);
   // Keep the Canyon's nonlethal recovery floor without ever granting energy
   // when a damaged or externally restored state starts below that floor.
-  const spendEnergy=amount=>{state.energy=Math.max(0,Math.min(state.energy,Math.max(7,state.energy-amount)));};
+  const spendEnergy=amount=>{const scale=window.TrailMode?.profile?.().energyMultiplier||1;state.energy=Math.max(0,Math.min(state.energy,Math.max(7,state.energy-amount*scale)));};
   const wX=x=>(x-500)/24,wZ=y=>(y-305)/24;
   const isWaterGarden=(x,z)=>{
     const dx=x-wX(goals.cistern.x),dz=z-wZ(goals.cistern.y);
@@ -290,7 +290,7 @@
       if(Math.abs(state.valves[0]-state.valves[2])>1)issues.push("Bring intake and return within one setting.");
       feedback.textContent=issues.join(" ")||"✓ All operating conditions are safe. Test pressure to complete calibration.";
       root.append(feedback);
-      if(state.failedValveTests.size>=2){
+      if(state.failedValveTests.size>=2||window.TrailMode?.profile?.().hints){
         const hint=document.createElement("p");hint.className="canyon-pressure-hint";
         hint.textContent="Nia’s field note: Intake 2 + Regulator 2 + Return 1 gives 69 kPa and balanced flow.";
         root.append(hint);
@@ -465,14 +465,14 @@
   }
   function showCelebration(){
     if(!state.finished)return;
-    modal("✦ ADVENTURE COMPLETE · CHAPTER 02","You brought the water home!",
+    modal("✦ CHAPTER 02 COMPLETE · COAST UNLOCKED","You brought the water home!",
       "Clean water flows through Sunstone Canyon again. You rebuilt the aqueduct, passed the safety inspection, and unlocked the reservoir. The canyon is alive again! Total impact: "+
       state.score.toLocaleString()+" points.",
-      [{text:"◈ Return to chapter selection",primary:true,action:goHome},
+      [{text:"◈ Return to chapter selection",action:goHome},
        {text:"↻ Replay Forgotten Canyon",action:()=>{closeModal();launch(true);}},
        {text:"💧 Watch the water flow",action:()=>{
          closeModal();$("canyonViewResults").focus({preventScroll:true});
-       }}],root=>{
+       }},{text:"🌊 Continue to Stormbreak Coast",primary:true,action:()=>{suspend();window.TrailCoast?.launch();}}],root=>{
          const scene=document.createElement("div");scene.className="canyon-victory-scene";
          scene.setAttribute("aria-hidden","true");
          for(const name of ["sun","cliff cliff-left","cliff cliff-right","cistern","spout","stream","pool","plant plant-left","plant plant-right"]){
@@ -493,6 +493,7 @@
   }
   function formatTime(t){const sec=Math.floor(t);return String(Math.floor(sec/60)).padStart(2,"0")+":"+String(sec%60).padStart(2,"0");}
   function refreshUI(){
+    $("canyonModeLabel").textContent=(window.TrailMode?.profile?.().label||"Explorer")+" mode";
     const n=state.done.size,next=questOrder.find(key=>!state.done.has(key));
     $("canyonProgressLabel").textContent=n+" / 5 completed";
     $("canyonProgressFill").style.width=n/5*100+"%";
@@ -1240,6 +1241,7 @@
   $("canyonPause").addEventListener("click",pause);
   $("canyonCameraReset").addEventListener("click",recenterCanyonCamera);
   $("canyonViewResults").addEventListener("click",showCelebration);
+  $("canyonNextCoast").addEventListener("click",()=>{if(state.finished){suspend();window.TrailCoast?.launch();}});
   for(const btn of document.querySelectorAll("[data-canyon-move]")){
     const key={up:"w",down:"s",left:"a",right:"d"}[btn.dataset.canyonMove];
     if(!key)continue;

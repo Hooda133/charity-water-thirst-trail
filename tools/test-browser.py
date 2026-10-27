@@ -42,6 +42,7 @@ def main():
         browser = p.chromium.launch(executable_path=executable, headless=True,
                                   args=(["--no-sandbox", "--disable-dev-shm-usage"] + (["--use-angle=swiftshader", "--enable-unsafe-swiftshader"] if args.three else ["--disable-gpu"])))
         context = browser.new_context(viewport={"width": 1440, "height": 1100}, reduced_motion="reduce")
+        context.add_init_script("localStorage.setItem('thirstTrailMode','challenge');")
         if not args.three:
             context.route("https://cdn.jsdelivr.net/**", lambda route: route.abort())
             context.route("https://esm.sh/**", lambda route: route.abort())

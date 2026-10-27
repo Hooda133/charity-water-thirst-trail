@@ -17,12 +17,18 @@
   }}
   </script>
   <script src="progression.js" defer></script>
+  <script src="expedition-mode.js" defer></script>
   <script src="explorer.js" defer></script>
+  <script src="village-life.js" defer></script>
   <script src="valley-restoration.js" defer></script>
   <script src="script.js" defer></script>
   <script src="canyon-visuals.js" defer></script>
   <script src="canyon.js" defer></script>
   <script src="canyon-map.js" defer></script>
+  <script src="coast-visuals.js" defer></script>
+  <script src="coast.js" defer></script>
+  <link rel="stylesheet" href="village-life.css">
+  <link rel="stylesheet" href="coast.css">
 </head>
 <body>
   <div class="app-shell">
@@ -41,7 +47,15 @@
         <div class="start-copy">
           <div class="eyebrow"><span class="live-dot"></span> A NEW EXPEDITION BEGINS</div>
           <h1 id="startTitle">Every drop<br><em>changes</em><br>everything<span class="yellow">.</span></h1>
-          <p>One village. One broken pump. A journey across the valley. Explore a living map, meet the locals, gather supplies, and solve the challenges standing between a community and safe water.</p>
+          <p>Three communities. One journey worth taking. Restore a village, cross the forgotten canyon, and rebuild Stormbreak Coast. Every repair changes the world around you.</p>
+          <section class="play-style" aria-labelledby="playStyleTitle">
+            <span id="playStyleTitle" class="eyebrow">CHOOSE YOUR PLAY STYLE</span>
+            <div class="play-style-options" role="radiogroup" aria-label="Expedition difficulty">
+              <button id="explorerMode" type="button" role="radio" aria-checked="true"><strong>🌿 Explorer</strong><small>Relaxed energy use · extra guidance</small></button>
+              <button id="challengeMode" type="button" role="radio" aria-checked="false"><strong>✦ Challenge</strong><small>Tighter resources · bonus objectives</small></button>
+            </div>
+            <small id="playModeLabel">Explorer mode · Take your time and discover every story.</small>
+          </section>
           <div class="start-buttons">
             <button id="startButton" type="button" class="button button-primary">Start adventure <span aria-hidden="true">↗</span></button>
             <button id="instructionsButton" type="button" class="button button-ghost">How to play <span aria-hidden="true">→</span></button>
@@ -67,6 +81,14 @@
                 <span class="chapter-select-number">02 · THE FORGOTTEN CANYON</span><strong>🏜️ Forgotten Canyon</strong>
                 <small>Repair an aqueduct and balance pressure</small><span id="canyonChapterStatus" class="chapter-select-status">🔒 Finish Chapter 1 to unlock</span>
               </button>
+              <button id="coastChapter" class="chapter-select-card is-locked" type="button" disabled aria-label="Stormbreak Coast unlocks after completing Forgotten Canyon">
+                <span class="chapter-select-number">03 · AFTER THE STORM</span><strong>🌊 Stormbreak Coast</strong>
+                <small>Restore power, balance a bridge and reconnect the coast</small><span id="coastChapterStatus" class="chapter-select-status">🔒 Finish Chapter 2 to unlock</span>
+              </button>
+              <button id="villageChapter" class="chapter-select-card is-locked" type="button" disabled aria-label="Village life unlocks after restoring Greenwater Valley">
+                <span class="chapter-select-number">VILLAGE LIFE · KEEP MAKING A DIFFERENCE</span><strong>🏡 A living community</strong>
+                <small>Deliver water, find leaks and build village upgrades</small><span id="villageChapterStatus" class="chapter-select-status">🔒 Restore the village first</span>
+              </button>
             </div>
           </section>
           <div class="start-highscore">🏆 <span>BEST EXPEDITION</span> <strong id="highScoreStart">—</strong></div>
@@ -85,7 +107,7 @@
 
       <section id="gameScreen" class="game-screen" hidden aria-label="Thirst Trail game">
         <div class="hud">
-          <div class="hud-mission"><span id="chapterLabel" class="overline"><span class="live-dot"></span> CHAPTER 01 / THE VALLEY</span><strong>Find the last well</strong><small id="statusLine">The village needs your help.</small><div class="mission-progress"><span id="progressLabel">0 / 4 completed</span><span class="mission-progress-track"><i id="progressBar"></i></span></div></div>
+          <div class="hud-mission"><span id="chapterLabel" class="overline"><span class="live-dot"></span> CHAPTER 01 / THE VALLEY</span><strong id="valleyMissionTitle">Find the last well</strong><small id="statusLine">The village needs your help.</small><div class="mission-progress"><span id="progressLabel">0 / 4 completed</span><span class="mission-progress-track"><i id="progressBar"></i></span></div></div>
           <div class="hud-resource"><div class="resource-label"><span>💧 ENERGY</span><strong id="energyValue">100%</strong></div><div class="bar"><div id="energyBar" class="bar-fill"></div></div></div>
           <div class="hud-stat"><span>✦ IMPACT</span><strong id="scoreValue">0000</strong></div>
           <div class="hud-stat"><span>◷ TIME</span><strong id="timeValue">00:00</strong></div>
@@ -95,7 +117,7 @@
         <div class="game-layout">
           <div class="canvas-column">
             <div class="world-frame">
-              <div class="frame-label"><span>🌿 GREENWATER VALLEY</span><div class="frame-tools"><span id="locationHint">Follow the golden markers</span><button id="scenicViewButton" type="button" class="scenic-button" aria-pressed="false" title="Toggle a scenic overview of the valley (V)">◈ SCENIC VIEW</button><button id="valleyCameraReset" type="button" class="camera-reset" title="Return camera to your explorer (C)">⌖ RECENTER</button></div></div>
+              <div class="frame-label"><span>🌿 GREENWATER VALLEY</span><div class="frame-tools"><span id="locationHint">Follow the golden markers</span><button id="villageOpenActivities" type="button" class="camera-reset">🏡 Activities</button><button id="scenicViewButton" type="button" class="scenic-button" aria-pressed="false" title="Toggle a scenic overview of the valley (V)">◈ SCENIC VIEW</button><button id="valleyCameraReset" type="button" class="camera-reset" title="Return camera to your explorer (C)">⌖ RECENTER</button></div></div>
               <div id="renderLoading" class="render-loading" role="status" aria-live="polite"><span class="render-loading-mark">◈</span><div><strong>Preparing the valley</strong><small>Loading the 3D expedition view…</small></div><i aria-hidden="true"></i></div>
               <canvas id="gameCanvas" width="1000" height="610" tabindex="0" role="img" aria-label="Stylized 2.5D adventure map of Greenwater Valley. Use WASD or arrow keys to move, E to interact, or use the destination buttons in the mission panel.">Your browser does not support canvas.</canvas>
               <div id="impactBurst" class="impact-burst" role="status" aria-live="polite" aria-atomic="true" hidden>
@@ -108,7 +130,7 @@
               <div id="touchControls" class="touch-controls" aria-label="Touch movement controls"><button type="button" class="touch-up" data-dir="up" aria-label="Move up">↑</button><button type="button" class="touch-left" data-dir="left" aria-label="Move left">←</button><button type="button" class="touch-down" data-dir="down" aria-label="Move down">↓</button><button type="button" class="touch-right" data-dir="right" aria-label="Move right">→</button><button type="button" class="touch-action" id="touchAction" aria-label="Interact with nearby location">✦ ACT</button></div>
               <div id="valleyCelebration" class="valley-celebration" hidden>
                 <div role="status"><span>✦ GREENWATER VALLEY RESTORED</span><strong>You brought the water home!</strong><small>The village fountain is flowing. Celebrate with your community.</small></div>
-                <div class="valley-celebration-actions"><button id="valleyCelebrate" type="button">✦ Celebrate with villagers</button><button id="valleyViewResults" type="button">View results</button><button id="valleyContinueCanyon" type="button">Chapter 2 →</button></div>
+                <div class="valley-celebration-actions"><button id="valleyCelebrate" type="button">✦ Celebrate with villagers</button><button id="valleyExploreVillage" type="button">🏡 Explore village life</button><button id="valleyViewResults" type="button">View results</button><button id="valleyContinueCanyon" type="button">Chapter 2 →</button></div>
               </div>
             </div>
             <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
@@ -116,6 +138,7 @@
           </div>
 
           <aside class="sidebar">
+            <div id="villageLifePanel" hidden></div>
             <div class="sidebar-header"><div><span class="overline">EXPEDITION LOG</span><h2>Your mission<span class="yellow">.</span></h2></div><div id="questsCompleted" class="quest-count">0 / 4</div></div>
             <p class="side-intro">Help the village restore access to a reliable source of water. Choose where to go next.</p>
             <section class="navigator-panel" aria-labelledby="navigatorTitle">
@@ -147,7 +170,7 @@
       <section id="canyonScreen" class="canyon-screen" hidden aria-label="Level 2: The Forgotten Canyon">
         <div class="canyon-header">
           <div><span class="overline">CHAPTER 02 · THE FORGOTTEN CANYON</span><h2>Restore the forgotten aqueduct<span class="yellow">.</span></h2><p id="canyonSubtitle">Meet the canyon surveyor to begin.</p></div>
-          <div class="canyon-controls"><span id="canyonProgressLabel" class="canyon-progress-label">0 / 5 repaired</span><button id="canyonPause" class="button button-compact button-ghost-dark" type="button">Ⅱ Pause</button><button id="canyonToChapters" class="button button-compact button-ghost-dark" type="button">◈ Chapters</button></div>
+          <div class="canyon-controls"><span id="canyonModeLabel" class="mode-badge">Explorer</span><span id="canyonProgressLabel" class="canyon-progress-label">0 / 5 repaired</span><button id="canyonPause" class="button button-compact button-ghost-dark" type="button">Ⅱ Pause</button><button id="canyonToChapters" class="button button-compact button-ghost-dark" type="button">◈ Chapters</button></div>
         </div>
         <div class="canyon-layout">
           <div class="canyon-stage">
@@ -157,6 +180,7 @@
             <div id="canyonCelebration" class="canyon-celebration" hidden>
               <div role="status"><span>✦ CANYON RESTORED</span><strong>Clean water flows again!</strong><small>You brought the canyon back to life.</small></div>
               <button id="canyonViewResults" type="button">View celebration →</button>
+              <button id="canyonNextCoast" type="button">🌊 Chapter 3 →</button>
             </div>
             <div id="canyonPrompt" class="canyon-prompt" hidden><span id="canyonPromptText">Talk to the surveyor</span><button id="canyonInteract" type="button">E · INTERACT</button></div>
             <div class="canyon-key-hint"><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> MOVE <kbd>E</kbd> INTERACT <span>DRAG TO LOOK AROUND · CLICK TO WALK · C RECENTER</span></div>
@@ -174,6 +198,7 @@
           </aside>
         </div>
       </section>
+      <section id="coastScreen" hidden aria-label="Chapter 3: Stormbreak Coast"></section>
     </main>
     <div id="canyonModalBackdrop" class="canyon-modal-backdrop" hidden>
       <section id="canyonModal" class="canyon-modal" role="dialog" aria-modal="true" aria-labelledby="canyonModalTitle" aria-describedby="canyonModalText" tabindex="-1">

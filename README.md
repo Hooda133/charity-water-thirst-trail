@@ -1,8 +1,18 @@
-# Thirst Trail 2.0: The Last Well
+# Thirst Trail 3.0: The Last Well
 
-**Thirst Trail** is a polished, browser-based 3D adventure game inspired by charity: water. Play two connected chapters: restore the Greenwater Valley pump, then unlock The Forgotten Canyon to rebalance pressure valves, rebuild an aqueduct, and inspect and unlock a cistern. Both chapters feature 3D exploration with a playable 2D fallback.
+**Thirst Trail** is a browser-based 3D adventure game inspired by charity: water. Restore Greenwater Valley, repair the Forgotten Canyon aqueduct, then rebuild Stormbreak Coast. Return to the restored village to deliver water, repair leaks and choose community improvements. All three chapters and Village Life have 3D environments with a playable 2D fallback.
 
-## Thirst Trail 2.0 — New chapters and progress
+## Thirst Trail 3.0 — A living village and a new coast
+
+- **Village Life:** unlocked after Chapter 1. Fill an 8-litre yellow jug at the fountain and carry 4-litre deliveries to Amina’s home, Leila’s school and Idris’s garden. The jug level changes in the activity panel and beside the explorer in 3D. Named neighbours respond to deliveries; flowers and greenery appear as the community recovers.
+- **Hidden leaks:** follow wet trail patches and a proximity dripping cue. Inspect the fault, choose a clamp, gasket or torque key, then complete three repair actions. Repaired patches dry up and each first repair earns building materials.
+- **Choose village upgrades:** spend earned materials on a second drinking-water station, garden irrigation or a shaded gathering place. All three appear in the world. First deliveries and repairs provide enough materials for every project; later delivery rounds do not repeat material rewards. Village progress saves independently of chapter replay.
+- **Explorer and Challenge modes:** choose on the chapter hub. Explorer uses less energy and offers early puzzle guidance. Challenge requires more energy management and offers the optional Caretaker and Storm Scout badges. Both modes keep hints available and allow resting or recovery.
+- **Chapter 3: Stormbreak Coast:** complete Chapter 2 to unlock a storm-damaged harbor with a lighthouse, cargo crossing, tank and coastal homes. Meet engineer Mara, solve a toggle-switch circuit, balance bridge counterweights, fit three tank repair layers and allocate flow with sluice sliders. Opening the release restores water and starts the harbor celebration.
+- **Visible repair stages:** tested feed lines appear in the village, the pump gauge responds to pipeline repair, the Coast bridge lowers, storm debris clears, tank patches and water levels update, and final channels fill before greenery returns. Progress and partial puzzle work persist across reloads.
+- **Existing saves:** completed older Canyon saves automatically unlock the Coast. Existing best scores, chapter checkpoints and completion badges are preserved; community projects have their own save field.
+
+## Chapters and celebrations
 
 - **Chapter 1: Greenwater Valley** — the complete original adventure is retained, including NPCs, mission puzzles, 3D model packs, mini-map and environmental effects.
 - **Village water celebration:** after solving the nine-piece pipeline and passing the safety checks, open the village water valve. A new communal fountain and channel fill with water, greenery returns, and villagers celebrate. Choose **Watch water reach the village** to see it, use **Celebrate with villagers** to cheer again, or continue to Chapter 2. Results can be reopened without repeating rewards; valve readiness saves across reloads. Both 3D and 2D scenes support the ending, including reduced motion.
@@ -14,7 +24,7 @@
 - **Interactive valve puzzle:** set three regulators to achieve **65–73 kPa**, keep the regulator open, and balance intake/return settings. Incorrect tests cost energy.
 - **Aqueduct assembly puzzle:** place anchors, braces, pipes and sealing material in the right order; repair stages save automatically.
 - **Chapter selection & unlocking:** finishing the Chapter 1 pump mission unlocks Chapter 2. The previous Valley victory screen offers direct access to Canyon.
-- **Autosave and resume:** Valley and Canyon checkpoints, unlocks and completion status persist using versioned browser `localStorage`; saves are on this browser/device, not synced online. Original best-score storage is preserved.
+- **Autosave and resume:** Valley, Canyon, Coast and Village Life progress persist using versioned browser `localStorage`; saves are on this browser/device, not synced online. Original best-score storage is preserved.
 - **Performance & accessibility:** the Valley renderer pauses when Canyon is visible; interactive keyboard and touch controls; 2D fallback if the 3D library is unavailable.
 
 ## Features
@@ -106,6 +116,9 @@ node tools/test-canyon-visuals.mjs
 node tools/test-explorer-motion.mjs
 node tools/validate-village.mjs
 node tools/validate-explorer.mjs
+node tools/test-expedition-mode.mjs
+node tools/test-village-life.mjs
+node tools/test-coast.mjs
 ```
 
 GitHub Actions runs these checks when gameplay source changes. The chapter integration test covers unlocking, autosaves, both canyon puzzles, wrong-answer penalties, final completion and checkpoint resume. **Actual WebGL visual appearance, sound and laptop frame rate still require testing in a browser.**
@@ -113,3 +126,7 @@ GitHub Actions runs these checks when gameplay source changes. The chapter integ
 For the real-interface Chromium walkthrough, install the optional QA tools (`python -m pip install playwright==1.58.0`, then `python -m playwright install chromium`) and run `python tools/test-browser.py`. It deliberately blocks CDN loading to test the 2D fallback. `python tools/test-browser.py --3d` tests the actual WebGL scenes and requires access to the existing Three.js CDN, or exact r170 test modules supplied with `--offline-three DIRECTORY`. Use `--browser PATH` to select a system Chromium. These are test tools; the game itself still needs no installation or build.
 
 See [GAMEPLAY_AUDIT.md](GAMEPLAY_AUDIT.md) for the October 26 repair report, executed checks and remaining manual-test limits. Canyon now has safe landmark approaches, bidirectional valve controls and recoverable construction checkpoints. Valley saves pipe/safety progress and offers **Recover at camp** after energy depletion while retaining completed work. Storage restrictions display an honest status and keep the current session playable.
+
+The expansion has its own real-interface check: `python tools/test-expansion-browser.py` exercises actual mode-dependent movement costs, three deliveries, all leak repairs, all projects, community reload, Coast puzzles, partial bridge reload, guarded water release, results and replay. Add `--mobile` for the same 390×844 walkthrough and native Coast touch cancellation. These checks use an earned old Chapter 1/2 completion fixture to test migration, then perform activities through player controls. Focused actual WebGL screenshots verify village projects and Coast restoration; software rendering does not establish representative laptop performance.
+
+To load updates in an existing Codespace on the preview branch, run `git pull --ff-only origin codex/canyon-reservoir-celebration`, refresh the preview, and choose **A living community** or **Stormbreak Coast** from the chapter hub once unlocked.
