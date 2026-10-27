@@ -149,6 +149,10 @@
             <div class="canyon-stage-heading"><span>🏜️ SUNSTONE CANYON · OPEN WORLD</span><span id="canyonPositionLabel">Explore the red cliffs</span><button id="canyonCameraReset" class="camera-reset" type="button" title="Return camera to explorer (C)">⌖ RECENTER</button></div>
             <canvas id="canyonCanvas" width="1000" height="610" tabindex="0" role="img" aria-label="Playable canyon environment. Use WASD or arrow keys to walk, E to interact, click to walk, hold and drag the mouse to explore without walking, or press C to recenter.">Your browser does not support canvas.</canvas>
             <div class="canyon-overlay-hud"><span id="canyonEnergy">⚡ 100% energy</span><span id="canyonScore">✦ 0 impact</span><span id="canyonTimer">◷ 00:00</span></div>
+            <div id="canyonCelebration" class="canyon-celebration" hidden>
+              <div role="status"><span>✦ CANYON RESTORED</span><strong>Clean water flows again!</strong><small>You brought the canyon back to life.</small></div>
+              <button id="canyonViewResults" type="button">View celebration →</button>
+            </div>
             <div id="canyonPrompt" class="canyon-prompt" hidden><span id="canyonPromptText">Talk to the surveyor</span><button id="canyonInteract" type="button">E · INTERACT</button></div>
             <div class="canyon-key-hint"><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> MOVE <kbd>E</kbd> INTERACT <span>DRAG TO LOOK AROUND · CLICK TO WALK · C RECENTER</span></div>
             <div class="canyon-touch-controls" aria-label="Canyon movement controls"><button data-canyon-move="up" type="button" aria-label="Move up">↑</button><button data-canyon-move="left" type="button" aria-label="Move left">←</button><button data-canyon-move="down" type="button" aria-label="Move down">↓</button><button data-canyon-move="right" type="button" aria-label="Move right">→</button><button id="canyonTouchInteract" type="button" aria-label="Interact with nearby location">✦ ACT</button></div>

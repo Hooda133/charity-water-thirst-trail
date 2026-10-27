@@ -1,13 +1,15 @@
 # Thirst Trail 2.0: The Last Well
 
-**Thirst Trail** is a polished, browser-based 3D adventure game inspired by charity: water. Play two connected chapters: restore the Greenwater Valley pump, then unlock The Forgotten Canyon to rebalance pressure valves, rebuild an aqueduct and inspect a cistern. Both chapters feature 3D exploration with a playable 2D fallback.
+**Thirst Trail** is a polished, browser-based 3D adventure game inspired by charity: water. Play two connected chapters: restore the Greenwater Valley pump, then unlock The Forgotten Canyon to rebalance pressure valves, rebuild an aqueduct, and inspect and unlock a cistern. Both chapters feature 3D exploration with a playable 2D fallback.
 
 ## Thirst Trail 2.0 — New chapters and progress
 
 - **Chapter 1: Greenwater Valley** — the complete original adventure is retained, including NPCs, mission puzzles, 3D model packs, mini-map and environmental effects.
 - **Chapter 2: The Forgotten Canyon** — a separate red-rock 3D chapter with cliff mesas, a gorge and bridge, aqueduct, control station, cistern, desert foliage and floating destination signs.
 - **Canyon visual rebuild:** textured, subtly undulating desert ground, sculpted stratified gorge walls, jagged layered mesas, blue-to-gold sky, enhanced aqueduct masonry, detailed valve station/cistern/shelter, drifting dust, moving turquoise water and instanced stones/scrub. Chapter 2 now loads the same animated original explorer glTF used by Chapter 1, with the existing procedural fallback. Art lives in `canyon-visuals.js`; gameplay coordinates, quest puzzles, 2D mode, and saves are unchanged.
-- **Five playable canyon objectives:** Meet Surveyor Nia, recover the seal kit, calibrate three pressure valves, rebuild the aqueduct in four stages, and complete a cistern safety check.
+- **Five playable canyon objectives:** Meet Surveyor Nia, recover the seal kit, calibrate three pressure valves, rebuild the aqueduct in four stages, and inspect and unlock the village cistern.
+- **Final reservoir puzzle:** after the cistern safety inspection, use 5-litre and 3-litre measuring chambers to leave exactly **4 litres** in the larger chamber. Fill, pour between chambers, or return water to the supply; levels update visually, progress saves, and Nia offers an optional hint. Experimenting costs no energy. This measuring puzzle uses a different mechanic from Chapter 1’s pipe rotations. Open the release gate once the target is reached to trigger the ending.
+- **A restored-water finale:** solving the reservoir lock and opening its gate releases clean water from the cistern into a stone channel and pool, with returning greenery, a celebratory explorer pose and a short chime that respects mute. The illustrated completion screen offers chapter selection, replay, or **Watch the water flow**; results remain available below the scene. Both 3D and 2D modes show the restoration, with a still presentation for reduced motion.
 - **Interactive valve puzzle:** set three regulators to achieve **65–73 kPa**, keep the regulator open, and balance intake/return settings. Incorrect tests cost energy.
 - **Aqueduct assembly puzzle:** place anchors, braces, pipes and sealing material in the right order; repair stages save automatically.
 - **Chapter selection & unlocking:** finishing the Chapter 1 pump mission unlocks Chapter 2. The previous Valley victory screen offers direct access to Canyon.

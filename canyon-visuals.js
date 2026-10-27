@@ -2,7 +2,7 @@
 /* Forgotten Canyon's authored visual pass. Purely decorative: world/quest coordinates,
    collision, saved progress, renderer ownership and 2D fallback remain in canyon.js. */
 (() => {
-  function build(THREE, {scene, camera, worldSpread, getState}) {
+  function build(THREE, {scene, camera, worldSpread, getState, isWaterGarden=()=>false}) {
     let seed=782331;
     const rand=()=>((seed=(Math.imul(seed,1664525)+1013904223)>>>0)/4294967296);
     const props=[];
@@ -202,6 +202,7 @@
       const side=i%2?-1:1,x=side*(3.9+rand()*18),z=-15+rand()*30;
       const sz=.075+rand()*.27;
       temp.position.set(x,-.005+sz*.35,z);
+      if(isWaterGarden(x,z))temp.position.x=-x;
       temp.rotation.set(rand()*.25,rand()*Math.PI*2,rand()*.4);
       temp.scale.set(sz*(1.2+rand()),sz*.43,sz*(.8+rand()));
       temp.updateMatrix();rocks.setMatrixAt(i,temp.matrix);
@@ -213,6 +214,7 @@
     for(let i=0;i<170;i++){
       const side=i%2?-1:1,x=side*(4.8+rand()*16),z=-15+rand()*30;
       temp.position.set(x,.12,z);temp.rotation.set(0,rand()*6.28,(rand()-.5)*.25);
+      if(isWaterGarden(x,z))temp.position.x=-x;
       const scale=.4+rand()*.9;temp.scale.set(scale,scale,scale);
       temp.updateMatrix();scrub.setMatrixAt(i,temp.matrix);
     }
