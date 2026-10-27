@@ -328,23 +328,41 @@
     try{
       const THREE=await import("https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js");
       if((!state.active&&!state.finished)||screen.hidden)return;
-      let graphics={};try{graphics=JSON.parse(localStorage.getItem("thirstTrailGraphics")||"null")||{};}catch{}
+      let graphics={preset:"high",resolution:1.1,shadows:true,effects:true};try{graphics={...graphics,...(JSON.parse(localStorage.getItem("thirstTrailGraphics")||"null")||{})};}catch{}
       const scene=new THREE.Scene();scene.background=new THREE.Color(0x93c4cd);scene.fog=new THREE.FogExp2(0xbed6cf,.006);
       const camera=new THREE.PerspectiveCamera(48,1000/610,.1,220),renderer=new THREE.WebGLRenderer({antialias:true,powerPreference:"high-performance"});
       renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,1.7)*clamp(Number(graphics.resolution)||1,.65,1.5));renderer.outputColorSpace=THREE.SRGBColorSpace;renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.05;
-      const hemi=new THREE.HemisphereLight(0xe6f4ed,0x9a9071,2);scene.add(hemi);const sun=new THREE.DirectionalLight(0xffe0ad,2.5);sun.position.set(-15,25,8);scene.add(sun);
-      const art=window.TrailCoastVisuals?.build(THREE,{scene,getState:()=>state,wx,wz});
+      renderer.shadowMap.type=THREE.PCFSoftShadowMap;
+      const hemi=new THREE.HemisphereLight(0xe6f4ed,0x788b78,1.15);scene.add(hemi);
+      const sun=new THREE.DirectionalLight(0xffe0ad,3.1);sun.position.set(-18,29,12);scene.add(sun);
+      sun.shadow.camera.left=-28;sun.shadow.camera.right=28;sun.shadow.camera.top=23;sun.shadow.camera.bottom=-23;
+      sun.shadow.camera.near=1;sun.shadow.camera.far=90;sun.shadow.bias=-.0002;sun.shadow.normalBias=.025;sun.shadow.radius=2;
+      const fill=new THREE.DirectionalLight(0x9ccfdd,.35);fill.position.set(15,10,-12);scene.add(fill);
+      const cinematic=window.TrailCinematic?.create(THREE,{renderer,scene,camera,chapter:"coast"});
+      function applyGraphics(next={}){
+        graphics={...graphics,...next};
+        const quality=["low","medium","high","ultra"].includes(graphics.preset)?graphics.preset:"high";
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,1.7)*clamp(Number(graphics.resolution)||1,.65,1.5));
+        renderer.shadowMap.enabled=graphics.shadows!==false;sun.castShadow=renderer.shadowMap.enabled;
+        const size=quality==="low"?512:quality==="medium"?1024:2048;
+        if(sun.shadow.mapSize.x!==size){sun.shadow.map?.dispose();sun.shadow.map=null;sun.shadow.mapSize.set(size,size);sun.shadow.needsUpdate=true;}
+        cinematic?.configure({...graphics,preset:quality});
+      }
+      applyGraphics(graphics);
+      const art=window.TrailCoastVisuals?.build(THREE,{scene,getState:()=>state,wx,wz,surfaces:cinematic?.surfaces});
       if(!art){const ground=new THREE.Mesh(new THREE.PlaneGeometry(45,29),new THREE.MeshStandardMaterial({color:0xd8c896}));ground.rotation.x=-Math.PI/2;ground.position.y=-.05;scene.add(ground);}
       const player=window.ThirstExplorer?.create(THREE)||new THREE.Group();
       if(!player.children.length){const body=new THREE.Mesh(new THREE.CylinderGeometry(.2,.24,.65,8),new THREE.MeshStandardMaterial({color:0x2d9892}));body.position.y=.6;player.add(body);}
       scene.add(player);
+      cinematic?.character(player);
+      const characterVisibility=window.ThirstExplorer?.visibility?.(THREE,scene,player);
       const marks=[];
       for(const [key,goal] of Object.entries(goals)){
         const group=new THREE.Group();group.position.set(wx(goal.x),.2,wz(goal.y));scene.add(group);
         const ring=new THREE.Mesh(new THREE.TorusGeometry(.55,.06,6,24),new THREE.MeshBasicMaterial({color:0xffd783}));ring.rotation.x=-Math.PI/2;group.add(ring);
         const labelCanvas=document.createElement("canvas");labelCanvas.width=512;labelCanvas.height=96;const g=labelCanvas.getContext("2d");
         if(g){g.fillStyle="#123b46";g.fillRect(0,0,512,96);g.strokeStyle="#e8d3a1";g.lineWidth=8;g.strokeRect(0,0,512,96);g.textAlign="center";g.fillStyle="#fff5d7";g.font="bold 28px sans-serif";g.fillText(goal.title,256,59);const label=new THREE.Sprite(new THREE.SpriteMaterial({map:new THREE.CanvasTexture(labelCanvas),depthTest:false}));label.position.y=3.8;label.scale.set(4.5,.85,1);group.add(label);}
-        marks.push({key,ring});
+        marks.push({key,group,ring});
       }
       const dom=renderer.domElement;dom.className="coast-webgl";dom.tabIndex=0;dom.style.cssText="display:block;width:100%;height:auto;aspect-ratio:1000/610;touch-action:none";
       canvas.parentElement.insertBefore(dom,canvas);canvas.style.display="none";
@@ -355,7 +373,7 @@
       });
       let zoom=1,first=true,last=0,lastX=state.x,lastY=state.y,width=0,height=0;
       dom.addEventListener("wheel",event=>{event.preventDefault();zoom=clamp(zoom+Math.sign(event.deltaY)*.09,.75,1.7);},{passive:false});
-      world={dom,recenter(){zoom=1;first=true;},draw(time){
+      world={dom,recenter(){zoom=1;first=true;},setGraphicsSettings:applyGraphics,getGraphicsStatus(){return cinematic?.status()||null;},draw(time){
         const w=Math.max(300,Math.floor(dom.clientWidth||1000)),h=Math.max(180,Math.floor(dom.clientHeight||610));if(width!==w||height!==h){renderer.setSize(w,h,false);camera.aspect=w/h;camera.updateProjectionMatrix();width=w;height=h;}
         const dx=state.x-lastX,dy=state.y-lastY,dt=last?clamp(time-last,0,.05):.016;last=time;lastX=state.x;lastY=state.y;
         player.position.set(wx(state.x),0,wz(state.y));if(Math.hypot(dx,dy)>.01)player.rotation.y=Math.atan2(dx,dy);
@@ -363,9 +381,16 @@
         const focus=state.finished?(art?.getFocus?.()||{x:wx(850),y:.8,z:wz(390)}):{x:wx(state.x),y:.75,z:wz(state.y)};
         const aim=new THREE.Vector3(focus.x,focus.y,focus.z),desired=aim.clone().add(new THREE.Vector3(7.5,11,14).multiplyScalar(zoom));
         if(first||reduced()){camera.position.copy(desired);first=false;}else camera.position.lerp(desired,1-Math.exp(-dt*5));camera.lookAt(aim);
-        for(const mark of marks)mark.ring.material.color.set(state.done.has(mark.key)?0x82d8b6:0xffd783);
-        art?.update(time,{reduced:reduced(),effects:graphics.effects!==false});renderer.render(scene,camera);
-      },dispose(){art?.dispose();renderer.dispose();dom.remove();canvas.style.display="";}};
+        const next=order.find(key=>!state.done.has(key));
+        for(const mark of marks){
+          mark.ring.material.color.set(state.done.has(mark.key)?0x82d8b6:0xffd783);mark.group.visible=!state.finished;
+          for(const child of mark.group.children)if(child.isSprite)child.visible=mark.key===next||nearest()===mark.key;
+        }
+        art?.update(time,{reduced:reduced(),effects:graphics.effects!==false});
+        if(state.finished)characterVisibility?.clear?.();else characterVisibility?.update(camera,dt);
+        cinematic?.update(time,{reduced:reduced(),effects:graphics.effects!==false});
+        if(cinematic)cinematic.render();else renderer.render(scene,camera);
+      },dispose(){characterVisibility?.dispose();art?.dispose();cinematic?.dispose();renderer.dispose();dom.remove();canvas.style.display="";}};
     }catch(error){console.warn("Coast 3D unavailable; using the playable harbor map.",error);canvas.style.display="";}finally{creating=false;}
   }
   function selectPoint(point){
@@ -412,5 +437,6 @@
   window.addEventListener("keyup",event=>state.keys.delete(event.key.toLowerCase()));window.addEventListener("blur",()=>state.keys.clear());window.addEventListener("pagehide",save);
   document.addEventListener("visibilitychange",()=>{state.keys.clear();if(document.hidden&&state.active&&!state.modal)pause();});
   window.addEventListener("trail:mode",()=>{if(state.active||state.finished)refresh();});
-  window.TrailCoast=Object.freeze({launch,suspend,goHome,pause,snapshot:()=>({active:state.active,paused:state.paused,finished:state.finished,x:state.x,y:state.y,energy:state.energy,score:state.score,elapsed:state.elapsed,done:[...state.done],power:[...state.power],powerOutputs:powerOutputs(),weights:[...state.weights],torque:bridgeTorque(),tankStep:state.tankStep,gates:[...state.gates],bonus:[...state.bonus],waterRestored:state.finished,renderer:world?"3d":"2d"})});
+  window.addEventListener("trail:graphics",event=>world?.setGraphicsSettings?.(event.detail));
+  window.TrailCoast=Object.freeze({launch,suspend,goHome,pause,snapshot:()=>({active:state.active,paused:state.paused,finished:state.finished,x:state.x,y:state.y,energy:state.energy,score:state.score,elapsed:state.elapsed,done:[...state.done],power:[...state.power],powerOutputs:powerOutputs(),weights:[...state.weights],torque:bridgeTorque(),tankStep:state.tankStep,gates:[...state.gates],bonus:[...state.bonus],waterRestored:state.finished,renderer:world?"3d":"2d",graphics:world?.getGraphicsStatus?.()||null})});
 })();

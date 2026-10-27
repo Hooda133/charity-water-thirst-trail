@@ -1,8 +1,16 @@
-# Thirst Trail 3.0: The Last Well
+# Thirst Trail 3.1: The Last Well
 
 **Thirst Trail** is a browser-based 3D adventure game inspired by charity: water. Restore Greenwater Valley, repair the Forgotten Canyon aqueduct, then rebuild Stormbreak Coast. Return to the restored village to deliver water, repair leaks and choose community improvements. All three chapters and Village Life have 3D environments with a playable 2D fallback.
 
-## Thirst Trail 3.0 — A living village and a new coast
+## Thirst Trail 3.1 — A visual overhaul across all three chapters
+
+- **Material detail:** locally hosted CC0 Poly Haven color, normal and roughness maps add surface detail to meadow, sandstone, stone and timber. Original explorer clothing has a subtle fabric weave; sky reflections bring out water and metal. Credits and licenses are in [assets/materials/LICENSE.md](assets/materials/LICENSE.md).
+- **Distinct environments:** Valley gains wind-swept grass and textured village masonry; Canyon gains sculpted, capped mesas, detailed waterworks and a restored palm oasis; Coast gains irregular shorelines, shallow-water edges, palms, sea grass, pitched roofs and a detailed lighthouse.
+- **Water and lighting:** shared animated ripple and caustic shaders, soft environment reflections and shadow tuning. High and Ultra add a restrained antialiasing/color-grade pass. Low and Medium use direct rendering with lighter decorative detail.
+- **Presentation:** original chapter illustrations, consistent ivory/gold/teal menus, readable puzzles and celebrations, and quieter destination labels. Scenic views and finales restore solid building roofs for a clear panorama.
+- **Quality controls:** High is the default for new players; existing saved preferences are respected. Use the gear menu to change presets, shadows, effects and resolution live in every chapter. Effects-off and reduced motion stop the new ambient animations while puzzle states keep updating.
+
+## A living village and a new coast
 
 - **Village Life:** unlocked after Chapter 1. Fill an 8-litre yellow jug at the fountain and carry 4-litre deliveries to Amina’s home, Leila’s school and Idris’s garden. The jug level changes in the activity panel and beside the explorer in 3D. Named neighbours respond to deliveries; flowers and greenery appear as the community recovers.
 - **Hidden leaks:** follow wet trail patches and a proximity dripping cue. Inspect the fault, choose a clamp, gasket or torque key, then complete three repair actions. Repaired patches dry up and each first repair earns building materials.
@@ -121,7 +129,7 @@ node tools/test-village-life.mjs
 node tools/test-coast.mjs
 ```
 
-GitHub Actions runs these checks when gameplay source changes. The chapter integration test covers unlocking, autosaves, both canyon puzzles, wrong-answer penalties, final completion and checkpoint resume. **Actual WebGL visual appearance, sound and laptop frame rate still require testing in a browser.**
+GitHub Actions runs these checks when gameplay source changes. The chapter integration test covers unlocking, autosaves, both canyon puzzles, wrong-answer penalties, final completion and checkpoint resume. A small real-WebGL smoke check also compiles the shared water and postprocessing shaders, verifies PBR maps and nonblank output, and checks disposal. Sound and representative laptop frame rate still require manual testing.
 
 For the real-interface Chromium walkthrough, install the optional QA tools (`python -m pip install playwright==1.58.0`, then `python -m playwright install chromium`) and run `python tools/test-browser.py`. It deliberately blocks CDN loading to test the 2D fallback. `python tools/test-browser.py --3d` tests the actual WebGL scenes and requires access to the existing Three.js CDN, or exact r170 test modules supplied with `--offline-three DIRECTORY`. Use `--browser PATH` to select a system Chromium. These are test tools; the game itself still needs no installation or build.
 
@@ -129,4 +137,6 @@ See [GAMEPLAY_AUDIT.md](GAMEPLAY_AUDIT.md) for the October 26 repair report, exe
 
 The expansion has its own real-interface check: `python tools/test-expansion-browser.py` exercises actual mode-dependent movement costs, three deliveries, all leak repairs, all projects, community reload, Coast puzzles, partial bridge reload, guarded water release, results and replay. Add `--mobile` for the same 390×844 walkthrough and native Coast touch cancellation. These checks use an earned old Chapter 1/2 completion fixture to test migration, then perform activities through player controls. Focused actual WebGL screenshots verify village projects and Coast restoration; software rendering does not establish representative laptop performance.
 
-To load updates in an existing Codespace on the preview branch, run `git pull --ff-only origin codex/canyon-reservoir-celebration`, refresh the preview, and choose **A living community** or **Stormbreak Coast** from the chapter hub once unlocked.
+To inspect all three 3D environments and live graphics controls, run `python tools/test-graphics-browser.py --presets low,high --live-check --mobile`. It uses earned-completion fixtures to inspect restored chapter scenes, records screenshots and reports shader/asset errors; it does not establish hardware frame rate. Use `--smoke` for the small rendering check run by CI.
+
+To load updates in an existing Codespace on the preview branch, run `git pull --ff-only origin codex/canyon-reservoir-celebration`, refresh the preview, and choose **High** or **Ultra** in the gear menu for the full visual treatment. Your saved graphics preferences and gameplay progress are preserved.

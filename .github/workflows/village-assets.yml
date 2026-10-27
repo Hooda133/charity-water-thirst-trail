@@ -1,10 +1,14 @@
-name: Validate 3D Assets and Both Chapters
+name: Validate 3D Assets and All Chapters
 on:
   push:
     branches: [main]
     paths:
       - 'assets/village/**'
       - 'assets/characters/**'
+      - 'assets/materials/**'
+      - 'assets/illustrations/**'
+      - 'cinematic-*'
+      - 'surface-detail.js'
       - 'tools/validate-village.mjs'
       - 'tools/validate-explorer.mjs'
       - 'tools/test-pipes.mjs'
@@ -32,6 +36,10 @@ on:
     paths:
       - 'assets/village/**'
       - 'assets/characters/**'
+      - 'assets/materials/**'
+      - 'assets/illustrations/**'
+      - 'cinematic-*'
+      - 'surface-detail.js'
       - 'tools/validate-village.mjs'
       - 'tools/validate-explorer.mjs'
       - 'tools/test-pipes.mjs'
@@ -113,6 +121,8 @@ jobs:
         run: python tools/test-expansion-browser.py --browser "$(command -v google-chrome)"
       - name: Verify expansion mobile layout and touch controls
         run: python tools/test-expansion-browser.py --mobile --browser "$(command -v google-chrome)"
+      - name: Compile cinematic shaders and verify actual WebGL output
+        run: python tools/test-graphics-browser.py --smoke --label ci-smoke --browser "$(command -v google-chrome)"
       - name: Preserve browser screenshots
         if: always()
         uses: actions/upload-artifact@v4
@@ -121,4 +131,5 @@ jobs:
           path: |
             work/browser-qa/
             work/expansion-qa/
+            work/graphics-qa/ci-smoke/
           if-no-files-found: ignore

@@ -201,7 +201,8 @@
         e.copies.forEach((mat,i)=>{const original=Array.isArray(e.original)?e.original[i]:e.original;mat.opacity=original.opacity*e.opacity;});
         if(!blocked.has(m)&&e.opacity>.995){restore(m,e);faded.delete(m);}
       }
-    },dispose(){for(const [m,e] of faded)restore(m,e);faded.clear();}};
+    },clear(){for(const [m,e] of faded)restore(m,e);faded.clear();blocked.clear();elapsed=1;},
+      dispose(){for(const [m,e] of faded)restore(m,e);faded.clear();blocked.clear();}};
   }
   window.ThirstExplorer={create,animate,visibility};
 })();

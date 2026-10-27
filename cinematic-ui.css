@@ -1,0 +1,315 @@
+/* Final presentation layer. The playable scenes and all controls stay native. */
+:root{
+  --bg:#071b22;--ink:#f7f3df;--muted:#a7c1bd;--yellow:#f4d27c;
+  --teal:#78d7c7;--line:#8bb6a52b;--panel:#12323a;--card:#173d43;
+  --cinema-cream:#fff0c6;--cinema-edge:#b9d8c331;
+  --cinema-shadow:0 20px 55px #000e1640,0 1px 0 #edffe812 inset;
+}
+html{scrollbar-color:#608e83 #0b242c}
+body{
+  background:radial-gradient(ellipse at 85% 0,#28594e38,transparent 38%),
+    radial-gradient(ellipse at 5% 45%,#1f46512b,transparent 40%),
+    linear-gradient(150deg,#071b22,#0b292f 55%,#071c27);
+  background-attachment:fixed;
+  text-rendering:optimizeLegibility;-webkit-font-smoothing:antialiased;
+}
+button,a{-webkit-tap-highlight-color:#f4d27c24}
+button:focus-visible,a:focus-visible,canvas:focus-visible,input:focus-visible,select:focus-visible{
+  outline:3px solid #ffe3a0;outline-offset:4px;
+}
+button{min-height:44px;min-width:44px}
+.app-shell{max-width:1720px;padding-inline:clamp(14px,3.5vw,60px)}
+.topbar{height:94px;border-bottom:1px solid #aec7b51c;gap:24px}
+.wordmark{font-size:25px;letter-spacing:-1.3px;color:#fff7dc}
+.wordmark small{font-size:8px;letter-spacing:3.6px;color:#9dbeb4}
+.water-mark{width:46px;height:47px;border-radius:15px;background:linear-gradient(145deg,#ffe5a3,#eebd5d);
+  color:#183c3d;box-shadow:0 7px 20px #d6ad4c21,inset 0 1px #fff8;transform:rotate(-8deg)}
+.topbar-center{font-size:9px;letter-spacing:2.2px;color:#91b4ad}
+.top-actions{gap:8px}.icon-button{width:44px;height:44px;border:1px solid #9bc4b532;
+  color:#e8ebd7;background:linear-gradient(150deg,#244b4c,#13333b);border-radius:12px;box-shadow:inset 0 1px #e7ffed09}
+.icon-button:hover{background:#325d59;border-color:#c8ddb75c}
+.icon-button[aria-pressed="false"]{opacity:.65}
+.eyebrow,.overline{color:#a3c5b6;font-size:9px;font-weight:800;letter-spacing:1.9px}
+.live-dot{width:6px;height:6px;box-shadow:0 0 0 4px #8bd3a10c;background:#a0dfb3}
+
+/* The live world is the main artwork; chapter covers provide a compact deck. */
+.start-screen{
+  grid-template-columns:minmax(340px,.83fr) minmax(0,1.17fr);
+  grid-template-areas:"eyebrow hero" "title hero" "description hero" "mode hero"
+    "buttons hero" "donation hero" "chapters chapters" "score bottom";
+  align-items:start;gap:14px clamp(30px,4vw,70px);padding:52px 0 34px;
+}
+.start-screen::before{left:1%;top:5%;width:60%;height:700px;filter:blur(60px);opacity:.55}
+.start-copy{display:contents}
+.start-copy>.eyebrow{grid-area:eyebrow;padding-top:5px}
+.start-copy h1{grid-area:title;white-space:normal;margin:0;max-width:100%;font-size:clamp(66px,6.2vw,108px);
+  line-height:.95;letter-spacing:-.063em;font-weight:800;color:#f8f2d9;text-shadow:0 12px 45px #00162055}
+.start-copy h1 em{background:linear-gradient(125deg,#fff0be,#e8be69 70%,#ffe9a2);background-clip:text;-webkit-background-clip:text;color:transparent}
+.start-copy>p{grid-area:description;max-width:510px;margin:10px 0 8px;color:#abc6bf;font-size:14px;line-height:1.85}
+.play-style{grid-area:mode;max-width:520px;gap:9px;margin:10px 0 8px}
+.play-style-options{gap:10px}.play-style-options button{padding:14px 15px;min-height:84px;border-radius:13px;
+  border:1px solid #8db8a732;background:linear-gradient(140deg,#173a3e,#10303a);box-shadow:inset 0 1px #efffe80b}
+.play-style-options button strong{font-size:13px;color:#f3efd7}.play-style-options button small{font-size:10px;line-height:1.45;color:#9dbcb3}
+.play-style-options button[aria-checked="true"]{background:linear-gradient(135deg,#315c4d,#214746);border-color:#e6d69a9c;box-shadow:inset 0 0 0 1px #f1d68c18,0 7px 18px #021e242b}
+.play-style>small{font-size:10px;line-height:1.5;color:#9ebdaf}
+.start-buttons{grid-area:buttons;gap:10px;margin:6px 0 4px}
+.button{border-radius:11px;min-height:52px;font-size:12px;letter-spacing:.15px;transition:background .18s,box-shadow .18s,transform .18s}
+.button-primary,.start-buttons .button-primary{
+  background:linear-gradient(125deg,#ffe6a4,#efc66f);border:1px solid #ffe6aa;color:#1b393a;
+  box-shadow:0 9px 27px #e5b65726,inset 0 1px #fff6;text-shadow:none;
+}
+.button-primary:hover,.start-buttons .button-primary:hover{background:linear-gradient(125deg,#fff0bf,#f8d688);box-shadow:0 12px 28px #d8a54535;transform:translateY(-2px)}
+.button-ghost,.button-ghost-dark{background:linear-gradient(130deg,#24494e,#173a43);border:1px solid #9bbfb438;color:#e1ece0;box-shadow:inset 0 1px #eaffef0a}
+.button-ghost:hover,.button-ghost-dark:hover{background:#315b5a;border-color:#c1d2b760}
+.donation-link{grid-area:donation;justify-self:start;margin:10px 0 0;padding:9px 12px 9px 9px;
+  border-color:#a8c8b627;background:#0c29306b;box-shadow:none;gap:10px}
+.donation-icon{width:35px;height:35px;border-radius:9px;background:#e7c77b}.donation-icon svg{width:23px;height:23px}
+.donation-link-copy strong{font-size:12px}.donation-link-copy small{font-size:10px;color:#9abbb0}
+.hero-scene,.hero-scene.is-3d{grid-area:hero;height:auto;min-height:650px;align-self:stretch;margin:0;
+  border:1px solid #b3d5bd65;border-radius:27px;box-shadow:0 28px 80px #00101980,0 0 0 7px #a0d5be04;transform:none}
+.hero-scene::before{background:linear-gradient(120deg,#fff3c914,transparent 28%,transparent 70%,#13342c20);mix-blend-mode:soft-light}
+.hero-scene.is-3d::after{background:linear-gradient(0deg,#061f29b5,transparent 40%,transparent 82%,#0c242b22)}
+.hero-top-label{left:23px;top:23px;padding:9px 13px;border:1px solid #d7f0ce61;border-radius:9px;
+  background:#103b3bd9;backdrop-filter:blur(10px);font-size:9px;letter-spacing:1.4px;box-shadow:0 5px 16px #06222733}
+.hero-beacon{width:7px;height:7px;background:#cdf0bc;box-shadow:0 0 0 4px #c7ecb212}
+.hero-scene .hero-caption,.hero-scene.is-3d .hero-caption{
+  left:23px;right:23px;bottom:23px;max-width:none;padding:21px 23px;border-radius:15px;
+  background:linear-gradient(125deg,#0b2c36f2,#153e3fe6);border:1px solid #cee4bd4d;
+  box-shadow:0 10px 25px #001b2466;backdrop-filter:blur(14px);
+}
+.hero-scene .hero-caption>span{font-size:8px;letter-spacing:1.8px;color:#f1d48e}
+.hero-scene .hero-caption>strong{font-size:clamp(26px,2.7vw,37px);font-weight:700;letter-spacing:-1px;color:#fff4d3}
+.hero-scene .hero-caption>small{font-size:11px;color:#bed4c9;letter-spacing:.2px}
+.hero-stats{gap:6px}.hero-stats span{padding:5px 7px!important;border-color:#cee0b324!important;background:#b8d4ad0a!important;letter-spacing:.8px!important;color:#d7e6c9!important}
+.chapter-select{grid-area:chapters;max-width:none;margin-top:33px}
+.chapter-select-heading{gap:6px;margin-bottom:18px}.chapter-select-heading h2{font-size:30px;letter-spacing:-.9px;color:#f9f0d4;font-weight:700}
+.chapter-select-heading small{font-size:11px;color:#8fafaa}
+.chapter-select-grid{grid-template-columns:repeat(4,minmax(0,1fr));gap:14px}
+.chapter-select-card{position:relative;isolation:isolate;overflow:hidden;min-height:263px;display:flex;flex-direction:column;align-items:flex-start;
+  padding:17px 18px 16px;border:1px solid #a3c7ae46;border-radius:17px;color:#f7f3df;
+  background-color:#11353c;background-repeat:no-repeat;background-size:100% 152px;
+  background-image:linear-gradient(0deg,#11353c 1%,transparent 40%),url("assets/illustrations/valley-chapter.svg");
+  box-shadow:0 9px 26px #02182045,inset 0 1px #edffe50c;gap:7px;
+}
+#canyonChapter{background-color:#343d3b;background-image:linear-gradient(0deg,#343d3b 1%,transparent 40%),url("assets/illustrations/canyon-chapter.svg")}
+#coastChapter{background-color:#143d48;background-image:linear-gradient(0deg,#143d48 1%,transparent 40%),url("assets/illustrations/coast-chapter.svg")}
+#villageChapter{background-color:#183b36;background-image:linear-gradient(0deg,#183b36 1%,transparent 40%),url("assets/illustrations/valley-chapter.svg");background-position:0 0,30% 0}
+.chapter-select-number{margin-bottom:80px;font-size:8px;letter-spacing:1px;padding:5px 7px;
+  background:#153a38db;border:1px solid #eef0bd3b;border-radius:5px;color:#f8e5a7;line-height:1.4;max-width:100%;text-align:left}
+.chapter-select-card strong{font-size:17px;line-height:1.2;letter-spacing:-.35px}
+.chapter-select-card small{font-size:11px;line-height:1.5;color:#b7cfbf;max-width:100%}
+.chapter-select-status{font-size:10px;line-height:1.45;margin-top:auto;padding-top:7px;color:#efd58e}
+.chapter-select-card.is-locked{opacity:.69;filter:saturate(.62)}
+.chapter-select-card:not(:disabled):hover{transform:translateY(-4px);border-color:#e9d79c;box-shadow:0 15px 33px #00161f6b}
+.chapter-select-card.is-ready{border-color:#bbd5a767}
+.start-highscore{grid-area:score;margin:16px 0 0;gap:10px;align-self:center;font-size:11px;color:#a1bdb1}
+.start-highscore span{font-size:8px;letter-spacing:1.4px}.start-highscore strong{font-size:22px;color:#f1d58a}
+.start-bottom{grid-area:bottom;position:static;align-self:center;justify-self:end;margin-top:16px;gap:24px;font-size:8px;letter-spacing:1.25px;color:#729b93}
+.footer{font-size:8px;letter-spacing:1px;color:#759f95;border-color:#bfd6b61c;padding:24px 0}
+
+/* A quiet frame around the worlds, with clearer play information and actions. */
+.game-screen,.canyon-screen,#coastScreen{padding-top:25px}
+.hud{gap:10px;margin-bottom:16px}.hud>div{padding:15px 18px;border:1px solid var(--cinema-edge);
+  background:linear-gradient(145deg,#193e42f2,#10303af5);border-radius:13px;box-shadow:inset 0 1px #f1ffe20b}
+.hud-mission::before{width:2px;background:linear-gradient(#f2d794,#80c8b4)}
+.hud-mission .overline{font-size:8px;letter-spacing:1.5px;color:#a4c9b9}
+.hud-mission strong{font-size:24px;letter-spacing:-.7px;font-weight:700;color:#fbf2d5}
+.hud-mission small{font-size:11px;color:#a8c7bd;line-height:1.6}
+.hud-stat strong{font-weight:600;font-size:26px;letter-spacing:-.6px;color:#fff2ce}
+.hud-stat span,.resource-label{font-size:9px;color:#9ebeb5;letter-spacing:1.35px}
+.bar{height:7px;background:#33544e}.bar-fill{background:linear-gradient(90deg,#65bbad,#b2e9cc);box-shadow:0 0 12px #93e3c51c}
+.mission-progress-track,.canyon-progress-track,.coast-progress{height:5px;background:#67857838}
+.mission-progress-track i,.canyon-progress-track span,.coast-progress i{background:linear-gradient(90deg,#77beac,#f0d494)}
+.hud-buttons .button,.button-compact{min-height:44px;border-radius:9px;font-size:10px;gap:8px}
+.world-frame,.canyon-stage,.coast-stage{border:1px solid #a6cab650;border-radius:19px;
+  box-shadow:0 24px 62px #00131e60,inset 0 1px #ecffe312;background:#10343e}
+.frame-label,.canyon-stage-heading,.coast-stage-label{min-height:58px;padding:11px 16px;
+  background:linear-gradient(105deg,#153b40,#1b4748);border-bottom:1px solid #bad2b826;color:#eed899;font-size:9px;letter-spacing:1.2px}
+.frame-tools{gap:8px}.frame-tools>span{font-size:9px;letter-spacing:.5px;color:#a9cbbd}
+.camera-reset,.scenic-button,.coast-stage-label button{min-height:44px;border-radius:8px;padding:9px 11px;
+  font-size:9px;letter-spacing:.6px;background:#234b4db5;border:1px solid #bfd5b73d;color:#ede3bd;box-shadow:inset 0 1px #fff9dd08}
+.scenic-button[aria-pressed="true"]{background:#39695c;border-color:#c2d8ac73;box-shadow:none}
+.chapter-pill,.canyon-overlay-hud span,.coast-hud span{border:1px solid #bdd9bf40;border-radius:8px;padding:8px 10px;
+  background:linear-gradient(125deg,#12383de8,#0d2936e8);font-size:9px;letter-spacing:.55px;color:#f6edcd;
+  box-shadow:0 4px 12px #001c2640;backdrop-filter:blur(6px)}
+.chapter-pill{display:table;margin-bottom:6px}
+.canvas-bottom{font-size:8px;letter-spacing:1px;background:linear-gradient(transparent,#082d2b94);padding:13px 16px}
+kbd{border-color:#d4e3c156;background:#173e3fd4;border-radius:4px;color:#f1edcf}
+.nearby-prompt,.canyon-prompt,.coast-prompt{border-color:#d1d8ad67;background:#173e43f0;color:#fff0c6;
+  box-shadow:0 7px 22px #001a2460;font-size:11px;letter-spacing:.15px}
+.nearby-prompt button,.canyon-prompt button,.coast-prompt button{min-height:44px;background:linear-gradient(120deg,#ffe4a0,#eec36f);color:#173b3d;border-radius:8px;padding:10px 14px}
+.sidebar,.canyon-sidebar,.coast-sidebar{border:1px solid #b6cbb630;border-radius:18px;
+  background:linear-gradient(150deg,#173b40ef,#102f39f5);box-shadow:var(--cinema-shadow)}
+.sidebar-header h2,.canyon-sidebar h3,.coast-sidebar h3{font-size:29px;line-height:1.12;letter-spacing:-.9px;font-weight:700;color:#f8efd1}
+.side-intro,.canyon-sidebar p,.coast-sidebar p{font-size:11px;line-height:1.75;color:#a9c7ba}
+.quest-count{font-size:13px;font-weight:600;color:#f3d58c;background:#254d49;border:1px solid #adc99b48;box-shadow:inset 0 1px #e9f9d50a}
+.quest-card,.canyon-quest,.coast-quest{padding:12px 11px;border-radius:10px;border:1px solid #9dbbab29;
+  background:linear-gradient(125deg,#1d4548,#173c43);box-shadow:inset 0 1px #eaffdb07}
+.quest-card strong,.canyon-quest strong,.coast-quest strong{font-size:11px;font-weight:700;line-height:1.45;color:#e9f0db}
+.quest-card small,.canyon-quest small,.coast-quest small{font-size:10px;color:#9fbdaf;line-height:1.5}
+.quest-icon{border-radius:8px;background:#315955}.quest-card.done,.canyon-quest.done,.coast-quest.done{opacity:.8;
+  border-color:#8dbb8861;background:linear-gradient(120deg,#244d42,#193e3d)}
+.destination-btn,.canyon-destination,.coast-destinations button{min-height:44px;padding:11px 12px;
+  border-radius:9px;background:#183b43;border:1px solid #a1c1ac2d;color:#d9e8d6;box-shadow:inset 0 1px #edffe508}
+.destination-btn:hover,.canyon-destination:hover,.coast-destinations button:hover{background:#2b5552;border-color:#c8d4a061}
+.destination-btn .dest-name,.canyon-destination,.coast-destinations button{font-size:11px}
+.inventory-item{border-radius:8px;padding:8px 10px;border-color:#b5cdad35;background:#234c47;color:#dbe8ca}
+.navigator-panel{border-color:#b0cab440;background:#0a29328c;border-radius:13px;box-shadow:inset 0 1px #c9edcf08}
+.navigator-heading{gap:7px}.navigator-toggle{min-height:44px;font-size:10px;border-radius:8px;border-color:#bdd4b438;background:#214a4c;color:#d4e8d4}
+.navigator-body canvas{border:1px solid #d4e5bf38;border-radius:9px}
+.toast,.canyon-toast,.coast-toast{border-color:#d4cf9970;background:linear-gradient(125deg,#244d45f5,#173b43f5);
+  border-radius:10px;box-shadow:0 8px 20px #001a2640;color:#f3e9bd;font-size:11px;line-height:1.6}
+.canyon-header,.coast-header{border:1px solid #c3d2b53b;box-shadow:var(--cinema-shadow);border-radius:17px;padding:22px 24px}
+.canyon-header{background:linear-gradient(115deg,#3d4641,#243d40 60%,#1a3c43)}
+.coast-header{background:linear-gradient(115deg,#244e58,#153944 65%,#1a454c)}
+.canyon-header h2,.coast-header h2{color:#fff0c9;font-weight:700;letter-spacing:-1px;font-size:clamp(26px,3vw,39px)}
+.canyon-header p,.coast-header p{color:#b3cdc0;font-size:12px}
+.canyon-header .button,.coast-header button{min-height:44px;border:1px solid #b4cbb23b;background:#264a4e;color:#e8edda;border-radius:8px;font-size:10px}
+.mode-badge,.coast-header-actions span{font-size:9px;border-color:#c3d3b345;border-radius:7px;color:#efdea5;background:#34574638}
+
+/* Shared tactile puzzle language across all three chapters. */
+.modal-backdrop,.canyon-modal-backdrop,.coast-modal-backdrop{background:#031a24cb;backdrop-filter:blur(8px);padding:18px}
+.modal-card,.canyon-modal,.coast-modal{border-radius:21px;border:1px solid #cdd9b970;
+  background:radial-gradient(ellipse at 10% 0,#3b635526,transparent 45%),linear-gradient(140deg,#234b50,#10323e 77%);
+  box-shadow:0 35px 110px #001019b3,inset 0 1px #f2ffdf15;color:#f5f2dc}
+.modal-tag,.canyon-modal-tag,.coast-modal-tag{font-size:9px;letter-spacing:1.6px;color:#ebd19a}
+.modal-illustration{font-size:47px;filter:drop-shadow(0 6px 12px #0a171b38)}
+.modal-card h2,.canyon-modal h2,.coast-modal h2{font-size:clamp(26px,3.5vw,36px);font-weight:700;letter-spacing:-.9px;line-height:1.12;color:#f8edcf}
+.modal-card p,.canyon-modal p,.coast-modal>p{font-size:13px;line-height:1.75;color:#c0d5c9}
+.modal-x{width:44px;height:44px;border-radius:10px;border-color:#a8c7b23b;background:#2a5051;color:#e4efda}
+.choice,.canyon-modal-options button,.coast-modal-options button{min-height:46px;padding:13px 15px;border-radius:10px;
+  border:1px solid #adc7b545;background:linear-gradient(125deg,#31575a,#254b54);color:#eff2db;font-size:12px;font-weight:700;
+  box-shadow:inset 0 1px #fff3dc0b;transition:background .16s,box-shadow .16s}
+.choice.primary,.canyon-modal-options button.primary,.coast-modal-options button.primary{background:linear-gradient(115deg,#f4ce79,#ffe7af);color:#193b3f;border-color:#ffe6a3;box-shadow:0 6px 18px #d6ad521a,inset 0 1px #fff7}
+.choice:hover,.canyon-modal-options button:hover,.coast-modal-options button:hover{background:#3d6864;border-color:#e8d89a84;filter:none}
+.choice.primary:hover,.canyon-modal-options button.primary:hover,.coast-modal-options button.primary:hover{background:linear-gradient(115deg,#ffe3a0,#fff0c0)}
+.modal-card .modal-tip,.canyon-pressure-hint,.coast-puzzle-status{color:#c3ddc8;line-height:1.6}
+.pipe-puzzle,.canyon-pressure,.canyon-release-puzzle,.coast-circuit,.coast-counterweights,.coast-sluices,.coast-tank-repair{
+  border-color:#b7cfaf4d;border-radius:13px;background:linear-gradient(145deg,#123740,#0a2934);box-shadow:inset 0 1px #e9ffd80a}
+.pipe-tile{border-color:#9cbba75c;background:linear-gradient(145deg,#305858,#1c414b);box-shadow:inset 0 1px #e5ffe514,0 3px 7px #06212b30}
+.pipe-arm.is-flowing{background:linear-gradient(90deg,#3ba69f,#c4f5d9,#58b6b0);box-shadow:inset 0 0 7px #d4ffee4f}
+.pipe-hint{min-height:44px;border-radius:8px;background:#244d4b;border-color:#b6cda54a;color:#e5dca9}
+.canyon-release-meter{border-color:#83afa4;background-color:#102f39;box-shadow:0 4px 12px #001b251c,inset 0 1px #c3ecd61a}
+.canyon-release-water{background:linear-gradient(0deg,#398f9f,#91e5cc);border-top-color:#c8fff0}
+.canyon-release-target strong{color:#f9dfa1}.canyon-release-controls button,.canyon-valve button,.coast-weight-row button{
+  min-height:44px;border-color:#b1c7ac5e;background:linear-gradient(125deg,#3b6260,#2b5159);color:#e9ead0;border-radius:8px}
+.canyon-valve button{background:linear-gradient(125deg,#e5bd76,#f3d29b);color:#20424a}
+.coast-switches button{box-shadow:inset 0 2px #ffffff10,0 4px 0 #092c35;border-color:#7daca4;background:linear-gradient(#496569,#213e4a)}
+.coast-switches button.on{background:linear-gradient(#6b9d79,#365e50);border-color:#d6e4ad;color:#f8f7d4;box-shadow:inset 0 2px #f3ffc323,0 4px 0 #092c35}
+.coast-service-lights span.on{background:#2e5547;border-color:#a0ca93;color:#d9f3c5;box-shadow:inset 0 0 18px #a7e3a812}
+.coast-sluice{background:#234a51;border:1px solid #b0c9ac24;border-radius:10px}
+.coast-sluice input{accent-color:#b6dfc5;min-height:38px}
+.coast-tank-repair button{border-color:#aac8b248;background:linear-gradient(125deg,#315a5e,#264954);border-radius:9px}
+.canyon-release-status,.coast-puzzle-status{border:1px solid #a8c7aa21;background:#123b3a;border-radius:9px}
+.canyon-release-puzzle.is-ready .canyon-release-status{background:#365d4b;border-color:#e8dba278;color:#f9edb8}
+.modal-card.is-victory,.canyon-modal.is-victory,.coast-modal.is-victory{background:radial-gradient(ellipse at top,#496f5a90,transparent 53%),linear-gradient(140deg,#214b4b,#11343f 75%);border-color:#ebdca486;box-shadow:0 30px 100px #00151db8,inset 0 1px #fff0ba2b}
+.modal-card.is-victory h2,.canyon-modal.is-victory h2,.coast-modal.is-victory h2{color:#f5dfaa}
+.valley-victory-scene,.canyon-victory-scene,.coast-victory-art{border-color:#d6e1b55c;box-shadow:inset 0 1px #fff3bd30,0 6px 16px #08232a30}
+.valley-celebration,.canyon-celebration,.coast-celebration{padding:20px;border-top:1px solid #c9dfb94a;
+  background:radial-gradient(ellipse at 0 100%,#75975716,transparent 60%),linear-gradient(110deg,#28584c,#163f46);gap:14px}
+.valley-celebration strong,.canyon-celebration strong,.coast-celebration strong{font-size:22px;font-weight:700;letter-spacing:-.5px;color:#fbefd1}
+.valley-celebration span,.canyon-celebration span,.coast-celebration span{font-size:8px;letter-spacing:1.5px;color:#e8d198}
+.valley-celebration small,.canyon-celebration small,.coast-celebration small{font-size:11px;line-height:1.55;color:#b9d4bf}
+.valley-celebration button,.canyon-celebration button,.coast-celebration button{min-height:44px;border-radius:9px;background:#2a5353;border:1px solid #c6dab844;color:#e5edcf;font-size:11px}
+.valley-celebration button:first-child,.coast-celebration button:first-child{background:linear-gradient(120deg,#ffe3a1,#edc472);color:#1b3c3d;border-color:#ffe2a0}
+
+/* Community planning and the graphics panel share the same material language. */
+.village-life-header h3{font-size:25px;line-height:1.13;letter-spacing:-.75px;font-weight:700;color:#f5ebce}
+.village-life-eyebrow{font-size:8px;letter-spacing:1.3px;color:#cfca91}
+.village-life-resources{gap:14px;border-bottom:1px solid #a6c5ac1d;margin-bottom:13px;padding:16px 0}
+.village-life-jug strong{font-size:23px;font-weight:600;color:#ecf2d9}
+.village-life-jug-icon{border-color:#e3c16e;border-radius:6px;background:#5d5633;box-shadow:0 3px 7px #051f2524}
+.village-life-jug-water{background:linear-gradient(#9ce8ca,#449e9e)}
+.village-life-materials{color:#e1cb8d;font-size:12px}
+.village-life-card{padding:14px;border:1px solid #b1c7a72e;background:linear-gradient(125deg,#11343da8,#11323aa8);border-radius:11px;box-shadow:inset 0 1px #f3ffd308}
+.village-life-card-top>strong{font-size:12px;font-weight:700;color:#e8edce}.village-life-card p,.village-life-note{font-size:11px;line-height:1.75;color:#accbbb}
+.village-life-button{min-height:44px;padding:10px 11px;border-radius:8px;border-color:#a4c0ab45;
+  background:linear-gradient(130deg,#315755,#214851);color:#e7ebcf;font-size:11px}
+.village-life-card-top>.village-life-button{min-height:44px;padding:7px 10px}
+.village-life-tabs [aria-pressed="true"]{background:linear-gradient(125deg,#f5d48b,#e5bf76);border-color:#f2daa0;color:#1c3d3c}
+.village-life-status{border:1px solid #c3cd9463;background:linear-gradient(125deg,#325446,#24483f);font-size:11px;color:#e6dfaf;box-shadow:inset 0 1px #fff6d80a}
+.village-life-save{font-size:9px;color:#8eb3a2}
+.graphics-panel{border:1px solid #cfddbd61;border-radius:17px;background:linear-gradient(145deg,#21484d,#10303b);box-shadow:0 22px 60px #00131f99;padding:23px}
+.graphics-panel-header h2{font-size:28px;letter-spacing:-.8px;color:#f4e8c7}
+.graphics-field select{min-height:44px;background:#183e46;border:1px solid #aac4aa58;border-radius:8px;color:#edf0d5;padding:9px}
+.graphics-field input{accent-color:#e6cc90}.graphics-check input{accent-color:#e6cc90}
+.graphics-note{color:#a7c3b4;line-height:1.7}
+
+@media(min-width:1600px){.hero-scene,.hero-scene.is-3d{min-height:740px}.chapter-select-card{min-height:280px;background-size:100% 170px}.chapter-select-number{margin-bottom:95px}}
+@media(max-width:1180px){
+  .start-screen{grid-template-columns:minmax(320px,.9fr) minmax(0,1.1fr);column-gap:30px}
+  .start-copy h1{font-size:clamp(65px,6.4vw,80px)}
+  .hero-scene,.hero-scene.is-3d{min-height:610px}
+  .chapter-select-grid{gap:10px}.chapter-select-card{padding:14px;min-height:252px;background-size:100% 140px}
+  .chapter-select-card strong{font-size:15px}.chapter-select-number{font-size:7px;letter-spacing:.6px;margin-bottom:75px}
+  .game-layout{grid-template-columns:minmax(0,1fr) 300px}
+}
+@media(max-width:980px){
+  .start-screen{grid-template-columns:1fr 1fr;grid-template-areas:"eyebrow hero" "title hero" "description hero" "mode mode" "buttons donation" "chapters chapters" "score bottom";gap:16px 24px;padding-top:35px}
+  .start-copy h1{font-size:clamp(62px,7.5vw,78px)}.start-copy>p{font-size:13px;margin-bottom:0}
+  .hero-scene,.hero-scene.is-3d{min-height:430px}.hero-top-label{font-size:8px;left:15px;top:15px;letter-spacing:.7px}
+  .hero-scene .hero-caption,.hero-scene.is-3d .hero-caption{left:15px;right:15px;bottom:15px;padding:16px}
+  .hero-scene .hero-caption>strong{font-size:25px}.hero-stats span{font-size:7px!important;letter-spacing:.3px!important;padding:4px!important}
+  .play-style{max-width:none;margin-top:6px}.play-style-options button{min-height:76px}
+  .donation-link{margin-top:0;justify-self:end;align-self:center}.start-buttons{margin:0}
+  .chapter-select-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:13px}
+  .chapter-select-card{min-height:253px;background-size:100% 160px}.chapter-select-number{font-size:8px;margin-bottom:85px}
+  .chapter-select-card strong{font-size:18px}.chapter-select-card small{font-size:11px}
+  .game-layout,.canyon-layout,.coast-layout{grid-template-columns:minmax(0,1fr)}
+  .sidebar{display:block}.sidebar .overline:not(.sidebar-header .overline){padding-top:0}
+  .sidebar-divider{display:block}
+  .start-bottom{gap:13px;font-size:7px;letter-spacing:.7px}.topbar-center{display:none}
+}
+@media(max-width:680px){
+  .app-shell{padding-inline:12px}.topbar{height:75px;gap:12px}.wordmark{font-size:20px;gap:9px}.wordmark small{font-size:7px;letter-spacing:2.8px}
+  .water-mark{width:37px;height:39px;border-radius:12px;font-size:28px}.top-actions{gap:6px}.icon-button{width:44px;min-height:44px;height:44px;font-size:18px}
+  .start-screen{grid-template-columns:minmax(0,1fr);grid-template-areas:"eyebrow" "title" "description" "hero" "mode" "buttons" "donation" "chapters" "score" "bottom";gap:15px;padding-top:26px}
+  .start-copy>.eyebrow{font-size:8px;letter-spacing:1.6px;padding-top:0}
+  .start-copy h1{font-size:clamp(58px,14.5vw,83px);line-height:.94;letter-spacing:-.06em;max-width:100%}
+  .start-copy>p{font-size:13px;line-height:1.75;margin:0 0 5px;max-width:100%}
+  .hero-scene,.hero-scene.is-3d{min-height:320px;height:320px;border-radius:19px;margin:3px 0 8px}
+  .hero-scene .hero-caption,.hero-scene.is-3d .hero-caption{left:12px;right:12px;bottom:12px;padding:13px 15px;border-radius:11px;gap:6px}
+  .hero-scene .hero-caption>strong{font-size:24px}.hero-scene .hero-caption>small{font-size:10px}
+  .hero-top-label{left:12px;top:12px;max-width:calc(100% - 24px);font-size:7px;padding:9px;letter-spacing:.55px}
+  .hero-stats{gap:4px}.hero-stats span{font-size:6px!important;letter-spacing:.4px!important}
+  .play-style{margin:5px 0 0;gap:9px}.play-style-options{gap:8px}.play-style-options button{padding:12px;min-height:86px}
+  .play-style-options button strong{font-size:12px}.play-style-options button small{font-size:9px}.play-style>small{font-size:10px}
+  .start-buttons{display:grid;grid-template-columns:1fr 1fr;gap:8px}.start-buttons .button{min-height:50px;padding:11px 13px;gap:10px;font-size:11px;width:100%}
+  .donation-link{justify-self:stretch;padding:9px 12px;gap:10px}.donation-icon{width:34px;height:34px}.donation-link-copy strong{font-size:12px}
+  .chapter-select{margin-top:18px}.chapter-select-heading h2{font-size:28px}.chapter-select-heading{margin-bottom:13px}
+  .chapter-select-grid{gap:10px;grid-template-columns:1fr}
+  .chapter-select-card{min-height:235px;padding:16px 17px;background-size:100% 155px;border-radius:14px}
+  .chapter-select-number{margin-bottom:83px;font-size:8px;max-width:100%}.chapter-select-card strong{font-size:20px}.chapter-select-card small{font-size:12px}
+  .chapter-select-status{font-size:11px;padding-top:5px}.start-highscore{margin-top:5px}.start-bottom{justify-self:stretch;justify-content:space-between;margin-top:3px;gap:12px;font-size:7px;line-height:1.65}
+  .footer{padding:20px 1px;font-size:8px;line-height:1.7}
+  .game-screen,.canyon-screen,#coastScreen{padding-top:18px}.hud{gap:8px}.hud>div{padding:12px;border-radius:11px}
+  .hud-mission{flex-basis:100%}.hud-mission strong{font-size:23px}.hud-mission .overline{font-size:7px;letter-spacing:1.3px}
+  .hud-resource{flex-basis:44%}.hud-stat strong{font-size:22px}.hud-stat span,.resource-label{font-size:8px}
+  .hud-buttons{gap:6px}.hud-buttons .button{padding:9px 10px;font-size:10px;min-height:44px}
+  .world-frame,.canyon-stage,.coast-stage{border-radius:15px}.frame-label,.canyon-stage-heading,.coast-stage-label{padding:10px 12px;min-height:58px;font-size:8px;letter-spacing:.7px;gap:8px}
+  .frame-label{flex-wrap:wrap}.frame-tools{gap:6px;flex-wrap:wrap}.frame-tools>span{display:inline;font-size:8px;line-height:1.4;max-width:92px}.frame-tools .camera-reset,.frame-tools .scenic-button,.coast-stage-label button{padding:8px;font-size:8px;min-height:44px;letter-spacing:.3px}
+  .chapter-pill,.canyon-overlay-hud span,.coast-hud span{font-size:8px;padding:6px 7px;letter-spacing:.2px;border-radius:6px}
+  .sidebar,.canyon-sidebar,.coast-sidebar{padding:18px 16px;border-radius:15px}.sidebar-header h2,.canyon-sidebar h3,.coast-sidebar h3{font-size:28px}
+  .canyon-header,.coast-header{padding:18px 17px;gap:14px;border-radius:15px}.canyon-header h2,.coast-header h2{font-size:29px}
+  .canyon-header p,.coast-header p{font-size:11px}.canyon-controls,.coast-header-actions{gap:7px}
+  .modal-backdrop,.canyon-modal-backdrop,.coast-modal-backdrop{padding:12px}
+  .modal-card,.canyon-modal,.coast-modal{max-height:calc(100dvh - 24px);border-radius:18px;padding:19px 18px 20px}
+  .modal-illustration{font-size:38px;margin:10px 0}.modal-card h2,.canyon-modal h2,.coast-modal h2{font-size:27px;line-height:1.15;letter-spacing:-.7px}
+  .modal-card p,.canyon-modal p,.coast-modal>p{font-size:12px;line-height:1.7}
+  .choice,.canyon-modal-options button,.coast-modal-options button{min-height:46px;padding:12px;font-size:11px}
+  .modal-card.is-pipe{padding:15px}.modal-card.is-pipe #modalTitle{font-size:25px}.modal-card.is-pipe #pipePuzzle{max-width:100%;padding:10px}
+  .canyon-release-controls button,.coast-weight-row button,.village-life-button{min-height:44px}
+  .canyon-release-target strong{font-size:27px}.canyon-release-target small{font-size:10px}.coast-service-lights span{font-size:9px}
+  .coast-weight-row{grid-template-columns:61px 44px minmax(0,1fr) 44px}.coast-weight-row button{height:44px}
+  .valley-celebration,.canyon-celebration,.coast-celebration{padding:16px;gap:11px}.valley-celebration strong,.canyon-celebration strong,.coast-celebration strong{font-size:20px}
+  .valley-celebration button,.canyon-celebration button,.coast-celebration button{font-size:10px;padding:10px}
+  .village-life-header h3{font-size:24px}.village-life-card{padding:12px}.village-life-card-top>strong{font-size:12px}
+  .village-life-tabs .village-life-button{font-size:10px;padding:9px 4px}.village-life-resources{gap:14px;padding-top:12px}
+  .game-screen.is-village .sidebar{padding:17px 15px}.village-life-tool-row>.village-life-button{font-size:9px;padding:9px 3px}
+  .graphics-panel{right:12px;width:min(355px,calc(100vw - 24px));padding:19px}
+}
+@media(prefers-reduced-motion:reduce){
+  .chapter-select-card,.button,.choice,.canyon-modal-options button,.coast-modal-options button{transition:none}
+  .chapter-select-card:not(:disabled):hover,.button-primary:hover,.start-buttons .button-primary:hover{transform:none}
+  .hero-caption,.hero-top-label,.chapter-pill,.canyon-overlay-hud span,.coast-hud span{backdrop-filter:none}
+}

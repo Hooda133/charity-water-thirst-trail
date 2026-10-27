@@ -34,6 +34,7 @@
       return cache.get(key);
     }
     function apply(material, kind, repeat = [1, 1], tint = null, strength = .5) {
+      if(!material)return Promise.resolve(false);
       // Leave the existing material intact unless every map has loaded.
       return maps(kind, repeat).then(result => {
         if (disposed || !result || result.some(map => !map)) return false;

@@ -4,6 +4,19 @@ Current repair evidence: [October 26 gameplay audit](GAMEPLAY_AUDIT.md). It reco
 
 This project is a static HTML/CSS/JavaScript game. Run it from a local HTTP server (for example `python3 -m http.server 8000`) and open the site in Chrome or Edge. Open DevTools → Console to spot JavaScript and WebGL errors.
 
+## Graphics overhaul — October 27
+
+The 3.1 graphics pass was checked in actual Chromium WebGL against screenshots of the previous committed game. Low and High rendered Valley/Village Life, restored Canyon and restored Coast without uncaught page errors, shader errors, failed local assets or WebGL context loss. The real settings menu changed rendering resolution and effects live in each chapter. A 390×844 check covered the title and Coast puzzle layout; the full fallback browser suites also covered gameplay, saves, mobile controls and celebrations.
+
+```bash
+python tools/test-graphics-browser.py --presets low,high --live-check --mobile
+python tools/test-graphics-browser.py --smoke
+```
+
+The small smoke test compiles the shared water/postprocessing shaders, loads the three PBR maps, samples nonblank rendered pixels and verifies texture/environment disposal. It runs in GitHub Actions alongside the gameplay checks. Full visual captures use restored-scene save fixtures and do not replace the separate gameplay walkthrough. Screenshots and JSON reports are written to ignored `work/graphics-qa/`.
+
+These software-rendered checks establish rendering correctness and layout; they do not measure frame rate or memory on a player's laptop or phone. Low/Medium, resolution and effects controls remain available for less powerful devices.
+
 ## Phase 1 — Graphics
 - [ ] Start page shows a real 3D valley (not the fallback 2D illustration).
 - [ ] Start Adventure transitions into the 3D game without a blank screen.

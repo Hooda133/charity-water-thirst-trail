@@ -42,12 +42,12 @@
   const graphicsPresets={
     low:{resolution:.75,shadows:false,effects:false,sensitivity:.9},
     medium:{resolution:1,shadows:true,effects:true,sensitivity:1},
-    high:{resolution:1.25,shadows:true,effects:true,sensitivity:1},
-    ultra:{resolution:1.5,shadows:true,effects:true,sensitivity:1.15}
+    high:{resolution:1.1,shadows:true,effects:true,sensitivity:1},
+    ultra:{resolution:1.35,shadows:true,effects:true,sensitivity:1.15}
   };
   const savedGraphics=safeStore.getGraphics();
-  const graphics={...graphicsPresets.medium,...(savedGraphics||{})};
-  let graphicsPreset=savedGraphics?.preset||"medium";
+  const graphics={...graphicsPresets.high,...(savedGraphics||{})};
+  let graphicsPreset=savedGraphics?.preset||"high";
   function graphicsProfile(){return {...graphics,preset:graphicsPreset};}
   const state = {
     screen:"start", energy:100, score:0, elapsed:0, x:310, y:620, moving:false,
@@ -1373,7 +1373,8 @@
   window.ThirstTrail={snapshot:()=>({screen:state.screen,energy:state.energy,score:state.score,quests:[...state.done],items:[...state.inventory],x:Math.round(state.x),y:Math.round(state.y),nearby:state.nearby,elapsed:state.elapsed,
     pumpSafetyPassed:state.pumpSafetyPassed,waterRestored:state.done.has("pump")&&state.ended,
     watchingVillage:state.screen==="ended"&&state.done.has("pump")&&!state.modalOpen,renderer:world3d?"3d":"2d",
-    mode:playStyle().id,community:window.TrailVillageLife?.snapshot?.()||null}),version:"3.0"};
+    mode:playStyle().id,community:window.TrailVillageLife?.snapshot?.()||null,
+    graphics:world3d?.getGraphicsStatus?.()||null}),version:"3.1"};
 
   // Self-contained renderer avoids authenticated preview requests for world3d.js.
   /* Thirst Trail - real-time, stylized Three.js world.
@@ -1419,6 +1420,8 @@
     renderer.toneMappingExposure = 1.12;
     renderer.shadowMap.enabled = graphics.shadows;
     renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    const cinematic=window.TrailCinematic?.create(THREE,{renderer,scene,camera,chapter:"valley"});
+    const surfaces=cinematic?.surfaces;
     const view = renderer.domElement;
     let effectsEnabled=graphics.effects;
     let cameraSensitivity=graphics.sensitivity;
@@ -1429,10 +1432,14 @@
       renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,1.7)*scale);
       renderer.shadowMap.enabled=!!next.shadows;
       sun.castShadow=!!next.shadows;
-      const quality=graphicsPreset==="ultra"?2048:graphicsPreset==="high"?1536:graphicsPreset==="medium"?1024:512;
-      sun.shadow.mapSize.set(quality,quality);
+      const quality=graphicsPreset==="ultra"?2048:graphicsPreset==="high"?2048:graphicsPreset==="medium"?1024:512;
+      if(sun.shadow.mapSize.x!==quality){
+        sun.shadow.map?.dispose();sun.shadow.map=null;
+        sun.shadow.mapSize.set(quality,quality);
+      }
       renderer.toneMappingExposure=graphicsPreset==="low"?1.08:graphicsPreset==="ultra"?1.16:1.2;
       scene.fog.density=graphicsPreset==="low"?.012:graphicsPreset==="ultra"?.0075:.009;
+      cinematic?.configure({...next,preset:graphicsPreset});
     }
     view.id = "world3dCanvas";
     view.tabIndex = 0;
@@ -1647,10 +1654,30 @@
     terrainGeometry.computeVertexNormals();
     const groundArt=art.grass;
     if(groundArt)groundArt.repeat.set(28,24);
-    mesh(terrainGeometry,new THREE.MeshStandardMaterial({
+    const terrainMaterial=new THREE.MeshStandardMaterial({
       vertexColors:true,map:groundArt||null,roughness:1,metalness:0,
       side:THREE.DoubleSide
-    }),scene,false);
+    });
+    mesh(terrainGeometry,terrainMaterial,scene,false);
+    surfaces?.apply(terrainMaterial,"meadow",[28,26],0xffffff,.3);
+    surfaces?.apply(mats.wood,"wood",[1,1],0xd2b68f,.28);
+    surfaces?.apply(mats.lightWood,"wood",[1,1],0xe1cba8,.22);
+    surfaces?.apply(mats.trunks,"wood",[1,2],0xa6937b,.35);
+    surfaces?.apply(mats.rock,"rock",[1,1],0xc3c5b4,.36);
+    surfaces?.apply(mats.rock2,"rock",[1,1],0xd5d2bb,.28);
+    surfaces?.meadow(scene,{height:(x,z)=>terrainElevation(x,z)+.02,count:4200,allowed:(x,z)=>{
+      const px=x*SCALE+900,py=z*SCALE+550;
+      if(blocked(px,py)||Math.abs(x-wx(riverCenter(py)))<3.6)return false;
+      if(px>310&&px<700&&py>400&&py<750)return false;
+      if(spots.some(([,sx,sy])=>Math.hypot(px-sx,py-sy)<120))return false;
+      const routes=[[[285,490],[370,630],[455,765],[610,708],[730,580],[970,580],[1180,825],[1540,690]],[[280,490],[420,435],[540,350]],[[970,580],[1170,415],[1460,265]]];
+      for(const route of routes)for(let i=1;i<route.length;i++){
+        const a=route[i-1],b=route[i],dx=b[0]-a[0],dy=b[1]-a[1],t=Math.max(0,Math.min(1,((px-a[0])*dx+(py-a[1])*dy)/(dx*dx+dy*dy)));
+        if(Math.hypot(px-a[0]-t*dx,py-a[1]-t*dy)<35)return false;
+      }
+      return true;
+    }});
+    surfaces?.quality(graphicsPreset,graphics.effects);
     // Layered distant mountain silhouettes add scale and recognizable scenery.
     // Mountains sit beyond the playable bounds and never affect navigation.
     const mountainDistant=makeMat(0x769c99),mountainNear=makeMat(0x6d887d);
@@ -1710,6 +1737,7 @@
     const waterMat=new THREE.MeshStandardMaterial({
       color:0x329fb3,metalness:.025,roughness:.38,side:THREE.DoubleSide
     });
+    waterMat.name="Valley spring and pond water";
     // Create a reusable, hand-painted flow pattern entirely in the browser.
     // Animated texture coordinates evoke moving water without a costly shader
     // pipeline or a network dependency for water assets.
@@ -1745,6 +1773,7 @@
       flowTexture.anisotropy=Math.min(4,renderer.capabilities.getMaxAnisotropy());
     }
     const riverWaterMat=waterMat.clone();
+    riverWaterMat.name="Valley river water";
     if(flowTexture)riverWaterMat.map=flowTexture;
     riverWaterMat.needsUpdate=true;
     const shallowWaterMat=new THREE.MeshBasicMaterial({
@@ -2368,6 +2397,7 @@
           // A glTF node may be a Mesh directly, without child objects.
           if(!original || !(original.isMesh || original.children?.length))continue;
           const asset=original.clone(true);
+          surfaces?.village(asset);
           asset.position.set(wx(p.x),0,wz(p.y));
           asset.scale.setScalar(p.size);
           asset.traverse(node=>{
@@ -2962,6 +2992,7 @@
         });
         if(triangleMeshes<6)throw Error("Character asset has insufficient geometry");
         characterModel=candidate;
+        cinematic?.character(candidate);
         explorer.add(candidate);
         characterRig={
           body:joints.ExplorerBody,head:joints.ExplorerHead,eyes:joints.ExplorerEyes,
@@ -3402,6 +3433,9 @@
         }
       }
       for(const [key,m] of Object.entries(markers)){
+        m.group.visible=playing&&state.screen!=="village"&&state.screen!=="ended";
+        const nextGoal=questDefs.find(quest=>!state.done?.has(quest.key))?.key;
+        for(const child of m.group.children)if(child.isSprite)child.visible=!state.scenic&&(key===nextGoal||state.nearby===key);
         const done=(state.done&&state.done.has(key))||(key==="river"&&state.inventory&&state.inventory.has("testKit"));
         m.mat.color.setHex(done?0x69edaa:(key==="camp"?0x8af9bf:(key==="river"||key==="spring"?0x75edff:0xffd45b)));
         m.ring.scale.setScalar(1+Math.sin(time*3+spots.findIndex(s=>s[0]===key))*.08);
@@ -3549,13 +3583,16 @@
         camTarget.lerp(aim,1-Math.exp(-4.7*cameraFrameDelta));
       }
       camera.lookAt(camTarget);
-      characterVisibility?.update(camera,frameDelta);
-      renderer.render(scene,camera);
+      if(!playing||state.scenic||state.screen==="ended")characterVisibility?.clear?.();
+      else characterVisibility?.update(camera,frameDelta);
+      cinematic?.update(time,{reduced:reduceMotion,effects:effectsEnabled,night});
+      if(cinematic)cinematic.render();else renderer.render(scene,camera);
     }
     return {
       render,
       focus(){view.focus({preventScroll:true});},
       dispose(){
+        cinematic?.dispose();
         villageRestoration?.dispose();
         villageLifeArt?.dispose();
         villageAssetDisposed=true;
@@ -3597,6 +3634,7 @@
       recenterCamera,
       getAssetStatus(){return {...villageAssetState};},
       getCharacterAssetStatus(){return {...characterAssetState};}
+      ,getGraphicsStatus(){return cinematic?.status()||null;}
     };
   }
   

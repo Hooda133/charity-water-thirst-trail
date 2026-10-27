@@ -618,6 +618,7 @@
     const copper=new THREE.MeshStandardMaterial({color:0x9a9f82,metalness:.4,roughness:.5});
     const clean=new THREE.MeshStandardMaterial({color:0x63e1de,emissive:0x105c67,
       emissiveIntensity:.38,roughness:.22,metalness:.12,transparent:true,opacity:.9});
+    clean.name="Canyon restored water";
     const foam=new THREE.MeshBasicMaterial({color:0xe4fff3,transparent:true,opacity:.8});
     const leaves=new THREE.MeshStandardMaterial({color:0x72bc7b,roughness:1,flatShading:true});
     const mesh=(geometry,material,x,y,z)=>{
@@ -710,11 +711,11 @@
       const camera=new THREE.PerspectiveCamera(47,1000/610,.1,300);
       camera.position.set(7.4,10.5,13.6);camera.lookAt(0,0,0);
       // Honor the player's saved Valley graphics profile in Canyon as well.
-      let graphics={};
-      try{graphics=JSON.parse(localStorage.getItem("thirstTrailGraphics")||"null")||{};}
+      let graphics={preset:"high",resolution:1.1,shadows:true,effects:true};
+      try{graphics={...graphics,...(JSON.parse(localStorage.getItem("thirstTrailGraphics")||"null")||{})};}
       catch{/* use safe defaults when browser storage is disabled */}
       let graphicsQuality=["low","medium","high","ultra"].includes(graphics.preset)?
-        graphics.preset:"medium";
+        graphics.preset:"high";
       const renderer=new THREE.WebGLRenderer({alpha:false,antialias:true,powerPreference:"high-performance"});
       const requestedScale=clamp(Number(graphics.resolution)||1,.65,1.5);
       renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,1.7)*requestedScale);
@@ -722,6 +723,8 @@
       renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.14;
       renderer.shadowMap.enabled=graphics.shadows!==false;
       renderer.shadowMap.type=THREE.PCFSoftShadowMap;
+      const cinematic=window.TrailCinematic?.create(THREE,{renderer,scene,camera,chapter:"canyon"});
+      const surfaces=cinematic?.surfaces;
       const dom=renderer.domElement;dom.className="canyon-webgl";
       dom.style.cssText="display:block;width:100%;height:auto;aspect-ratio:1000/610;touch-action:none;outline:none";
       dom.tabIndex=0;
@@ -730,7 +733,7 @@
       const mat=(color,metalness=0)=>new THREE.MeshStandardMaterial({color,roughness:.87,metalness,flatShading:true});
       const rock=[mat(0xd58c68),mat(0xaa6454),mat(0xeeaf77),mat(0x86535a)];
       const sand=mat(0xd8aa76),path=mat(0xf1d2a0),timber=mat(0x86624b),iron=mat(0x768d90,.25),teal=mat(0x5a9e9b);
-      const water=new THREE.MeshStandardMaterial({color:0x50b1b9,roughness:.31,metalness:.05,transparent:true,opacity:.91});
+      const water=new THREE.MeshStandardMaterial({name:"Canyon river water",color:0x50b1b9,roughness:.31,metalness:.05,transparent:true,opacity:.91});
       const hemi=new THREE.HemisphereLight(0xdff3f5,0x8d6656,1.55);scene.add(hemi);
       const sun=new THREE.DirectionalLight(0xffd6a0,3.2);
       sun.position.set(-18,29,12);sun.castShadow=renderer.shadowMap.enabled;
@@ -738,6 +741,7 @@
         graphicsQuality==="high"?1536:2048;
       sun.shadow.mapSize.set(shadowSize,shadowSize);sun.shadow.camera.left=-36;sun.shadow.camera.right=36;
       sun.shadow.camera.top=29;sun.shadow.camera.bottom=-29;sun.shadow.bias=-.0003;
+      sun.shadow.normalBias=.025;sun.shadow.radius=2;
       scene.add(sun);const fill=new THREE.DirectionalLight(0xa9dadd,.65);fill.position.set(16,12,-9);scene.add(fill);
       const put=(geometry,material,x,y,z,shadow=true)=>{
         const o=new THREE.Mesh(geometry,material);o.position.set(x,y,z);
@@ -760,6 +764,7 @@
       }
       // Terraced sandstone mesas and layered cliffs at the skyline.
       let seed=31415;const rng=()=>((seed=(Math.imul(seed,1664525)+1013904223)>>>0)/4294967296);
+      const skylineFallback=[];
       for(let i=0;i<44;i++){
         let x=(i%2?-1:1)*(10+rng()*24);const z=-24+rng()*52;
         const radius=1.1+rng()*2.5,height=2.5+rng()*7;
@@ -768,9 +773,10 @@
         if(Math.abs(x)-radius<22.8)x=Math.sign(x)*(22.8+radius);
         const column=put(new THREE.CylinderGeometry(radius*.70,radius,height,7,1),rock[i%4],x,height/2-.20,z,false);
         column.rotation.y=rng()*6.28;
+        skylineFallback.push(column);
         for(let layer=0;layer<3;layer++)
-          put(new THREE.CylinderGeometry(radius*(.82+layer*.065),radius*(.82+layer*.065),.15,7),
-            rock[(i+layer+1)%4],x,layer*height/4+.2,z,false);
+          skylineFallback.push(put(new THREE.CylinderGeometry(radius*(.82+layer*.065),radius*(.82+layer*.065),.15,7),
+            rock[(i+layer+1)%4],x,layer*height/4+.2,z,false));
       }
       // Distinct winding desert roads.
       const roads=[
@@ -869,11 +875,14 @@
       let canyonArt=null;
       try{
         canyonArt=window.ThirstCanyonVisuals?.build(THREE,{
-          scene,camera,worldSpread,getState:()=>state,isWaterGarden
+          scene,camera,worldSpread,getState:()=>state,isWaterGarden,surfaces
         })||null;
       }catch(error){
         console.warn("Canyon advanced scenery unavailable; using safe original terrain.",error);
       }
+      if(canyonArt)for(const mesh of skylineFallback)mesh.visible=false;
+      surfaces?.apply(timber,"wood",[1,1],0xc1a080,.28);
+      for(const m of rock)surfaces?.apply(m,"rock",[1,1],null,.28);
       const restoredWater=buildRestoredWater(THREE,scene);
       restoredWater.update();
       const canyonEffects=[];
@@ -892,6 +901,7 @@
           sun.shadow.mapSize.set(size,size);sun.shadow.needsUpdate=true;
         }
         for(const o of canyonEffects)o.visible=graphics.effects!==false;
+        cinematic?.configure({...graphics,preset:graphicsQuality});
       }
       applyGraphicsSettings(graphics);
       // Floating, player-facing world mission labels.
@@ -920,7 +930,7 @@
           sprite.scale.set(3.9,.74,1);
           sprite.renderOrder=1000;sprite.position.y=2.65;group.add(sprite);
         }
-        marks.push({key,ring,pillar});
+        marks.push({key,group,ring,pillar});
       }
       // Character: local procedural fallback renders immediately.
       const player=new THREE.Group();scene.add(player);
@@ -987,6 +997,7 @@
           });
           if(parts<6)throw Error("Explorer model has too few meshes");
           player.add(candidate);
+          cinematic?.character(candidate);
           fallbackParts.forEach(part=>part.visible=false);
           explorerRig=rig;explorerRig.model=candidate;explorerStatus.status="ready";
           console.info("Forgotten Canyon: shared animated 3D explorer loaded.");
@@ -1055,6 +1066,7 @@
       dom.addEventListener("click",select);
       if(!state.active&&!(state.finished&&!$("canyonScreen").hidden)){
         explorerDisposed=true;canyonArt?.dispose();restoredWater.dispose();
+        cinematic?.dispose();
         renderer.dispose();dom.remove();canvas.style.display="";
         return;
       }
@@ -1063,7 +1075,7 @@
       const playerMotion={lastTime:0,lastX:state.x,lastY:state.y,blend:0};
       const reducedMotion=!!window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
       const desiredCameraPosition=new THREE.Vector3();
-      let renderWidth=0,renderHeight=0,cameraFirstFrame=true,lastArtDone=-1;
+      let renderWidth=0,renderHeight=0,cameraFirstFrame=true;
       world={
         dom,renderer,scene,camera,player,limbs,marks,broken,pipeMesh,water,
         recenterCamera,setGraphicsSettings:applyGraphicsSettings,
@@ -1141,21 +1153,27 @@
           camera.lookAt(cameraTarget);
           for(const m of marks){
             const done=state.done.has(m.key);
+            m.group.visible=!state.finished;
+            const next=questOrder.find(key=>!state.done.has(key));
+            for(const child of m.group.children)if(child.isSprite)child.visible=!done&&(m.key===next||state.nearby===m.key);
             m.pillar.visible=!done;m.ring.material.color.set(done?0x70c5a4:0xffd787);
             m.ring.scale.setScalar(reducedMotion||graphics.effects===false?1:1+Math.sin(time*2.2)*.08);
           }
           broken.visible=!state.done.has("span");
           water.color.set(state.done.has("cistern")?0x55c4cb:0x50b1b9);
           restoredWater.update();
+          // Keep valve/repair visuals current even when ambient motion is off.
           if(graphics.effects!==false)canyonArt?.update(time);
-          else if(lastArtDone!==state.done.size)canyonArt?.update(0);
-          lastArtDone=state.done.size;
-          characterVisibility?.update(camera,delta);
-          renderer.render(scene,camera);
+          else canyonArt?.update(0);
+          if(state.finished)characterVisibility?.clear?.();else characterVisibility?.update(camera,delta);
+          cinematic?.update(time,{reduced:reducedMotion,effects:graphics.effects!==false});
+          if(cinematic)cinematic.render();else renderer.render(scene,camera);
         },
         getExplorerAssetStatus(){return {...explorerStatus};},
+        getGraphicsStatus(){return cinematic?.status()||null;},
         dispose(){
           characterVisibility?.dispose();
+          cinematic?.dispose();
           explorerDisposed=true;
           canyonArt?.dispose();
           restoredWater.dispose();
@@ -1275,7 +1293,7 @@
       x:state.x,y:state.y,energy:state.energy,score:state.score,
       done:[...state.done],pressure:currentPressure(),valves:[...state.valves],
       cisternSafetyPassed:state.cisternSafetyPassed,releaseBasins:[...state.releaseBasins],
-      repairStep:state.repairStep,renderer:world?"3d":"2d"
+      repairStep:state.repairStep,renderer:world?"3d":"2d",graphics:world?.getGraphicsStatus?.()||null
     })
   });
 })();

@@ -13,6 +13,7 @@
     const metal=new THREE.MeshStandardMaterial({color:0x8bb5ac,roughness:.45,metalness:.3});
     const water=new THREE.MeshStandardMaterial({color:0x5ddbd6,emissive:0x12515c,
       emissiveIntensity:.25,roughness:.2,metalness:.12,transparent:true,opacity:.92});
+    water.name="Village fountain water";
     const foam=new THREE.MeshBasicMaterial({color:0xe2fff1,transparent:true,opacity:.85});
     const leaf=new THREE.MeshStandardMaterial({color:0x71bb79,roughness:1,flatShading:true});
     const skin=new THREE.MeshStandardMaterial({color:0x955e3c,roughness:.9});
