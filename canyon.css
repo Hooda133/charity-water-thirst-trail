@@ -114,7 +114,7 @@
 .canyon-release-puzzle .canyon-release-guide{font-size:11px;line-height:1.55;margin:0;color:#c5ded4}
 .canyon-release-controls{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}
 .canyon-release-controls button{min-width:0;min-height:44px;padding:9px 7px;border:1px solid #a6cebb73;border-radius:8px;
- font:800 11px system-ui;line-height:1.4;color:#e5f9ee;background:#29555b;cursor:pointer}
+ font:800 11px var(--font-ui);line-height:1.4;color:#e5f9ee;background:#29555b;cursor:pointer}
 .canyon-release-controls button:hover:not(:disabled){background:#39736e;border-color:#e8db99}
 .canyon-release-controls button:focus-visible{outline:3px solid #ffe39a;outline-offset:2px}
 .canyon-release-controls button:disabled{opacity:.4;cursor:default}
@@ -159,7 +159,7 @@
 
 /* Free camera exploration: visible reset controls in both 3D chapters. */
 .camera-reset{appearance:none;border:1px solid #f0d5969c;border-radius:8px;
- background:#1b4752e8;color:#ffe3a0;font:800 10px system-ui,sans-serif;
+ background:#1b4752e8;color:#ffe3a0;font:800 10px var(--font-ui);
  letter-spacing:.35px;padding:8px 10px;white-space:nowrap;cursor:pointer}
 .camera-reset:hover{background:#2d6470;border-color:#ffe2a0}
 .camera-reset:focus-visible{outline:3px solid #ffdd81;outline-offset:2px}
@@ -198,7 +198,7 @@
 .canyon-celebration strong{font-size:18px;line-height:1.2}
 .canyon-celebration small{font-size:11px;color:#bfe2d6}
 .canyon-celebration button{border:1px solid #c8e9c279;border-radius:8px;background:#f5d879;color:#16383b;
- padding:11px 14px;font:800 11px system-ui;cursor:pointer;white-space:nowrap;min-height:44px}
+ padding:11px 14px;font:800 11px var(--font-ui);cursor:pointer;white-space:nowrap;min-height:44px}
 .canyon-celebration button:hover{background:#ffe9a8}
 .canyon-celebration button:focus-visible{outline:3px solid #ffe39a;outline-offset:3px}
 .canyon-stage:has(.canyon-celebration:not([hidden])) .canyon-key-hint,
@@ -256,7 +256,7 @@
  .canyon-touch-controls{position:relative;grid-column:1;grid-row:4;bottom:auto;left:auto;display:grid;
   grid-template-columns:repeat(3,44px) 70px;grid-template-rows:repeat(2,44px);gap:5px;width:max-content;margin:10px auto 12px;touch-action:none}
  .canyon-touch-controls button{min-width:44px;min-height:44px;border:1px solid #a3d0b6;border-radius:10px;
-  background:#12383c;color:#fff;font:800 18px system-ui,sans-serif;touch-action:none;user-select:none}
+  background:#12383c;color:#fff;font:800 18px var(--font-ui);touch-action:none;user-select:none}
  .canyon-touch-controls button:active{background:#37786b}
  .canyon-touch-controls [data-canyon-move="up"]{grid-column:2;grid-row:1}
  .canyon-touch-controls [data-canyon-move="left"]{grid-column:1;grid-row:2}
