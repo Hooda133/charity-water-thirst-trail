@@ -374,7 +374,7 @@
         if(g){g.fillStyle="#123b46";g.fillRect(0,0,512,96);g.strokeStyle="#e8d3a1";g.lineWidth=8;g.strokeRect(0,0,512,96);g.textAlign="center";g.fillStyle="#fff5d7";g.font=`bold 28px ${FONT_FAMILY}`;g.fillText(goal.title,256,59);const label=new THREE.Sprite(new THREE.SpriteMaterial({map:new THREE.CanvasTexture(labelCanvas),depthTest:false}));label.position.y=3.8;label.scale.set(4.5,.85,1);group.add(label);}
         marks.push({key,group,ring});
       }
-      const dom=renderer.domElement;dom.className="coast-webgl";dom.tabIndex=0;dom.style.cssText="display:block;width:100%;height:auto;aspect-ratio:1000/610;touch-action:none";
+      const dom=renderer.domElement;dom.className="coast-webgl";dom.tabIndex=0;dom.style.cssText="display:block;width:100%;height:auto;aspect-ratio:1000/610;";
       let missionLabels=null;
       try{
         missionLabels=window.TrailWorldLabels?.create?.(THREE,{camera,canvas:dom,
