@@ -28,6 +28,7 @@
   const mode=()=>window.TrailMode?.profile?.()||{id:"normal",label:"Normal",difficulty:"normal",energyMultiplier:1,mistakeMultiplier:1,hints:false,bonusObjectives:false};
   const reduced=()=>!!window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
   const tone=(note=620,duration=.08)=>window.ThirstAudio?.tone(note,duration);
+  const cue=name=>window.ThirstAudio?.play?.(name);
   const dist=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y);
   function blocked(x,y){
     if(x<40||x>960||y<90||y>555)return true;
@@ -80,7 +81,7 @@
     if(!state.active||state.finished||state.done.has(key))return false;
     const index=order.indexOf(key);
     if(index<0||order.slice(0,index).some(previous=>!state.done.has(previous)))return false;
-    state.done.add(key);state.score+=points[key];tone(780,.12);save();refresh();toast("✓ "+goals[key].title+" · +"+points[key]+" impact");return true;
+    state.done.add(key);state.score+=points[key];cue(key==="tank"?"repair":"reward");save();refresh();toast("✓ "+goals[key].title+" · +"+points[key]+" impact");return true;
   }
   function modal(tag,title,description,choices,extra){
     state.modal=true;state.keys.clear();state.path=[];refreshDifficulty=null;
@@ -92,7 +93,7 @@
       if(choice.primary)button.classList.add("primary");
       button.addEventListener("click",()=>{if(state===owner&&state.modal&&state.modalVersion===version)choice.action();});options.append(button);}
     $("coastModal").classList.toggle("is-victory",state.finished);$("coastModalBackdrop").hidden=false;
-    $("coastModal").scrollTop=0;$("coastModal").focus({preventScroll:true});save();refresh();tone(550,.06);
+    $("coastModal").scrollTop=0;$("coastModal").focus({preventScroll:true});save();refresh();if(!state.finished)cue("interact");
   }
   function close(){state.modal=false;state.modalVersion++;refreshDifficulty=null;$("coastModalBackdrop").hidden=true;refresh();(world?.dom||canvas).focus({preventScroll:true});}
   function easyHint(root,text){
@@ -128,7 +129,7 @@
     if(!state.active||state.paused||state.modal)return;
     const key=nearest();state.path=[];
     if(!key)return toast("Walk to a landmark, then press E or tap INTERACT.");
-    if(key==="rest"){state.energy=Math.min(100,state.energy+45);save();refresh();tone();return toast("Rested at the harbor shelter · energy restored.");}
+    if(key==="rest"){state.energy=Math.min(100,state.energy+45);save();refresh();cue("water");return toast("Rested at the harbor shelter · energy restored.");}
     if(key==="mara")return modal("MARA · HARBOR ENGINEER","A stronger shore",
       state.done.has("release")?"The homes, clinic and storage tank have a reliable flow again. The whole harbor is grateful.":"The storm cut power and damaged our only storage tank. Restore the backup circuit, balance the cargo bridge, seal the tank and set the distribution gates. Each repair brings us closer to opening the water.",
       [{text:state.done.has("mara")?"Return to the harbor":"Let’s restore the harbor (+90 impact)",primary:true,action:()=>{close();reward("mara");}},{text:"Keep exploring",action:close}]);
@@ -145,7 +146,7 @@
   function gatesSafe(){return state.gates.every((value,i)=>value===[3,2,1][i]);}
   function fail(key,stamp,message){
     if(!state[key].has(stamp)){state[key].add(stamp);spend(3*(mode().mistakeMultiplier||1));}
-    $("coastModalText").textContent=message;tone(190,.08);save();refresh();
+    $("coastModalText").textContent=message;cue("mistake");save();refresh();
   }
   function powerPuzzle(){
     let paint=()=>{};
@@ -210,8 +211,8 @@
           const button=document.createElement("button");button.type="button";button.dataset.coastRepair=String(i);button.textContent=["▧ ","◉ ","⊏ "][i]+repairOrder[i];
           button.addEventListener("click",()=>{
             if(state!==owner||!state.modal||state.modalVersion!==version||state.finished)return;
-            if(i!==state.tankStep){$("coastModalText").textContent="Next: "+repairOrder[state.tankStep]+". Work from the inside out.";tone(190,.07);return;}
-            state.tankStep++;tone(660,.06);
+            if(i!==state.tankStep){$("coastModalText").textContent="Next: "+repairOrder[state.tankStep]+". Work from the inside out.";cue("mistake");return;}
+            state.tankStep++;cue("repair");
             if(state.tankStep===3){close();reward("tank");return;}
             save();paint();
           });board.append(button);buttons.push(button);
@@ -248,7 +249,7 @@
     if(state.finished||order.some(key=>!state.done.has(key)))return;
     state.finished=true;state.active=false;state.paused=false;state.keys.clear();state.path=[];
     state.score+=Math.round(state.energy)*2;state.waterAt=performance.now()/1000;state.cheerAt=state.waterAt;
-    progress?.complete("coast");$("coastToast").hidden=true;tone(990,.18);refresh();results();
+    progress?.complete("coast");$("coastToast").hidden=true;cue("victory");refresh();results();
   }
   function results(){
     if(!state.finished||screen.hidden)return;
@@ -294,7 +295,7 @@
       if(!blocked(state.x+dx,state.y))state.x+=dx;if(!blocked(state.x,state.y+dy))state.y+=dy;
       spend(dt*(state.keys.has("shift")?.42:.22));}
     state.elapsed+=dt;
-    for(const cache of caches)if(!state.bonus.has(cache.id)&&dist(state,cache)<29){state.bonus.add(cache.id);state.energy=Math.min(100,state.energy+12);state.score+=35;save();toast("Storm cache recovered · +12 energy · +35 impact");tone(880,.1);}
+    for(const cache of caches)if(!state.bonus.has(cache.id)&&dist(state,cache)<29){state.bonus.add(cache.id);state.energy=Math.min(100,state.energy+12);state.score+=35;save();toast("Storm cache recovered · +12 energy · +35 impact");cue("collect");}
     if(state.elapsed-state.lastSave>7)save();
     if(state.elapsed-state.lastUI>.25){state.lastUI=state.elapsed;refresh();}
   }
@@ -439,7 +440,7 @@
   }
   canvas.addEventListener("click",event=>{if(world||!state.active||state.modal||state.paused)return;const rect=canvas.getBoundingClientRect();selectPoint({x:(event.clientX-rect.left)/rect.width*W,y:(event.clientY-rect.top)/rect.height*H});});
   $("coastInteract").addEventListener("click",interact);$("coastTouchAct").addEventListener("click",interact);$("coastPause").addEventListener("click",pause);$("coastHome").addEventListener("click",goHome);$("coastFinishHome").addEventListener("click",goHome);$("coastResults").addEventListener("click",results);
-  $("coastCheer").addEventListener("click",()=>{if(!state.finished||state.modal||screen.hidden)return;state.cheerAt=performance.now()/1000;tone(880,.12);toast("The harbor crew cheers with you. Stormbreak Coast is alive again!");});
+  $("coastCheer").addEventListener("click",()=>{if(!state.finished||state.modal||screen.hidden)return;state.cheerAt=performance.now()/1000;cue("victory");toast("The harbor crew cheers with you. Stormbreak Coast is alive again!");});
   $("coastRecenter").addEventListener("click",()=>world?.recenter());
   for(const button of screen.querySelectorAll?.("[data-coast-key]")||[]){const key=button.dataset.coastKey;button.addEventListener("pointerdown",event=>{event.preventDefault();button.setPointerCapture?.(event.pointerId);state.keys.add(key);});for(const type of ["pointerup","pointercancel","lostpointercapture"])button.addEventListener(type,()=>state.keys.delete(key));}
   window.addEventListener("keydown",event=>{
