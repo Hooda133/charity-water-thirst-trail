@@ -46,6 +46,13 @@ function boot(values=new Map(),{denyRead=false,denyWrite=false}={}){
 let game=boot();
 assert.equal(game.api.open(),false,'Village activities require a completed pump chapter');
 game.progress.complete('valley');assert.equal(game.api.open(),true);
+assert.equal(game.document.getElementById('villageOpenActivities').getAttribute('aria-expanded'),'true');
+game.button('close').focus();game.click('close');
+assert.equal(game.panel.hidden,true,'Close activities hides the sidebar panel');
+assert.equal(game.document.activeElement,game.document.getElementById('villageOpenActivities'),
+  'Closing an active panel returns keyboard focus to its opener');
+assert.equal(game.document.getElementById('villageOpenActivities').getAttribute('aria-expanded'),'false');
+assert.equal(game.api.open(),true);
 assert.equal(game.api.snapshot().jug,0);
 game.click('go-home');assert.equal(game.walks.length,1);assert.equal(game.api.snapshot().jug,0,'Travel buttons never fill or deliver remotely');
 const obsoleteFill=game.button('fill');
