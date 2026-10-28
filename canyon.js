@@ -882,7 +882,7 @@
       let canyonArt=null;
       try{
         canyonArt=window.ThirstCanyonVisuals?.build(THREE,{
-          scene,camera,worldSpread,getState:()=>state,isWaterGarden,surfaces
+          scene,camera,worldSpread,getState:()=>state,isWaterGarden,surfaces,getGraphics:()=>graphics
         })||null;
       }catch(error){
         console.warn("Canyon advanced scenery unavailable; using safe original terrain.",error);
@@ -939,6 +939,12 @@
         }
         marks.push({key,group,ring,pillar});
       }
+      // HTML mission tags stay legible above rock formations and aqueduct masonry.
+      let missionLabels=null;
+      try{
+        missionLabels=window.TrailWorldLabels?.create?.(THREE,{camera,canvas:dom,
+          labels:marks.map(mark=>({id:mark.key,title:goals[mark.key].title,anchor:mark.group,offset:[0,3.0,0]}))})||null;
+      }catch(error){console.warn("Canyon mission label overlay unavailable; retaining sprites.",error);}
       // Character: local procedural fallback renders immediately.
       const player=new THREE.Group();scene.add(player);
       // Character remains human-sized while landscape and landmarks spread apart.
@@ -1162,10 +1168,12 @@
             const done=state.done.has(m.key);
             m.group.visible=!state.finished;
             const next=questOrder.find(key=>!state.done.has(key));
-            for(const child of m.group.children)if(child.isSprite)child.visible=!done&&(m.key===next||state.nearby===m.key);
+            for(const child of m.group.children)if(child.isSprite)child.visible=!missionLabels&&!done&&(m.key===next||state.nearby===m.key);
             m.pillar.visible=!done;m.ring.material.color.set(done?0x70c5a4:0xffd787);
             m.ring.scale.setScalar(reducedMotion||graphics.effects===false?1:1+Math.sin(time*2.2)*.08);
           }
+          missionLabels?.update({visible:!state.finished,completed:state.done,
+            activeKey:questOrder.find(key=>!state.done.has(key))||null});
           broken.visible=!state.done.has("span");
           water.color.set(state.done.has("cistern")?0x55c4cb:0x50b1b9);
           restoredWater.update();
@@ -1179,6 +1187,7 @@
         getExplorerAssetStatus(){return {...explorerStatus};},
         getGraphicsStatus(){return cinematic?.status()||null;},
         dispose(){
+          missionLabels?.dispose();
           characterVisibility?.dispose();
           cinematic?.dispose();
           explorerDisposed=true;
