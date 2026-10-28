@@ -73,7 +73,7 @@ assert.ok(h.voices.every(v=>Number.isFinite(v.stopped)&&v.stopped>v.started));
 h.voices.forEach(v=>v.onended?.());
 assert.equal(h.audio.status().activeVoices,0,"oscillators are disposed when finished");
 assert.equal(h.audio.setVolume(.25),.25);
-assert.equal(h.memory.get("thirstTrailSfxVolume"),".25");
+assert.equal(h.memory.get("thirstTrailSfxVolume"),"0.25");
 assert.equal(h.targets.at(-1),.25);
 assert.equal(h.audio.setEnabled(false),false);
 assert.equal(h.memory.get("thirstTrailSound"),"false");
