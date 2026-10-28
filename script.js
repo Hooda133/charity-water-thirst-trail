@@ -2835,6 +2835,13 @@
       const dot=ball(g,new THREE.MeshBasicMaterial({color}),0,1.72,0,.23,.23,.23,false);
       markers[key]={group:g,ring,beacon,dot,mat};
     }
+    // Keep mission names in screen space so trees, roofs and terrain cannot hide them.
+    // Sprite nameplates remain as a fallback if the optional overlay is unavailable.
+    let missionLabels=null;
+    try{
+      missionLabels=window.TrailWorldLabels?.create?.(THREE,{camera,canvas:view,
+        labels:spots.map(([key,,,name])=>({id:key,title:name,anchor:markers[key].group,offset:[0,3.6,0]}))})||null;
+    }catch(error){console.warn("Valley 3D mission labels unavailable; retaining sprites.",error);}
     // Four sealed-water supply caches: collecting them restores some energy.
     const supplyModels=[];
     const bottleMat=new THREE.MeshStandardMaterial({color:0x91e1e5,roughness:.29,metalness:.08});
@@ -3493,7 +3500,7 @@
       for(const [key,m] of Object.entries(markers)){
         m.group.visible=playing&&state.screen!=="village"&&state.screen!=="ended";
         const nextGoal=questDefs.find(quest=>!state.done?.has(quest.key))?.key;
-        for(const child of m.group.children)if(child.isSprite)child.visible=!state.scenic&&(key===nextGoal||state.nearby===key);
+        for(const child of m.group.children)if(child.isSprite)child.visible=!missionLabels&&!state.scenic&&(key===nextGoal||state.nearby===key);
         const done=(state.done&&state.done.has(key))||(key==="river"&&state.inventory&&state.inventory.has("testKit"));
         m.mat.color.setHex(done?0x69edaa:(key==="camp"?0x8af9bf:(key==="river"||key==="spring"?0x75edff:0xffd45b)));
         m.ring.scale.setScalar(1+Math.sin(time*3+spots.findIndex(s=>s[0]===key))*.08);
@@ -3641,6 +3648,8 @@
         camTarget.lerp(aim,1-Math.exp(-4.7*cameraFrameDelta));
       }
       camera.lookAt(camTarget);
+      missionLabels?.update({visible:playing&&!state.scenic&&state.screen!=="village"&&state.screen!=="ended",
+        completed:state.done,activeKey:questDefs.find(quest=>!state.done.has(quest.key))?.key||null});
       if(!playing||state.scenic||state.screen==="ended")characterVisibility?.clear?.();
       else characterVisibility?.update(camera,frameDelta);
       cinematic?.update(time,{reduced:reduceMotion,effects:effectsEnabled,night});
@@ -3650,6 +3659,7 @@
       render,
       focus(){view.focus({preventScroll:true});},
       dispose(){
+        missionLabels?.dispose();
         cinematic?.dispose();
         villageRestoration?.dispose();
         villageLifeArt?.dispose();
