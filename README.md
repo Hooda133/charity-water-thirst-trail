@@ -10,6 +10,14 @@ These changes are under review; the branch needs automated checks and visual gam
 
 The game uses locally hosted **Nunito Sans** to evoke charity: water's Proxima Nova/Avenir typography. One shared family spans headings, body copy, controls, chapter menus, footer links, map labels, and 3D nameplates, with weight and spacing providing hierarchy. The variable font loads without a font service, keeps text visible while loading, and includes a readable fallback stack. Source, build details, and the open font license are in [assets/fonts/README.md](assets/fonts/README.md).
 
+## Action-only sound effects and player volume settings
+
+The game's shared `audio-system.js` provides a small, original Web Audio palette for collecting items, successful repairs, incorrect answers, water deliveries, village building projects and chapter victories. **No background music, ambient loops, external audio downloads or recurring sound timers** are used. All notes stop within one second, repeated identical cues are rate-limited, and Web Audio initializes only after an action actually requests sound. Missing audio support never stops gameplay.
+
+Use the **♫ button** in the top bar to mute or unmute the game, or open **⚙ Game settings → Sound & Feedback** for a saved on/off checkbox, a **0–100% effects volume slider**, and an optional **Test sound** preview. The old `thirstTrailSound` preference is preserved; effects volume is saved independently in `thirstTrailSfxVolume` (default 55%) and works across all chapters and Village Life. Setting volume to zero is silent without modifying the mute preference.
+
+Run `node tools/test-audio-system.mjs` for offline engine and interaction-wiring checks, or `python tools/test-audio-browser.py` with Chromium/Playwright installed to verify actual settings interaction, persistence, non-autoplay and finite oscillators. Both run in GitHub Actions when audio source code changes.
+
 ## Thirst Trail 3.3 — Clickable supplies and visible DOM reactions
 
 In Chapter 1, **Water for the trail** shows the four sealed-water supply drops beside the map. Click a nearby drop to collect it; a distant drop guides the explorer toward its cache. Collection removes the actual HTML button, inserts a named collected badge, and updates the counter, status, energy and impact. These are the existing expedition supplies: each can restore up to 12 energy and award 25 impact once per run. Walking over a cache still collects it automatically. Saved collections survive reload; replay restores the drops.
