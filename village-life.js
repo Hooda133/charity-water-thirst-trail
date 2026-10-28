@@ -61,7 +61,7 @@
     data.jug=capacity;
     const litres=request(),deliveries=Math.floor(capacity/litres);
     message="Jug filled: 8 / 8 litres. "+(deliveries===1?"Each delivery uses "+litres+" litres; refill before visiting the next neighbour.":"You can make "+deliveries+" deliveries of "+litres+" litres.");
-    window.ThirstAudio?.tone?.(680,.08);save();
+    window.ThirstAudio?.play?.("water");save();
   }
   function deliver(person){
     if(!active||!requireNear(person))return;
@@ -72,7 +72,7 @@
     data.jug-=litres;data.served.push(person.id);data.delivered[person.id]++;
     if(first)data.materials+=2;
     message=person.person+": “"+person.after+"”"+(first?" +2 building materials.":" Thank you for another delivery.");
-    window.ThirstAudio?.tone?.(790,.1);save();
+    window.ThirstAudio?.play?.("deliver");save();
   }
   function discover(leak){
     if(!active||!requireNear(leak))return;
@@ -93,13 +93,13 @@
     data.repair.step++;
     if(data.repair.step===3){data.fixed.push(leak.id);data.materials+=3;data.repair=null;message="✓ Leak repaired. The wet patch is drying. +3 building materials.";}
     else message="✓ Step complete. Next: "+leak.steps[data.repair.step]+".";
-    window.ThirstAudio?.tone?.(620+index*80,.07);save();
+    window.ThirstAudio?.play?.(data.repair?"repair":"reward");save();
   }
   function buildProject(project){
     if(!active||data.upgrades.includes(project.id))return;
     if(data.materials<project.cost)return announce("You need "+project.cost+" materials. First deliveries earn 2 each; each repaired leak earns 3.");
     data.materials-=project.cost;data.upgrades.push(project.id);message="✓ "+project.name+" built! Visit it in the village to see your work.";
-    window.ThirstAudio?.tone?.(930,.12);save();
+    window.ThirstAudio?.play?.("build");save();
   }
   function nextRound(){
     if(!active||data.served.length!==3)return;
