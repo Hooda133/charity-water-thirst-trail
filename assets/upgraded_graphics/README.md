@@ -1,0 +1,9 @@
+# Curated Thirst Trail assets
+
+`tools/import_cc0_assets.py` downloads a curated set of Kenney CC0 GLBs, Quaternius CC0 nature/building models, and small ambientCG CC0 PBR material packages here. It optionally imports verified-CC0 Poly Pizza models with an API key. Additional specifically licensed Quaternius/Fab downloads can be configured in `tools/asset_sources.json`.
+
+Each imported file is recorded in `manifest.json` with creator, original pack page, license, fetched URL where available, SHA-256, and byte size. Kenney/Quaternius models come from pinned, publicly available GitHub commits because their official pack pages or itch.io downloads do not provide reliable unauthenticated endpoints for runners. Sources: [Kenney mirror and CC0 license](https://github.com/Hidencod/tge-assets), [Quaternius mirror credits](https://github.com/anshaneja5/skyline-run/blob/main/CREDITS.md), [Quaternius source license](https://quaternius.com/packs/stylizednaturemegakit.html). Quaternius/Fab entries must provide a publicly available direct HTTPS file URL, an independently verified CC license, and SHA-256; the importer does not scrape or bypass marketplace access.
+
+Imported files are **not automatically loaded by the game**. Integrate selectively into Three.js after reviewing artistic consistency, asset scale, model texture dependencies, mobile performance, and credits. Never replace `assets/characters/explorer.gltf` blindly or remove its yellow-jug character design. Existing game scenes and gameplay are unchanged by this importer.
+
+Free does not mean public domain: Fab Standard/other marketplace licenses are not auto-importable into a public GitHub repo. Poly Pizza has per-model CC0/CC-BY licensing; the optional API adapter accepts only CC0 records. Kenney and Quaternius CC0 source URLs: https://kenney.nl/support and https://quaternius.com/faq.html.
