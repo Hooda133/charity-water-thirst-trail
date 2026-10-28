@@ -1310,6 +1310,7 @@
     const percent=Math.round((audioEngine?.volume ?? .55)*100);
     $("sfxVolume").value=String(percent);
     $("sfxVolumeValue").textContent=percent+"%";
+    $("sfxStyle").value=audioEngine?.style ?? "soft";
     $("sfxPreview").disabled=!state.sound||percent===0;
     $("soundStatus").textContent=!state.sound?"Sound muted":
       percent===0?"Volume is at 0%":"Sound effects on";
@@ -1331,6 +1332,11 @@
   $("sfxVolume").addEventListener("input",event=>{
     audioEngine?.setVolume(Number(event.target.value)/100);
     syncSoundButton();
+  });
+  $("sfxStyle").addEventListener("change",event=>{
+    audioEngine?.setStyle(event.target.value);
+    syncSoundButton();
+    if(state.sound)playCue("preview");
   });
   $("sfxPreview").addEventListener("click",()=>playCue("preview"));
   audioEngine?.setEnabled(state.sound);
