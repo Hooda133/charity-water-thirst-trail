@@ -3,8 +3,8 @@
    Legacy high scores and preferences remain stored under their original keys. */
 (() => {
   const KEY="thirstTrailProgressV2",BACKUP=KEY+"Backup";
-  const levels=Object.freeze(["valley","canyon"]),MAX_CHECKPOINT=12000,MAX_PROGRESS=32000;
-  const blank=()=>({version:2,unlocked:["valley"],completed:[],saves:{},lastLevel:"valley",revision:0});
+  const levels=Object.freeze(["valley","canyon","coast"]),MAX_CHECKPOINT=12000,MAX_PROGRESS=64000;
+  const blank=()=>({version:2,unlocked:["valley"],completed:[],saves:{},community:null,lastLevel:"valley",revision:0});
   const object=value=>value!==null&&typeof value==="object"&&!Array.isArray(value);
   const clone=value=>JSON.parse(JSON.stringify(value));
   function checkpoint(value){
@@ -20,18 +20,18 @@
     // Migrate only recognized chapter fields from older snapshots. Salvage them
     // rather than erase a whole expedition when one optional field is missing.
     if(data.version===undefined&&!('unlocked' in data||'completed' in data||'saves' in data))return null;
-    const completed=levels.filter(x=>Array.isArray(data.completed)&&data.completed.includes(x));
-    // A finished Canyon proves Valley was finished, even if its flag was damaged.
-    if(completed.includes("canyon")&&!completed.includes("valley"))completed.unshift("valley");
+    const lastCompleted=Math.max(-1,...levels.map((x,i)=>Array.isArray(data.completed)&&data.completed.includes(x)?i:-1));
+    // Each completed later chapter proves its prerequisites were completed.
+    const completed=levels.filter((_,i)=>i<=lastCompleted);
     const unlocked=levels.filter(x=>x==="valley"||completed.includes(x)||
-      (x==="canyon"&&completed.includes("valley"))||
+      completed.includes(levels[levels.indexOf(x)-1])||
       (Array.isArray(data.unlocked)&&data.unlocked.includes(x)));
     const saves={};
     for(const name of levels){
       const row=object(data.saves)?checkpoint(data.saves[name]):null;
       if(row&&unlocked.includes(name))saves[name]=row;
     }
-    return {version:2,completed,unlocked,saves,
+    return {version:2,completed,unlocked,saves,community:checkpoint(data.community),
       lastLevel:unlocked.includes(data.lastLevel)?data.lastLevel:"valley",
       revision:Number.isSafeInteger(data.revision)&&data.revision>=0?data.revision:0};
   }
@@ -51,7 +51,8 @@
           // damaged. Do not combine checkpoint maps: a completed chapter may
           // intentionally have cleared an older replay checkpoint.
           const intact=Array.isArray(parsed.unlocked)&&Array.isArray(parsed.completed)&&object(parsed.saves)&&
-            levels.every(name=>parsed.saves[name]===undefined||checkpoint(parsed.saves[name])!==null);
+            levels.every(name=>parsed.saves[name]===undefined||checkpoint(parsed.saves[name])!==null)&&
+            (parsed.community===undefined||parsed.community===null||checkpoint(parsed.community)!==null);
           candidates.push({data,intact});
         }
       }catch{/* A broken primary can still be recovered from the independent backup. */}
@@ -93,8 +94,9 @@
   function complete(level){
     if(!levels.includes(level)||!current.unlocked.includes(level))return false;
     const data=snapshot();
-    if(!data.completed.includes(level))data.completed.push(level);
-    if(level==="valley"&&!data.unlocked.includes("canyon"))data.unlocked.push("canyon");
+    const index=levels.indexOf(level);
+    data.completed=levels.filter((name,i)=>i<=index||data.completed.includes(name));
+    data.unlocked=levels.filter((name,i)=>i<=Math.min(index+1,levels.length-1)||data.unlocked.includes(name));
     delete data.saves[level];data.lastLevel=level;
     return write(data);
   }
@@ -102,6 +104,13 @@
     if(!levels.includes(level))return false;
     const data=snapshot();delete data.saves[level];return write(data);
   }
+  function saveCommunity(value){
+    const row=checkpoint(value);
+    if(!row)return false;
+    const data=snapshot();data.community=row;
+    return write(data);
+  }
+  function community(){return current.community?clone(current.community):null;}
   function storageStatus(){return {...status};}
-  window.TrailProgress=Object.freeze({snapshot,unlocked,save,saved,complete,clearSave,storageStatus,levels});
+  window.TrailProgress=Object.freeze({snapshot,unlocked,save,saved,complete,clearSave,saveCommunity,community,storageStatus,levels});
 })();

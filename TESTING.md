@@ -4,6 +4,41 @@ Current repair evidence: [October 26 gameplay audit](GAMEPLAY_AUDIT.md). It reco
 
 This project is a static HTML/CSS/JavaScript game. Run it from a local HTTP server (for example `python3 -m http.server 8000`) and open the site in Chrome or Edge. Open DevTools → Console to spot JavaScript and WebGL errors.
 
+## Interactive DOM outcomes — version 3.3
+
+```bash
+python tools/test-dom-interactions-browser.py
+python tools/test-dom-interactions-browser.py --mobile
+```
+
+The new browser check uses MutationObserver and retained element handles to verify that collecting a supply removes an HTML button, adds a badge and changes text. It also checks stable remaining nodes, keyboard focus, travel/proximity pickup, guarded rewards, saved collections, replay restoration, paused controls, and pipeline rotation/feedback through actual controls. Fixtures supply legitimate unfinished chapter checkpoints where needed; the test does not complete puzzles through injected game state. Artifacts are written to ignored `work/dom-outcome-qa/`.
+
+## Difficulty in Settings — version 3.2
+
+```bash
+node tools/test-expedition-mode.mjs
+node tools/test-village-life.mjs
+node tools/test-canyon-regressions.mjs
+node tools/test-coast.mjs
+python tools/test-difficulty-browser.py
+python tools/test-difficulty-browser.py --mobile
+```
+
+The three difficulties share the existing play-style preference, so Explorer/Challenge saves remain usable as Easy/Hard. The Node regressions exercise actual costs, pressure validation, delivery conservation and save recovery. The browser regression selects difficulties through **⚙ Game settings**, uses keyboard movement and real puzzle/delivery controls, and checks persistence and the mobile layout. Difficulty changes must preserve partial valves/circuits, carried jug water and village projects. Graphics presets remain independent. Existing complete gameplay suites continue to cover all chapter celebrations and Village Life.
+
+## Graphics overhaul — October 27
+
+The 3.1 graphics pass was checked in actual Chromium WebGL against screenshots of the previous committed game. Low and High rendered Valley/Village Life, restored Canyon and restored Coast without uncaught page errors, shader errors, failed local assets or WebGL context loss. The real settings menu changed rendering resolution and effects live in each chapter. A 390×844 check covered the title and Coast puzzle layout; the full fallback browser suites also covered gameplay, saves, mobile controls and celebrations.
+
+```bash
+python tools/test-graphics-browser.py --presets low,high --live-check --mobile
+python tools/test-graphics-browser.py --smoke
+```
+
+The small smoke test compiles the shared water/postprocessing shaders, loads the three PBR maps, samples nonblank rendered pixels and verifies texture/environment disposal. It runs in GitHub Actions alongside the gameplay checks. Full visual captures use restored-scene save fixtures and do not replace the separate gameplay walkthrough. Screenshots and JSON reports are written to ignored `work/graphics-qa/`.
+
+These software-rendered checks establish rendering correctness and layout; they do not measure frame rate or memory on a player's laptop or phone. Low/Medium, resolution and effects controls remain available for less powerful devices.
+
 ## Phase 1 — Graphics
 - [ ] Start page shows a real 3D valley (not the fallback 2D illustration).
 - [ ] Start Adventure transitions into the 3D game without a blank screen.

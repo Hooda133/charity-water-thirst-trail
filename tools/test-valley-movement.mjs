@@ -57,7 +57,6 @@ const sandbox={document,window,localStorage:storage,console,
  performance:{now:()=>time},requestAnimationFrame(fn){frames.push(fn);return frames.length},
  setTimeout(fn){return 1},clearTimeout(){},Event:class{constructor(type){this.type=type}}};
 runInNewContext(readFileSync(resolve(root,"progression.js"),"utf8"),sandbox);
-runInNewContext(readFileSync(resolve(root,"difficulty.js"),"utf8"),sandbox);
 runInNewContext(script,sandbox);
 const snapshot=()=>window.ThirstTrail.snapshot();
 const dispatch=(name,event={})=>{for(const cb of handlers.get(name)||[])cb(event)};
@@ -238,6 +237,7 @@ for(let hint=0;hint<10;hint++){
 }
 assert.ok(nodes.get('pipeStatus').className.includes('is-success'),'Actual tile rotations form a leak-free supplied network');
 choose(0);assert.equal(state.modalKind,'quiz');
+assert.equal(snapshot().waterRestored,false,'A solved pipe network alone cannot release village water');
 const beforeWrongSafety=state.energy;choose(1);
 assert.equal(state.energy,beforeWrongSafety-6,'Unsafe pump answer costs energy and keeps the quiz open');
 assert.equal(window.TrailProgress.saved('valley').energy,state.energy,'Wrong-answer penalty is immediately saved');
@@ -273,20 +273,110 @@ assert.equal(state.nearby,'pump','Recovered player can genuinely walk back to th
 assert.equal(state.modalKind,'quiz');assert.match(nodes.get('modalTitle').textContent,/2\/3/);
 console.log('✓ Actual energy depletion → camp recovery preserves work and allows walking back to finish');
 for(const answer of [1,2])choose(answer);
+assert.equal(snapshot().screen,'playing','Safety approval waits for the player to open the village valve');
+assert.equal(snapshot().pumpSafetyPassed,true,'The completed safety inspection is recorded');
+assert.equal(state.modalKind,'release','The safety quiz leads to the final water-release interaction');
+assert.equal(snapshot().waterRestored,false,'Village water stays off before the valve is opened');
+assert.equal(snapshot().quests.includes('pump'),false,'Pump reward waits for explicit water release');
+assert.equal(window.TrailProgress.unlocked('canyon'),false,'Valve interaction remains part of Chapter 1 completion');
+assert.equal(window.TrailProgress.saved('valley').pumpSafetyPassed,true,'Safety approval saves before water release');
+const staleRelease=nodes.get('modalChoices').children[0];
+choose(1);
+staleRelease.click();
+assert.equal(snapshot().waterRestored,false,'A detached valve control cannot release water after leaving the dialog');
+nodes.get('valleyChapters').click();nodes.get('valleyChapter').click();go(1540,690);
+assert.equal(snapshot().pumpSafetyPassed,true,'Safety approval survives checkpoint restoration');
+assert.equal(state.modalKind,'release','Returning to the pump does not repeat completed safety questions');
+const finalValve=nodes.get('modalChoices').children[0];
+finalValve.click();
 assert.equal(snapshot().screen,'ended');
 assert.ok(snapshot().quests.includes('pump'));
+assert.equal(snapshot().waterRestored,true,'Opening the valve restores village water');
 assert.equal(state.effect.kind,'victory');
 assert.equal(window.TrailProgress.unlocked('canyon'),true,'Pump victory unlocks the next chapter');
 assert.equal(window.TrailProgress.saved('valley'),null,'Completion removes the finished checkpoint');
 assert.ok(Number(values.get('thirstTrailBest'))>0,'Winning score is retained');
+assert.equal(nodes.get('valleyVictoryScene').hidden,false,'The end screen shows the village-water celebration');
+const finalScore=snapshot().score,finalEnergy=snapshot().energy,finalTime=snapshot().elapsed;
+finalValve.click();staleRelease.click();
+assert.equal(snapshot().score,finalScore,'Repeated and detached valve callbacks cannot award victory twice');
+for(let cycle=0;cycle<3;cycle++){
+ const watch=nodes.get('modalChoices').children.find(n=>n.textContent.includes('Watch water reach the village'));
+ assert.ok(watch,'The completed village can be watched');watch.click();
+ assert.equal(snapshot().watchingVillage,true);
+ assert.equal(nodes.get('modalBackdrop').hidden,true);
+ assert.equal(nodes.get('valleyCelebration').hidden,false,'The restored village keeps its ending controls');
+ nodes.get('valleyCelebrate').click();nodes.get('valleyCelebrate').click();
+ assert.equal(snapshot().score,finalScore,'Celebrating with villagers cannot farm points');
+ assert.equal(snapshot().energy,finalEnergy);assert.equal(snapshot().elapsed,finalTime);
+ frame();assert.equal(snapshot().elapsed,finalTime,'Watching village water pauses the expedition timer');
+ nodes.get('valleyViewResults').click();
+ assert.equal(snapshot().watchingVillage,false);
+ assert.equal(nodes.get('modalBackdrop').hidden,false);
+ assert.equal(nodes.get('valleyCelebration').hidden,true,'Ending controls do not overlap the results dialog');
+ assert.equal(snapshot().score,finalScore,'Reopening results does not repeat the completion bonus');
+ assert.equal(window.TrailProgress.saved('valley'),null,'Watching/reopening does not resurrect the completed checkpoint');
+}
 nodes.get('modalChoices').children.find(n=>n.textContent.includes('Chapter selection')).click();
+assert.equal(nodes.get('valleyCelebration').hidden,true,'Chapter selection hides the village celebration');
 nodes.get('valleyChapter').click();
 assert.equal(snapshot().screen,'playing');assert.equal(snapshot().x,310);
 assert.equal(snapshot().quests.length,0,'Replay starts with fresh quests');
+assert.equal(snapshot().pumpSafetyPassed,false,'Replay resets the safety-release state');
+assert.equal(snapshot().waterRestored,false,'Replay resets village water');
+assert.equal(snapshot().watchingVillage,false);
+assert.equal(nodes.get('valleyCelebration').hidden,true);
 assert.equal(window.TrailProgress.saved('valley')?.x,310,'Completed chapters still save a new replay');
 assert.ok(window.TrailProgress.snapshot().completed.includes('valley'),'Replay keeps the completion/unlock record');
 console.log('✓ Malformed checkpoint recovery and full Valley quests → real pipe callbacks → safety quiz → victory');
 console.log('✓ Canyon unlock, winning score, completion checkpoint cleanup and resumable replay');
+console.log('✓ Saved safety approval, explicit valve release, village watch/cheer/results and reward-idempotent replay');
+
+// Completed older saves still recover their earned finale; a stray safety flag
+// cannot bypass an unsolved pipeline or missing quest prerequisites.
+nodes.get('valleyChapters').click();
+window.TrailProgress.save('valley',{done:['elder','toolkit','gasket','pump'],inventory:['fieldNotes','toolkit','gasket'],energy:70,score:800});
+nodes.get('valleyChapter').click();
+assert.equal(snapshot().screen,'ended','A legacy completed pump checkpoint still finishes');
+assert.equal(snapshot().waterRestored,true);
+assert.equal(window.TrailProgress.saved('valley'),null);
+let canyonLaunches=0;
+window.TrailCanyon={suspend(){},launch(){canyonLaunches++;}};
+choose(3);nodes.get('valleyContinueCanyon').click();
+assert.equal(canyonLaunches,1,'The restored-village control launches Chapter 2');
+assert.equal(nodes.get('valleyCelebration').hidden,true,'Starting Chapter 2 hides the village ending controls');
+delete window.TrailCanyon;
+nodes.get('valleyChapters').click();
+window.TrailProgress.save('valley',{done:['elder','toolkit','gasket'],inventory:['fieldNotes','toolkit','gasket'],pumpSafetyPassed:true,pipeReady:false,energy:70});
+nodes.get('valleyChapter').click();go(1540,690);
+assert.equal(snapshot().pumpSafetyPassed,false,'Safety approval requires a verified solved pipeline');
+assert.equal(state.modalKind,'pipe');
+assert.equal(snapshot().waterRestored,false);
+console.log('✓ Legacy pump completion recovers; invalid safety flags cannot bypass the pipe puzzle');
+
+// Load the actual shared preferences after the legacy baseline, then exercise
+// the existing puzzle callbacks with each difficulty while keeping saved work.
+runInNewContext(readFileSync(resolve(root,'expedition-mode.js'),'utf8'),sandbox);
+const partialPipeline=JSON.stringify(window.TrailProgress.saved('valley').pipeTurns);
+for(const [difficulty,cost] of [['easy',.35],['normal',2],['hard',3.6]]){
+ window.TrailMode.setDifficulty(difficulty);state.energy=70;
+ choose(0);
+ assert.ok(Math.abs(70-state.energy-cost)<1e-9,'Pipe mistake uses '+difficulty+' penalties');
+ assert.ok(nodes.get('pipeStatus').textContent.includes('−'+cost+' energy'),'Pipe feedback shows the actual energy cost');
+ assert.equal(JSON.stringify(window.TrailProgress.saved('valley').pipeTurns),partialPipeline,'Changing difficulty preserves pipe rotations');
+ assert.equal(snapshot().difficulty,difficulty);
+ assert.equal(nodes.get('difficultySelect').value,difficulty,'Settings reflects the shared preference');
+}
+choose(1);go(705,610);
+assert.equal(state.modalKind,'quiz');
+for(const [difficulty,cost] of [['easy',1.05],['normal',6],['hard',10.8]]){
+ window.TrailMode.setDifficulty(difficulty);state.energy=70;
+ choose(0);
+ assert.ok(Math.abs(70-state.energy-cost)<1e-9,'Safety mistake uses '+difficulty+' penalties');
+ assert.ok(nodes.get('modalTip').textContent.includes('−'+cost+' energy'),'Safety feedback shows the actual energy cost');
+ assert.equal(state.modalKind,'quiz','Wrong answers keep the current question available');
+}
+console.log('✓ Shared Settings difficulty scales actual pipe/quiz penalties and preserves saved puzzle work');
 
 
 // Exercise the REAL camera-controller click and release functions in isolation.

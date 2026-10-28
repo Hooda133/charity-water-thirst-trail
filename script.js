@@ -20,8 +20,8 @@
   // Sealed expedition drinking-water caches are placed on safe walkable banks.
   // Unlike river or rainwater, these are pre-packed supplies for the explorer.
   const supplyCaches=[
-    {id:"village",name:"Village trail",x:405,y:690},{id:"camptrail",name:"Camp trail",x:610,y:455},
-    {id:"easttrail",name:"East trail",x:1115,y:695},{id:"hillside",name:"Hillside",x:1350,y:430}
+    {id:"village",label:"Village trail",x:405,y:690},{id:"camptrail",label:"Camp trail",x:610,y:455},
+    {id:"easttrail",label:"East bank",x:1115,y:695},{id:"hillside",label:"Hillside",x:1350,y:430}
   ];
   const questDefs = [
     {key:"elder",title:"Meet the village elder", detail:"Learn what the village needs",icon:"💬"},
@@ -30,8 +30,8 @@
     {key:"pump",title:"Restore the village pump",detail:"Complete the repair challenge",icon:"⚙️"}
   ];
   const safeStore = {
-    get(mode="normal") {try{return Number(localStorage.getItem(mode==="normal"?"thirstTrailBest":"thirstTrailBest_"+mode))||0;}catch{return 0;}},
-    set(v,mode="normal") {try{localStorage.setItem(mode==="normal"?"thirstTrailBest":"thirstTrailBest_"+mode,String(v));}catch{/* optional storage */}},
+    get() {try{return Number(localStorage.getItem("thirstTrailBest"))||0;}catch{return 0;}},
+    set(v) {try{localStorage.setItem("thirstTrailBest",String(v));}catch{/* optional storage */}},
     getSound() {try{return localStorage.getItem("thirstTrailSound")!=="false";}catch{return true;}},
     setSound(v) {try{localStorage.setItem("thirstTrailSound",String(v));}catch{/* optional storage */}},
     tutorialSeen() {try{return localStorage.getItem("thirstTrailTutorial")==="true";}catch{return false;}},
@@ -42,42 +42,41 @@
   const graphicsPresets={
     low:{resolution:.75,shadows:false,effects:false,sensitivity:.9},
     medium:{resolution:1,shadows:true,effects:true,sensitivity:1},
-    high:{resolution:1.25,shadows:true,effects:true,sensitivity:1},
-    ultra:{resolution:1.5,shadows:true,effects:true,sensitivity:1.15}
+    high:{resolution:1.1,shadows:true,effects:true,sensitivity:1},
+    ultra:{resolution:1.35,shadows:true,effects:true,sensitivity:1.15}
   };
   const savedGraphics=safeStore.getGraphics();
-  const graphics={...graphicsPresets.medium,...(savedGraphics||{})};
-  let graphicsPreset=savedGraphics?.preset||"medium";
+  const graphics={...graphicsPresets.high,...(savedGraphics||{})};
+  let graphicsPreset=savedGraphics?.preset||"high";
   function graphicsProfile(){return {...graphics,preset:graphicsPreset};}
-  const difficulty=window.TrailDifficulty;
   const state = {
-    difficulty:difficulty.selected(),
     screen:"start", energy:100, score:0, elapsed:0, x:310, y:620, moving:false,
     walkT:0, facing:1, keys:new Set(), touch:new Set(), path:[], goal:null, destination:null,
     done:new Set(), inventory:new Set(), campUses:0, quizStep:0, modalOpen:false, modalKind:"",
     sound:safeStore.getSound(), cameraX:0, cameraY:0, nearby:null, ended:false, lastStatus:"",
     toastTimeout:null, effect:null, impactTimer:null, supplies:new Set(), scenic:false,
-    pipeReady:false,pumpQuizStep:0
+    pipeReady:false,pumpQuizStep:0,pumpSafetyPassed:false,
+    villageWaterAt:0,villageCheerAt:-100,villageSummary:null
   };
 
+  const exploring=()=>state.screen==="playing"||state.screen==="village";
+  let supplyUI=null;
+  const playStyle=()=>window.TrailMode?.profile?.()||{id:"normal",label:"Normal",difficulty:"normal",energyMultiplier:1,mistakeMultiplier:1,hints:false};
+  const mistakeAmount=amount=>amount*(playStyle().mistakeMultiplier??1);
+  const mistakeLabel=amount=>String(Number((mistakeAmount(amount)*playStyle().energyMultiplier).toFixed(2)));
+  const quizTip=()=>"Think carefully: wrong answers cost "+mistakeLabel(6)+" energy.";
+  const pipeTip=()=>"IN connects to tile 4 on the left; OUT leaves tile 6 on the right. Teal shows supplied pipes, red shows open joints. Hints are free; unsuccessful flow tests cost "+mistakeLabel(2)+" energy.";
   const chapters=window.TrailProgress;
-  const rules=()=>difficulty.get(state.difficulty);
-  const energyCost=n=>Math.round(n*rules().energyCost*100)/100;
-  function refreshBest(){
-    const mode=difficulty.selected(),best=safeStore.get(mode);
-    $("highScoreStart").textContent=best?best.toLocaleString():"—";
-    $("highScoreMode").textContent=difficulty.get(mode).label;
-  }
   let lastValleySaveTime=0;
   function saveValley(){
     if(state.screen!=="playing"||!chapters||state.ended)return;
     chapters.save("valley",{
-      difficulty:state.difficulty,
       energy:Math.round(state.energy*10)/10,score:state.score,
       elapsed:Math.round(state.elapsed),x:Math.round(state.x),y:Math.round(state.y),
       done:[...state.done],inventory:[...state.inventory],
       supplies:[...state.supplies],campUses:state.campUses,
-      pipeTurns:[...pipeTurns],pipeReady:state.pipeReady,pumpQuizStep:state.pumpQuizStep
+      pipeTurns:[...pipeTurns],pipeReady:state.pipeReady,pumpQuizStep:state.pumpQuizStep,
+      pumpSafetyPassed:state.pumpSafetyPassed
     });
   }
   function refreshChapters(){
@@ -92,19 +91,25 @@
     $("canyonChapterStatus").textContent=canyonUnlocked&&canyonSave?"▶ Continue saved chapter":
       data.completed.includes("canyon")?"✓ Chapter complete · Replay":
       canyonUnlocked?"▶ Chapter unlocked":"🔒 Finish Chapter 1 to unlock";
-    if(valleySave)$("valleyChapterStatus").textContent+=" · "+difficulty.get(data.saves.valley.difficulty).label;
-    if(canyonSave&&canyonUnlocked)$("canyonChapterStatus").textContent+=" · "+difficulty.get(data.saves.canyon.difficulty).label;
+    const coastUnlocked=chapters.unlocked("coast"),villageUnlocked=data.completed.includes("valley");
+    $("coastChapter").disabled=!coastUnlocked;$("coastChapter").classList.toggle("is-locked",!coastUnlocked);
+    $("coastChapterStatus").textContent=data.saves.coast?"▶ Continue saved chapter":data.completed.includes("coast")?"✓ Chapter complete · Replay":coastUnlocked?"▶ Chapter unlocked":"🔒 Finish Chapter 2 to unlock";
+    $("villageChapter").disabled=!villageUnlocked;$("villageChapter").classList.toggle("is-locked",!villageUnlocked);
+    $("villageChapterStatus").textContent=villageUnlocked?"▶ Return to your community":"🔒 Restore the village first";
   }
   function showChapters(){
+    window.TrailVillageLife?.close?.();window.TrailCoast?.suspend?.();
     closeModal(true);
     state.screen="start";state.moving=false;state.keys.clear();state.touch.clear();
     $("gameScreen").hidden=true;$("canyonScreen").hidden=true;$("startScreen").hidden=false;
+    $("coastScreen").hidden=true;$("gameScreen").classList.toggle("is-village",false);
+    refreshVillageCelebration();
     window.TrailCanyon?.suspend?.();refreshChapters();
     window.scrollTo?.(0,0);
   }
   function continueValley(){
     const saved=chapters?.saved("valley");
-    start({resume:!!saved,mode:saved?difficulty.normalize(saved.difficulty):difficulty.selected()});
+    start({resume:!!saved});
     if(!saved)return;
     closeModal(true);
     const number=(value,fallback)=>value!==null&&value!==""&&
@@ -128,8 +133,10 @@
     pipeTurns=Array.isArray(saved.pipeTurns)&&saved.pipeTurns.length===9&&saved.pipeTurns.every(n=>Number.isInteger(n)&&n>=0&&n<4)?[...saved.pipeTurns]:[...PIPE_START];
     state.pipeReady=saved.pipeReady===true&&pipeFlow().solved;
     state.pumpQuizStep=state.pipeReady?Math.max(0,Math.min(2,Math.floor(number(saved.pumpQuizStep,0)))):0;
+    state.pumpSafetyPassed=state.done.has("pump")||(saved.pumpSafetyPassed===true&&state.pipeReady&&
+      ["elder","toolkit","gasket"].every(key=>state.done.has(key)));
     state.supplies=new Set((Array.isArray(saved.supplies)?saved.supplies:[]).filter(x=>supplyCaches.some(s=>s.id===x)));
-    state.campUses=Math.max(0,Math.min(rules().campUses,Math.floor(number(saved.campUses,0))));
+    state.campUses=Math.max(0,Math.min(2,Math.floor(number(saved.campUses,0))));
     state.lastStatus="";updateNearby();updateUI();notify("Welcome back — valley progress restored.");
     saveValley();
     if(state.done.has("pump"))end(true,"Your restored checkpoint confirms the pump repair. The Forgotten Canyon is ready for your next expedition.","THE LAST WELL RESTORED");
@@ -147,7 +154,8 @@
   setRenderLoading(true);
   createWorld(canvas, {
       onSelect(x,y) {
-        if(state.screen!=="playing" || state.modalOpen)return;
+        if(!exploring() || state.modalOpen)return;
+        if(state.screen==="village"){navToPosition({x,y});return;}
         let nearestKey=null, best=80;
         for(const [key,sp] of Object.entries(spots)) {
           const distance=Math.hypot(x-sp.x,y-sp.y);
@@ -208,6 +216,8 @@
   let lastMapDraw=-1;
 
   function recommendedDestination(){
+    if(state.screen==="village")return null;
+    if(state.screen==="ended"&&state.done.has("pump"))return null;
     if(state.destination&&spots[state.destination])return state.destination;
     const next=questDefs.find(q=>!state.done.has(q.key));
     return next?.key||"pump";
@@ -282,8 +292,8 @@
     c.fillStyle="#e7f9ed";c.font="900 12px system-ui";c.fillText("N",14,16);
     c.fillStyle="#567c76";c.fillRect(11,25,2,13);
     const goal=spots[dest];
-    $("mapGoalLabel").textContent=goal?
-      (state.destination?"Traveling: ":"Next: ")+goal.name:"Explore the valley";
+    $("mapGoalLabel").textContent=state.screen==="village"?"Village life · Follow a neighbour’s request":state.screen==="ended"&&state.done.has("pump")?"Village restored · Water is flowing!":
+      goal?(state.destination?"Traveling: ":"Next: ")+goal.name:"Explore the valley";
   }
   function toggleNavigator(){
     const body=$("mapBody"),button=$("mapToggle");
@@ -307,84 +317,27 @@
     return y<532||y>635 ? Math.abs(x-riverCenter(y))<94 : false;
   }
   function addScore(points){state.score+=points;tone(750,.13);}
-  // Cache controls are real DOM elements, separate from the canvas scenery.
-  // Reconcile only when membership changes so periodic HUD updates keep focus.
-  const supplyButtons=new Map();
-  const supplyBadges=new Map();
-  let supplyDisplayStamp=null;
-  function renderSupplyDrops(){
-    const stamp=state.difficulty+":"+[...state.supplies].sort().join(",");
-    if(stamp!==supplyDisplayStamp){
-      supplyDisplayStamp=stamp;
-      const focused=document.activeElement?.dataset?.supply;
-      const available=$("supplyDropList"),collected=$("collectedSupplyList");
-      const availableNodes=[],collectedNodes=[];
-      for(const id of supplyBadges.keys())if(!state.supplies.has(id))supplyBadges.delete(id);
-      for(const cache of supplyCaches){
-        if(state.supplies.has(cache.id)){
-          const badge=supplyBadges.get(cache.id)||document.createElement("span");
-          badge.className="collected-supply";badge.dataset.collectedSupply=cache.id;
-          badge.textContent="✓ "+cache.name;supplyBadges.set(cache.id,badge);collectedNodes.push(badge);
-          supplyButtons.delete(cache.id);
-          continue;
-        }
-        if(supplyButtons.has(cache.id)){
-          const button=supplyButtons.get(cache.id);
-          button.setAttribute("aria-label",`Collect sealed water at ${cache.name}, up to ${rules().supplyRecovery} energy and 25 impact`);
-          button.querySelector("small").textContent=`+${rules().supplyRecovery} energy · +25 impact`;
-          availableNodes.push(button);continue;
-        }
-        const button=document.createElement("button");
-        button.type="button";button.className="supply-drop";button.dataset.supply=cache.id;
-        button.setAttribute("aria-label",`Collect sealed water at ${cache.name}, up to ${rules().supplyRecovery} energy and 25 impact`);
-        const icon=document.createElement("span");icon.className="supply-drop-icon";
-        icon.setAttribute("aria-hidden","true");
-        icon.innerHTML='<svg viewBox="0 0 40 48" fill="none" focusable="false"><path d="M20 3C16 12 5 22 5 30a15 15 0 0 0 30 0C35 22 24 12 20 3Z" fill="currentColor"/><path d="M12 29c0 5 3 8 7 9" stroke="#fff" stroke-width="3" stroke-linecap="round"/></svg>';
-        const copy=document.createElement("span");copy.className="supply-drop-copy";
-        const title=document.createElement("strong");title.textContent=cache.name;
-        const reward=document.createElement("small");reward.textContent=`+${rules().supplyRecovery} energy · +25 impact`;
-        copy.append(title,reward);button.append(icon,copy);
-        button.addEventListener("click",()=>{
-          // Detached controls, paused dialogs, and repeated clicks cannot grant rewards.
-          if(state.screen!=="playing"||state.modalOpen||state.ended||state.supplies.has(cache.id)||supplyButtons.get(cache.id)!==button)return;
-          if(Math.hypot(state.x-cache.x,state.y-cache.y)<=42){collectNearbySupplies();return;}
-          navToPosition(cache);
-          if(state.goal?.x===cache.x&&state.goal?.y===cache.y){
-            renderSupplyDrops();
-            $("supplyDropStatus").textContent=`Walking to ${cache.name}. The drop will disappear when collected.`;
-          }
-        });
-        supplyButtons.set(cache.id,button);availableNodes.push(button);
-      }
-      available.replaceChildren(...availableNodes);collected.replaceChildren(...collectedNodes);
-      $("supplyDropStatus").textContent=state.supplies.size===supplyCaches.length?
-        "All four caches collected! Their sealed water has restored your energy.":
-        `${state.supplies.size} / ${supplyCaches.length} caches collected. Select a drop to find sealed water.`;
-      if(focused)(supplyButtons.get(focused)||supplyButtons.values().next().value||$("supplyDropTitle")).focus({preventScroll:true});
-    }
-    for(const cache of supplyCaches){
-      const selected=state.screen==="playing"&&!state.modalOpen&&state.goal?.x===cache.x&&state.goal?.y===cache.y;
-      supplyButtons.get(cache.id)?.classList.toggle("is-target",!!selected);
-    }
+  function syncSupplyUI(){
+    supplyUI?.update({active:state.screen==="playing",paused:state.modalOpen||!$("graphicsPanel").hidden,
+      collected:[...state.supplies],x:state.x,y:state.y});
+  }
+  function collectSupply(id,manual=false){
+    if(state.screen!=="playing"||state.modalOpen||!$("graphicsPanel").hidden)return false;
+    const cache=supplyCaches.find(item=>item.id===id);
+    if(!cache||state.supplies.has(id)||Math.hypot(state.x-cache.x,state.y-cache.y)>(manual?140:42))return false;
+    state.supplies.add(id);
+    const gained=Math.min(12,100-state.energy);
+    state.energy=Math.min(100,state.energy+12);state.score+=25;
+    tone(920,.14);
+    notify("🧴 Sealed drinking-water supply found! +"+Number(gained.toFixed(1))+" energy · +25 impact");
+    updateUI();saveValley();return true;
   }
   function collectNearbySupplies(){
-    if(state.screen!=="playing"||state.modalOpen)return;
-    for(const cache of supplyCaches){
-      if(state.supplies.has(cache.id))continue;
-      if(Math.hypot(state.x-cache.x,state.y-cache.y)>42)continue;
-      state.supplies.add(cache.id);
-      const gained=Math.min(rules().supplyRecovery,100-state.energy);
-      state.energy=Math.min(100,state.energy+rules().supplyRecovery);
-      state.score+=25;
-      tone(920,.14);
-      notify("🧴 Sealed drinking-water supply found! +"+Math.ceil(gained)+" energy · +25 impact");
-      updateUI();
-      $("supplyDropStatus").textContent=`${cache.name} collected! +${Math.round(gained*10)/10} energy · +25 impact. ${state.supplies.size} / ${supplyCaches.length} caches collected.`;
-      saveValley();
-    }
+    for(const cache of supplyCaches)collectSupply(cache.id);
   }
   function drain(n){
-    state.energy=Math.max(0,state.energy-n*rules().energyCost);
+    if(state.screen==="village")return;
+    state.energy=Math.max(0,state.energy-n*playStyle().energyMultiplier);
     if(state.modalOpen&&state.energy>0)saveValley();
     if(state.energy<=0 && state.screen==="playing")end(false,"Your energy ran out before the expedition was complete. Rest at the camp, choose a shorter route, and try again.");
   }
@@ -412,10 +365,10 @@
     state.impactTimer=setTimeout(()=>{panel.hidden=true;panel.classList.remove("replay");},victory?4200:2400);
   }
   function updateUI(){
-    renderSupplyDrops();
-    $("valleyDifficulty").textContent=rules().label;
-    $("valleyDifficulty").setAttribute("aria-label",`Expedition difficulty: ${rules().label}`);
-    spots.camp.hint=`Restore ${rules().campRecovery} energy (${Math.max(0,rules().campUses-state.campUses)} uses left)`;
+    syncSupplyUI();
+    refreshVillageCelebration();
+    $("valleyMissionTitle").textContent=state.screen==="village"?"A village worth coming home to":"Find the last well";
+    if(state.screen==="ended"&&state.done.has("pump"))$("locationHint").textContent="The village water is flowing again!";
     $("energyValue").textContent=`${Math.ceil(state.energy)}%`;
     $("energyBar").style.width=`${state.energy}%`;
     $("energyBar").classList.toggle("low",state.energy<=28);
@@ -427,11 +380,15 @@
     $("questsCompleted").textContent=`${completed} / 4`;
     $("progressLabel").textContent=`${completed} / 4 completed`;
     $("progressBar").style.width=`${completed/4*100}%`;
-    $("chapterLabel").innerHTML=`<span class="live-dot"></span> CHAPTER 01 / GREENWATER VALLEY`;
+    $("chapterLabel").innerHTML=`<span class="live-dot"></span> CHAPTER 01 / GREENWATER VALLEY · ${playStyle().label.toUpperCase()}`;
     const goals={elder:"Talk to the village elder.",toolkit:"Find the workshop and get your toolkit.",gasket:"Travel across the bridge to the supply depot.",pump:"Restore the pump to help the village."};
     const next=questDefs.find(q=>!state.done.has(q.key));
     const status=next?goals[next.key]:"You completed the main mission!";
     if(status!==state.lastStatus){$("statusLine").textContent=status;state.lastStatus=status;}
+    if(state.screen==="village"){
+      $("chapterLabel").textContent="VILLAGE LIFE · "+playStyle().label.toUpperCase();
+      $("statusLine").textContent="Fill your jug, help your neighbours, and grow the village.";
+    }
     $("inventoryCount").textContent=`${state.inventory.size} ITEM${state.inventory.size===1?"":"S"}`;
     $("inventoryList").replaceChildren();
     if(!state.inventory.size){const e=document.createElement("span");e.className="muted";e.textContent="Your bag is empty.";$("inventoryList").append(e);}
@@ -452,12 +409,15 @@
       b.title=`Walk to ${sp.name}`;b.addEventListener("click",()=>navigateTo(key));ds.append(b);
     }
   }
-  function start({resume=false,mode=difficulty.selected()}={}){
+  function start({resume=false}={}){
+    window.TrailVillageLife?.close?.();window.TrailCoast?.suspend?.();window.TrailCanyon?.suspend?.();
+    $("coastScreen").hidden=true;$("canyonScreen").hidden=true;$("gameScreen").classList.toggle("is-village",false);
     lastValleySaveTime=0;
-    supplyDisplayStamp=null;
-    Object.assign(state,{difficulty:difficulty.normalize(mode),screen:"playing",energy:100,score:0,elapsed:0,x:310,y:620,walkT:0,
-      path:[],goal:null,destination:null,nearby:null,campUses:0,ended:false,moving:false,lastStatus:"",cameraX:0,cameraY:0,effect:null,scenic:false,pipeReady:false,pumpQuizStep:0});
+    Object.assign(state,{screen:"playing",energy:100,score:0,elapsed:0,x:310,y:620,walkT:0,
+      path:[],goal:null,destination:null,nearby:null,campUses:0,ended:false,moving:false,lastStatus:"",cameraX:0,cameraY:0,effect:null,scenic:false,pipeReady:false,pumpQuizStep:0,pumpSafetyPassed:false,
+      villageWaterAt:0,villageCheerAt:-100,villageSummary:null});
     pipeTurns=[...PIPE_START];pipeTests=0;
+    $("locationHint").textContent="Follow the golden markers";
     $("scenicViewButton").setAttribute("aria-pressed","false");
     $("scenicViewButton").textContent="◈ SCENIC VIEW";
     state.keys.clear();state.touch.clear();state.done.clear();state.inventory.clear();state.supplies.clear();
@@ -475,6 +435,17 @@
   }
   function nearest(){let found=null,best=85;for(const [key,sp] of Object.entries(spots)){const d=dist({x:state.x,y:state.y},sp);if(d<best){found=key;best=d;}}return found;}
   function updateNearby(){
+    if(state.screen==="village"){
+      let point=null,best=70;
+      for(const candidate of window.TrailVillageLife?.getDestinations?.()||[]){
+        const distance=Math.hypot(state.x-candidate.x,state.y-candidate.y);
+        if(distance<best){point=candidate;best=distance;}
+      }
+      state.nearby=point?"village:"+point.id:null;$("nearbyPrompt").hidden=!point;
+      if(point)$("nearbyName").textContent=point.title||point.name||"Help the village";
+      $("locationHint").textContent=point?(point.title||point.name):"Follow village requests · E to interact";
+      return;
+    }
     const next=nearest();if(state.nearby!==next){state.nearby=next;
       $("nearbyPrompt").hidden=!next;
       if(next)$("nearbyName").textContent=spots[next].name;
@@ -482,7 +453,7 @@
     }
   }
   function navToPosition(target,spotKey=null){
-    if(state.screen!=="playing"||state.modalOpen)return;
+    if(!exploring()||state.modalOpen)return;
     target=approaches[spotKey]||target;
     if(blocked(target.x,target.y)){
       notify("That spot is across the water or outside the safe trail. Select a land destination.");
@@ -547,7 +518,7 @@
   }
   function navigateTo(key){const sp=spots[key];if(sp)navToPosition(sp,key);}
   function recenterValleyCamera(){
-    if(state.screen!=="playing"||state.modalOpen)return;
+    if(!exploring()||state.modalOpen)return;
     world3d?.recenter?.();
     state.scenic=false;
     $("scenicViewButton").setAttribute("aria-pressed","false");
@@ -555,7 +526,7 @@
     notify("Camera returned to your explorer.");
   }
   function toggleScenicView(){
-    if(state.screen!=="playing"||state.modalOpen)return;
+    if(!exploring()||state.modalOpen)return;
     state.scenic=!state.scenic;
     const control=$("scenicViewButton");
     control.setAttribute("aria-pressed",String(state.scenic));
@@ -567,7 +538,7 @@
     if(world3d)world3d.focus();
   }
   function handleMovement(dt){
-    if(state.screen!=="playing"||state.modalOpen)return;
+    if(!exploring()||state.modalOpen)return;
     const key=(...names)=>names.some(name=>state.keys.has(name)||state.touch.has(name));
     let dx=Number(key("arrowright","d","right"))-Number(key("arrowleft","a","left"));
     let dy=Number(key("arrowdown","s","down"))-Number(key("arrowup","w","up"));
@@ -598,6 +569,8 @@
     // dialogue, rain, wetland and victory screens keep their original design.
     $("dialog").classList.toggle("is-pipe",kind==="pipe");
     $("pipePuzzle").hidden=true;$("rainPanel").hidden=true;$("marshPanel").hidden=true;
+    $("valleyVictoryScene").hidden=!celebrateWin;
+    refreshVillageCelebration();
     $("modalTag").textContent=tag;$("modalIllustration").textContent=icon;
     $("modalTitle").textContent=title;$("modalDescription").textContent=description;
     $("modalClose").hidden=!allowClose;
@@ -615,6 +588,7 @@
     // Reopening a puzzle should start at the top even after scrolling another
     // dialog; otherwise its title and controls can appear cut off.
     $("dialog").scrollTop=0;
+    syncSupplyUI();
     $("dialog").focus({preventScroll:true});
     tone(550,.07);
   }
@@ -623,8 +597,10 @@
     modalRevision++;
     $("modalBackdrop").hidden=true;$("pipePuzzle").hidden=true;$("rainPanel").hidden=true;$("marshPanel").hidden=true;
     state.modalOpen=false;state.modalKind="";
+    syncSupplyUI();
+    $("valleyVictoryScene").hidden=true;refreshVillageCelebration();
     if(!silent)saveValley();
-    if(!silent&&state.screen==="playing"){
+    if(!silent&&exploring()){
       if(world3d)world3d.focus();else canvas.focus({preventScroll:true});
     }
   }
@@ -637,7 +613,11 @@
     return true;
   }
   function interact(){
-    if(state.screen!=="playing"||state.modalOpen)return;
+    if(!exploring()||state.modalOpen)return;
+    if(state.screen==="village"){
+      if(!window.TrailVillageLife?.interactNear?.())notify("Visit the fountain or follow a village request. Move close, then press E.");
+      return;
+    }
     const key=nearest();if(!key){notify("Walk closer to a glowing location, then press E.");return;}
     state.path=[];state.goal=null;state.destination=null;
     switch(key){
@@ -658,9 +638,8 @@
     }
   }
   function restAtCamp(){
-    const {campUses,campRecovery}=rules();
-    if(state.campUses>=campUses){openModal({tag:"REST CAMP",icon:"⛺",title:"Supplies have run out",description:"This campsite's sealed drinking-water supplies have been used. Choose your remaining route carefully.",choices:[{text:"Continue expedition",primary:true,action:()=>closeModal()}]});return;}
-    openModal({tag:"SAFE SUPPLIES",icon:"⛺",title:"Take a breather",description:`A volunteer has sealed, ready-to-drink water and a place to rest. Recover ${campRecovery} energy. ${campUses-state.campUses} rest stop(s) remaining.`,choices:[{text:`Rest and recover (+${campRecovery} energy)`,primary:true,action:()=>{state.energy=Math.min(100,state.energy+campRecovery);state.campUses++;addScore(25);closeModal();updateUI();notify("Rested at camp · Energy recovered!");}},{text:"Not yet",action:()=>closeModal()}]});
+    if(state.campUses>=2){openModal({tag:"REST CAMP",icon:"⛺",title:"Supplies have run out",description:"This campsite's sealed drinking-water supplies have been used. Choose your remaining route carefully.",choices:[{text:"Continue expedition",primary:true,action:()=>closeModal()}]});return;}
+    openModal({tag:"SAFE SUPPLIES",icon:"⛺",title:"Take a breather",description:`A volunteer has sealed, ready-to-drink water and a place to rest. Recover 32 energy. ${2-state.campUses} rest stop(s) remaining.`,choices:[{text:"Rest and recover (+32 energy)",primary:true,action:()=>{state.energy=Math.min(100,state.energy+32);state.campUses++;addScore(25);closeModal();updateUI();notify("Rested at camp · Energy recovered!");}},{text:"Not yet",action:()=>closeModal()}]});
   }
   const riverQuestions=[
     {q:"The river looks crystal clear. Does that automatically mean the water is safe to drink?",answers:["Yes, clear water is always safe.","No, appearance alone can't establish safety.","Only if the water feels cold."],right:1,feedback:"Correct! Clear water may still carry contaminants. Appearance alone does not establish safety."},
@@ -677,8 +656,8 @@
   ];
   function quiz({tag,icon,title,questions,onWin,step=0,onProgress=null}){
     const q=questions[step];
-    openModal({tag,icon,title:`${title} · ${step+1}/${questions.length}`,description:q.q,progress:step,total:questions.length,kind:"quiz",tip:`Think carefully: wrong answers cost ${energyCost(6)} energy.`,choices:q.answers.map((answer,i)=>({text:answer,action:()=>{
-      if(i!==q.right){drain(6);if(state.ended)return;quiz({tag,icon,title,questions,onWin,step,onProgress});$("modalTip").textContent=`Not quite. That choice may put people at risk. Try again (−${energyCost(6)} energy).`;tone(190,.16);updateUI();return;}
+    openModal({tag,icon,title:`${title} · ${step+1}/${questions.length}`,description:q.q,progress:step,total:questions.length,kind:"quiz",tip:quizTip(),choices:q.answers.map((answer,i)=>({text:answer,action:()=>{
+      if(i!==q.right){drain(mistakeAmount(6));if(state.ended)return;quiz({tag,icon,title,questions,onWin,step,onProgress});$("modalTip").textContent="Not quite. That choice may put people at risk. Try again (−"+mistakeLabel(6)+" energy).";tone(190,.16);updateUI();return;}
       tone(850,.13);
       onProgress?.(step+1);
       if(step+1<questions.length){quiz({tag,icon,title,questions,onWin,step:step+1,onProgress});$("modalTip").textContent=q.feedback;}
@@ -734,9 +713,9 @@
     if(state.modalKind!=="marsh"||marshPicked.has(index))return;
     const item=marshItems[index];
     if(!item.litter){
-      drain(3);if(state.ended)return;
+      drain(mistakeAmount(3));if(state.ended)return;
       const status=$("marshStatus");status.className="marsh-status is-error";
-      status.textContent=item.name+` belongs in the habitat. Leave it undisturbed (−${energyCost(3)} energy).`;
+      status.textContent=item.name+" belongs in the habitat. Leave it undisturbed (−"+mistakeLabel(3)+" energy).";
       tone(190,.12);updateUI();return;
     }
     marshPicked.add(index);tone(650+index*40,.085);renderMarsh();
@@ -762,7 +741,7 @@
     openModal({tag:"OPTIONAL HABITAT MISSION",icon:"🪷",title:"Protect the Wetland Sanctuary",
       description:"A boardwalk overlooks a fragile wetland. Collect four pieces of litter, but don't disturb nests or living plants.",
       kind:"marsh",
-      tip:`Select the items you would safely remove. Disturbing wildlife and plants costs ${energyCost(3)} energy.`,
+      tip:"Select the items you would safely remove. Disturbing wildlife and plants costs "+mistakeLabel(3)+" energy.",
       choices:[{text:"✓ Finish cleanup",primary:true,action:verifyMarsh},
         {text:"Back to the trail",action:()=>closeModal()}]});
     $("marshPanel").hidden=false;renderMarsh();
@@ -813,10 +792,10 @@
       notify("🌦️ Raincatch plan completed! Testing and treatment are still needed before drinking.");
       return;
     }
-    drain(2);
+    drain(mistakeAmount(2));
     if(state.ended)return;
     const status=$("rainStatus");status.className="rain-status is-error";
-    status.textContent=`This plan needs improvement. Consider roof runoff, filtration and protected storage (−${energyCost(2)} energy).`;
+    status.textContent="This plan needs improvement. Consider roof runoff, filtration and protected storage (−"+mistakeLabel(2)+" energy).";
     updateUI();tone(220,.12);
   }
   function rainChallenge(){
@@ -903,6 +882,7 @@
     for(let i=0;i<9;i++){
       const button=document.createElement("button");
       button.type="button";
+      button.dataset.pipeTile=String(i);button.dataset.rotation=String(pipeTurns[i]*90);
       const supplied=flow.connected.has(i);
       const leakDirections=new Set(flow.leaks.filter(leak=>leak.tile===i).map(leak=>leak.direction));
       button.className="pipe-tile"+(supplied?" is-connected":"")+
@@ -956,69 +936,86 @@
   }
   function rotatePipe(index){
     if(state.modalKind!=="pipe")return;
+    const keepFocus=document.activeElement?.dataset?.pipeTile===String(index);
     pipeTurns[index]=(pipeTurns[index]+1)%4;
-    state.pipeReady=false;state.pumpQuizStep=0;saveValley();
+    state.pipeReady=false;state.pumpQuizStep=0;state.pumpSafetyPassed=false;saveValley();
     tone(440+index*24,.045);
     renderPipePuzzle();
+    const tile=$("pipeGrid").querySelector('[data-pipe-tile="'+index+'"]');
+    tile?.classList.add("was-rotated");if(keepFocus)tile?.focus({preventScroll:true});
+    $("pipeActionFeedback").textContent="Tile "+(index+1)+" turned clockwise · now at "+pipeTurns[index]*90+"°.";
   }
   function finalPumpSafetyQuiz(){
     quiz({tag:"THE FINAL CHALLENGE",icon:"🔧",title:"Repair the Pump",
       questions:pumpQuestions,step:state.pumpQuizStep,onProgress:step=>{state.pumpQuizStep=Math.min(step,2);saveValley();},onWin:()=>{
-        doneOnce("pump",null,520);
-        end(true,"Water is flowing again! By listening to the village, gathering the right supplies, and checking your work, you restored the village's path toward reliable safe water.","THE LAST WELL RESTORED");
+        state.pumpSafetyPassed=true;saveValley();openVillageWater();
       }});
+  }
+  function openVillageWater(){
+    if(state.screen!=="playing"||state.ended||!state.pumpSafetyPassed||!state.pipeReady||!pipeFlow().solved||
+      !["elder","toolkit","gasket"].every(key=>state.done.has(key)))return;
+    openModal({tag:"THE VILLAGE IS READY",icon:"💧",title:"Bring the water home",
+      description:"The pipeline is connected and the safety checks are complete. Open the village water valve to fill the fountain and let the celebration begin!",
+      kind:"release",choices:[{text:"💧 Open the village water valve",primary:true,action:()=>{
+        if(!state.pumpSafetyPassed||!state.pipeReady||!pipeFlow().solved||state.ended)return;
+        doneOnce("pump",null,520);
+        end(true,"You repaired the pipeline, checked the system, and opened the village water valve. Clean water is flowing into Greenwater Valley again!","YOU BROUGHT THE WATER HOME!");
+      }},{text:"↩ Return to the valley",action:()=>closeModal()}]});
   }
   function verifyPipe(){
     if(state.modalKind!=="pipe")return;
     pipeTests++;
     if(pipeFlow().solved){
-      state.pipeReady=true;state.pumpQuizStep=0;
+      state.pipeReady=true;state.pumpQuizStep=0;state.pumpSafetyPassed=false;
       tone(960,.17);
       closeModal();
       finalPumpSafetyQuiz();
       return;
     }
-    drain(2);
+    drain(mistakeAmount(2));
     if(state.ended)return;
     const status=$("pipeStatus");
     status.className="pipe-status is-error";
     const flow=pipeFlow();
     status.textContent=(flow.delivered?"The outlet has water but the branches are incomplete. ":"No safe water reached the outlet. ")+
       flow.connected.size+"/9 pieces connected, "+flow.leaks.length+
-      ` open joints. Repair the pipeline and try again (−${energyCost(2)} energy).`;
+      " open joints. Repair the pipeline and try again (−"+mistakeLabel(2)+" energy).";
     updateUI();
     tone(210,.15);
   }
   function beginPipePuzzle(){
     pipeTests=0;
+    $("pipeActionFeedback").textContent="Select a tile to turn it clockwise. Keyboard: Enter or Space.";
     openModal({tag:"PUMP REPAIR • STEP 1 OF 2",icon:"🔧",
       title:"Reconnect the water pipeline",
       description:"Connect all nine pipe sections. Water enters from middle LEFT and exits middle RIGHT. Turn the T-junctions to feed the branches and use the end caps to prevent leaks.",
-      kind:"pipe",tip:`IN connects to tile 4 on the left; OUT leaves tile 6 on the right. Teal shows supplied pipes, red shows open joints. Hints are free; unsuccessful flow tests cost ${energyCost(2)} energy.`,
+      kind:"pipe",tip:pipeTip(),
       choices:[
         {text:"💧 Test the flow",primary:true,action:verifyPipe},
         {text:"↩ Back to the valley",action:()=>closeModal()}
       ]});
     $("pipePuzzle").hidden=false;
     renderPipePuzzle();
+    if(playStyle().hints)showPipeHint();
   }
   function pumpChallenge(){
     if(state.done.has("pump"))return;
     const need=[!state.done.has("elder")&&"Talk to the elder",!state.inventory.has("toolkit")&&"Collect the toolkit",!state.inventory.has("gasket")&&"Find the gasket"].filter(Boolean);
     if(need.length){openModal({tag:"REPAIR STATION",icon:"⚙️",title:"The pump needs your help",description:`You can't start repairs yet. You still need: ${need.join(" · ")}.`,choices:[{text:"Show me the next stop",primary:true,action:()=>{closeModal();navigateTo(!state.done.has("elder")?"elder":!state.inventory.has("toolkit")?"toolkit":"gasket");}},{text:"Back to map",action:()=>closeModal()}]});return;}
-    if(state.pipeReady&&pipeFlow().solved)finalPumpSafetyQuiz();
+    if(state.pumpSafetyPassed)openVillageWater();
+    else if(state.pipeReady&&pipeFlow().solved)finalPumpSafetyQuiz();
     else beginPipePuzzle();
   }
   function recoverAtCamp(){
     if(!state.ended||state.screen!=="ended")return;
     // Recovery preserves the work already completed without awarding another
     // camp rest, replenishing supplies or changing the expedition timer/score.
-    Object.assign(state,{screen:"playing",ended:false,energy:rules().recoveryEnergy,x:approaches.camp.x,y:approaches.camp.y,
+    Object.assign(state,{screen:"playing",ended:false,energy:50,x:approaches.camp.x,y:approaches.camp.y,
       path:[],goal:null,destination:null,moving:false,effect:null,lastStatus:""});
     state.keys.clear();state.touch.clear();
     closeModal(true);world3d?.recenter?.();
     updateNearby();updateUI();saveValley();
-    notify(`Recovered at camp · ${rules().recoveryEnergy} energy restored. Your mission progress is safe.`);
+    notify("Recovered at camp · 50 energy restored. Your mission progress is safe.");
     if(world3d)world3d.focus();else canvas.focus({preventScroll:true});
   }
   function end(won,description,headline="EXPEDITION ENDED"){
@@ -1030,11 +1027,17 @@
       if(state.impactTimer)clearTimeout(state.impactTimer);
       state.impactTimer=null;$("impactBurst").hidden=true;
     }
-    if(won){state.score+=Math.ceil(state.energy)*3;state.score+=Math.max(0,240-Math.floor(state.elapsed))*2;const best=safeStore.get(state.difficulty);if(state.score>best)safeStore.set(state.score,state.difficulty);chapters?.complete("valley");refreshChapters();}
-    const best=safeStore.get(state.difficulty);refreshBest();
+    if(won){state.score+=Math.ceil(state.energy)*3;state.score+=Math.max(0,240-Math.floor(state.elapsed))*2;const best=safeStore.get();if(state.score>best)safeStore.set(state.score);chapters?.complete("valley");refreshChapters();}
+    const best=safeStore.get();$("highScoreStart").textContent=best?best.toLocaleString():"—";
     updateUI();
-    if(won)celebrate(state.done.has("pump")?"pump":"spring",0,true);
-    openModal({tag:won?"✦ MISSION COMPLETE":"RECOVERY AVAILABLE",icon:won?"🏆":"🌵",title:won?headline:"Out of energy!",description:`${description}  •  ${rules().label.toUpperCase()} DIFFICULTY  •  FINAL IMPACT: ${state.score.toLocaleString()}  •  TIME: ${fmtTime(state.elapsed)}  •  BEST: ${best.toLocaleString()}`,kind:"end",allowClose:false,celebrateWin:won,choices:[...(won?[{text:"🏜️ Enter the Forgotten Canyon",primary:true,action:()=>{showChapters();window.TrailCanyon?.launch(false,state.difficulty);}}]:[{text:`⛺ Recover at camp (${rules().recoveryEnergy} energy)`,primary:true,action:recoverAtCamp}]),{text:"↻ Play a new expedition",action:start},{text:"↩ Chapter selection",action:showChapters}]});
+    if(won){
+      state.villageWaterAt=performance.now()/1000;state.villageCheerAt=state.villageWaterAt;
+      world3d?.recenter?.();
+      celebrate(state.done.has("pump")?"pump":"spring",0,true);
+    }
+    $("nearbyPrompt").hidden=true;
+    state.villageSummary={won,title:won?headline:"Out of energy!",description:`${description}  •  FINAL IMPACT: ${state.score.toLocaleString()}  •  TIME: ${fmtTime(state.elapsed)}  •  BEST: ${best.toLocaleString()}`};
+    showVillageResults();
     if(won){
       // A short three-note flourish, using the existing optional Web Audio system.
       tone(620,.13);
@@ -1042,11 +1045,55 @@
       setTimeout(()=>{if(state.screen==="ended")tone(1100,.24);},280);
     }else tone(210,.22);
   }
+  function refreshVillageCelebration(){
+    $("valleyCelebration").hidden=!(state.screen==="ended"&&state.done.has("pump")&&!state.modalOpen&&!$("gameScreen").hidden);
+  }
+  function enterCanyon(){showChapters();window.TrailCanyon?.launch();}
+  function showVillageResults(){
+    const summary=state.villageSummary;
+    if(!summary||state.screen!=="ended")return;
+    const {won,title,description}=summary;
+    openModal({tag:won?"✦ GREENWATER VALLEY RESTORED":"RECOVERY AVAILABLE",icon:won?"🏆":"🌵",title,description,
+      kind:"end",allowClose:false,celebrateWin:won,choices:[
+        ...(won?[{text:"🏜️ Enter the Forgotten Canyon",primary:true,action:enterCanyon}]:
+          [{text:"⛺ Recover at camp (50 energy)",primary:true,action:recoverAtCamp}]),
+        {text:"↻ Play a new expedition",action:start},{text:"↩ Chapter selection",action:showChapters},
+        ...(won?[{text:"💧 Watch water reach the village",action:()=>{
+          closeModal(true);$("impactBurst").hidden=true;
+          canvas.parentElement?.scrollIntoView?.({block:"start",behavior:"instant"});
+          $("valleyCelebrate").focus({preventScroll:true});
+        }},{text:"🏡 Explore village life",action:launchVillage}]:[])
+      ]});
+  }
+  function launchVillage(){
+    if(!chapters?.snapshot().completed.includes("valley"))return;
+    saveValley();window.TrailCanyon?.suspend?.();window.TrailCoast?.suspend?.();
+    closeModal(true);
+    Object.assign(state,{screen:"village",ended:true,x:475,y:660,moving:false,nearby:null,path:[],goal:null,destination:null,scenic:false,effect:null});
+    state.keys.clear();state.touch.clear();
+    for(const key of ["elder","toolkit","gasket","pump"])state.done.add(key);
+    if(!state.villageWaterAt)state.villageWaterAt=performance.now()/1000-10;
+    $("startScreen").hidden=true;$("canyonScreen").hidden=true;$("coastScreen").hidden=true;$("gameScreen").hidden=false;
+    $("gameScreen").classList.toggle("is-village",true);$("impactBurst").hidden=true;
+    $("scenicViewButton").textContent="◈ SCENIC VIEW";$("scenicViewButton").setAttribute("aria-pressed","false");
+    window.TrailVillageLife?.open?.();world3d?.recenter?.();
+    updateNearby();updateUI();refreshVillageCelebration();
+    canvas.parentElement?.scrollIntoView?.({block:"start",behavior:"instant"});
+    notify("Welcome home! Fill your jug at the fountain, then follow a neighbour’s request.");
+  }
+  function celebrateVillage(){
+    if(state.screen!=="ended"||state.modalOpen||!state.done.has("pump"))return;
+    const now=performance.now()/1000;
+    if(now-state.villageCheerAt<1)return;
+    state.villageCheerAt=now;celebrate("pump",0,true);tone(825,.13);
+    notify("💛 The village celebrates with you! Clean water is flowing again.");
+  }
   function pause(){
-    if(state.screen!=="playing"||state.modalOpen)return;
+    if(!exploring()||state.modalOpen)return;
     openModal({tag:"GAME PAUSED",icon:"⏸️",title:"Take your time",description:"Your energy won't change while paused. Ready to continue your expedition?",kind:"pause",choices:[{text:"▶ Resume adventure",primary:true,action:()=>closeModal()},{text:"↻ Start a new expedition",action:start}]});
   }
   function help(){
+    if(!$("coastScreen").hidden){window.TrailCoast?.pause?.();return;}
     if(window.TrailCanyon?.snapshot().active){window.TrailCanyon.pause?.();return;}
     safeStore.markTutorialSeen();
     openModal({tag:"HOW TO PLAY",icon:"🧭",title:"Your adventure guide",description:"Move using WASD or arrow keys. On phones, use the on-screen directional buttons. Click the 3D world once to walk; hold and drag with the left button to pan the camera without moving, or right-drag to rotate around the landscape. Use the mouse wheel to zoom, and press C to return the camera to your explorer. The live mini-map shows your location and route; click one of its markers to travel there, or press M to hide or show it. Press V or select SCENIC VIEW above the world to see the full valley, and press it again to follow your explorer. When you're near a glowing marker, press E or tap INTERACT. Solve challenges, collect items, rotate the pipe sections during the pump repair, and restore water before your energy runs out. Raincatch Ridge is an optional hands-on collection activity. Rest at the camp to recharge. Press Shift to sprint (uses more energy).",kind:"help",choices:[{text:"Got it — let's go!",primary:true,action:()=>closeModal()}],tip:"BONUS ROUTES: Earn a test kit at the River Bank to survey Hill Spring, or inspect the collection station at Raincatch Ridge. Progress saves automatically on this device. Choose Continue from chapter selection after a refresh."});
@@ -1127,14 +1174,19 @@
   function draw(){
     const time=performance.now()/1000;
     const scenic2d=state.scenic&&!world3d;
-    const goalX=Math.min(W-VW,Math.max(0,state.x-VW*.45)),goalY=Math.min(H-VH,Math.max(0,state.y-VH*.51));
+    const watchingWater=state.screen==="ended"&&state.done.has("pump");
+    const focusX=watchingWater?475:state.x,focusY=watchingWater?580:state.y;
+    const goalX=Math.min(W-VW,Math.max(0,focusX-VW*.45)),goalY=Math.min(H-VH,Math.max(0,focusY-VH*.51));
     if(scenic2d){state.cameraX=0;state.cameraY=0;}
+    else if(watchingWater&&window.matchMedia?.("(prefers-reduced-motion: reduce)").matches){state.cameraX=goalX;state.cameraY=goalY;}
     else{state.cameraX+=(goalX-state.cameraX)*.12;state.cameraY+=(goalY-state.cameraY)*.12;}
     ctx.clearRect(0,0,VW,VH);
     ctx.save();
     if(scenic2d)ctx.scale(VW/W,VH/H);
     else ctx.translate(-state.cameraX,-state.cameraY);
     drawWorld(time);
+    window.TrailValleyRestoration?.draw2D(ctx,state,time);
+    if(state.done.has("pump"))window.TrailVillageLife?.draw2D?.(ctx,time);
     for(const cache of supplyCaches){
       if(state.supplies.has(cache.id))continue;
       ctx.fillStyle="#2c9bb1";ctx.strokeStyle="#fff9d5";ctx.lineWidth=4;
@@ -1160,7 +1212,8 @@
       lastMapDraw=t;
     }
     if(state.screen==="playing"&&!state.modalOpen){state.elapsed+=dt;handleMovement(dt);collectNearbySupplies();updateNearby();uiTimer+=dt;if(uiTimer>.18){updateUI();uiTimer=0;}if(state.elapsed-lastValleySaveTime>=8){saveValley();lastValleySaveTime=state.elapsed;}}
-    if(world3d && $("canyonScreen").hidden){
+    if(state.screen==="village"&&!state.modalOpen){handleMovement(dt);window.TrailVillageLife?.update?.(dt);updateNearby();uiTimer+=dt;if(uiTimer>.18){updateUI();uiTimer=0;}}
+    if(world3d && $("canyonScreen").hidden&&$("coastScreen").hidden){
       try { world3d.render(state,t/1000); }
       catch(error){
         console.error("3D renderer stopped; falling back to the playable 2D game.",error);
@@ -1169,30 +1222,32 @@
         canvas.style.display="";
       }
     }
-    if(!world3d && state.screen!=="start")draw();
+    if(!world3d && state.screen!=="start"&&$("coastScreen").hidden&&$("canyonScreen").hidden)draw();
     requestAnimationFrame(loop);
   }
   function moveFromCanvas(event){
-    if(state.screen!=="playing"||state.modalOpen)return;
+    if(!exploring()||state.modalOpen)return;
     const rect=canvas.getBoundingClientRect();
     const scenic2d=state.scenic&&!world3d;
     const x=(event.clientX-rect.left)*(scenic2d?W:VW)/rect.width+(scenic2d?0:state.cameraX);
     const y=(event.clientY-rect.top)*(scenic2d?H:VH)/rect.height+(scenic2d?0:state.cameraY);
+    if(state.screen==="village"){navToPosition({x:Math.min(W-50,x),y:Math.min(H-50,y)});return;}
     let key=null,d=75;for(const [k,sp] of Object.entries(spots)){const n=dist({x,y},sp);if(n<d){d=n;key=k;}}
     if(key){if(dist(state,spots[key])<85)interact();else navigateTo(key);}else navToPosition({x:Math.min(W-50,Math.max(50,x)),y:Math.min(H-50,Math.max(50,y))});
   }
   window.addEventListener("keydown",e=>{
+    if(e.key==="Escape"&&!$("graphicsPanel").hidden){closeSettings();e.stopImmediatePropagation?.();return;}
     if(e.key==="Escape"&&state.modalOpen&&state.modalKind!=="end"){closeModal();return;}
-    if(state.screen!=="playing"||state.modalOpen||!$("graphicsPanel").hidden)return;
+    if(!exploring()||state.modalOpen||!$("graphicsPanel").hidden)return;
     if(e.target?.closest?.('input,select,textarea,[contenteditable="true"]'))return;
     if((e.key===" "||e.key==="Enter")&&e.target?.closest?.('button,a'))return;
     const k=e.key.toLowerCase();if(["arrowup","arrowdown","arrowleft","arrowright"," "].includes(k))e.preventDefault();
     if(["arrowup","arrowdown","arrowleft","arrowright","w","a","s","d","shift"].includes(k))state.keys.add(k);
-    if((k==="e"||k===" ")&&!e.repeat&&state.screen==="playing")interact();
-    if(k==="p"&&state.screen==="playing")pause();
-    if(k==="m"&&state.screen==="playing"&&!e.repeat)toggleNavigator();
-    if(k==="v"&&state.screen==="playing"&&!e.repeat)toggleScenicView();
-    if(k==="c"&&state.screen==="playing"&&!e.repeat)recenterValleyCamera();
+    if((k==="e"||k===" ")&&!e.repeat)interact();
+    if(k==="p")pause();
+    if(k==="m"&&!e.repeat)toggleNavigator();
+    if(k==="v"&&!e.repeat)toggleScenicView();
+    if(k==="c"&&!e.repeat)recenterValleyCamera();
   });
   window.addEventListener("keyup",e=>state.keys.delete(e.key.toLowerCase()));
   window.addEventListener("blur",()=>{state.keys.clear();state.touch.clear();});
@@ -1205,8 +1260,13 @@
   $("mapToggle").addEventListener("click",toggleNavigator);
   $("scenicViewButton").addEventListener("click",toggleScenicView);
   $("valleyCameraReset").addEventListener("click",recenterValleyCamera);
+  $("valleyCelebrate").addEventListener("click",celebrateVillage);
+  $("valleyExploreVillage").addEventListener("click",launchVillage);
+  $("villageOpenActivities").addEventListener("click",()=>{if(state.screen==="village")window.TrailVillageLife?.open?.();});
+  $("valleyViewResults").addEventListener("click",showVillageResults);
+  $("valleyContinueCanyon").addEventListener("click",()=>{if(state.screen==="ended"&&state.done.has("pump"))enterCanyon();});
   miniMap.addEventListener("click",event=>{
-    if(state.screen!=="playing"||state.modalOpen)return;
+    if(!exploring()||state.modalOpen)return;
     const rect=miniMap.getBoundingClientRect();
     if(!rect.width||!rect.height)return;
     const x=(event.clientX-rect.left)*mapW/rect.width;
@@ -1231,6 +1291,8 @@
   $("pipeHint").addEventListener("click",showPipeHint);
   $("startButton").addEventListener("click",start);
   $("valleyChapter").addEventListener("click",continueValley);
+  $("villageChapter").addEventListener("click",launchVillage);
+  $("coastChapter").addEventListener("click",()=>{if(chapters?.unlocked("coast"))window.TrailCoast?.launch();});
   $("canyonChapter").addEventListener("click",()=>{
     if(!chapters?.unlocked("canyon"))return;
     state.screen="start";$("gameScreen").hidden=true;
@@ -1238,8 +1300,12 @@
   });
   $("valleyChapters").addEventListener("click",()=>{saveValley();showChapters();});
   window.addEventListener("trail:progress",refreshChapters);
-  window.addEventListener("trail:difficulty",()=>{refreshBest();refreshChapters();});
   window.addEventListener("trail:home",showChapters);
+  window.addEventListener("trail:coast",()=>{
+    saveValley();window.TrailVillageLife?.close?.();window.TrailCanyon?.suspend?.();closeModal(true);
+    state.screen="start";state.keys.clear();state.touch.clear();state.path=[];
+    $("startScreen").hidden=true;$("gameScreen").hidden=true;$("canyonScreen").hidden=true;refreshVillageCelebration();
+  });
   $("instructionsButton").addEventListener("click",help);
   $("helpButton").addEventListener("click",help);
   $("pauseButton").addEventListener("click",pause);
@@ -1272,15 +1338,22 @@
     syncGraphicsPanel();
     window.dispatchEvent(new CustomEvent("trail:graphics",{detail:graphicsProfile()}));
   }
+  function closeSettings(){
+    graphicsPanel.hidden=true;$("graphicsButton").setAttribute("aria-expanded","false");
+    syncSupplyUI();
+    $("graphicsButton").focus({preventScroll:true});
+  }
   $("graphicsButton").addEventListener("click",()=>{
-    graphicsPanel.hidden=!graphicsPanel.hidden;
-    if(!graphicsPanel.hidden){
-      if(window.TrailCanyon?.snapshot().active)window.TrailCanyon.pause?.();
-      else if(state.screen==="playing"&&!state.modalOpen)pause();
-      syncGraphicsPanel();
-    }
+    if(!graphicsPanel.hidden){closeSettings();return;}
+    graphicsPanel.hidden=false;$("graphicsButton").setAttribute("aria-expanded","true");
+    state.keys.clear();state.touch.clear();
+    const coastState=window.TrailCoast?.snapshot?.(),canyonState=window.TrailCanyon?.snapshot?.();
+    if(coastState?.active){if(!coastState.modal)window.TrailCoast.pause?.();}
+    else if(canyonState?.active){if(!canyonState.modal)window.TrailCanyon.pause?.();}
+    else if(exploring()&&!state.modalOpen)pause();
+    syncGraphicsPanel();syncPlayStyle();$("difficultySelect").focus({preventScroll:true});
   });
-  $("graphicsClose").addEventListener("click",()=>{graphicsPanel.hidden=true;});
+  $("graphicsClose").addEventListener("click",closeSettings);
   qualityPreset.addEventListener("change",()=>{
     graphicsPreset=qualityPreset.value;
     Object.assign(graphics,graphicsPresets[graphicsPreset]);
@@ -1299,10 +1372,64 @@
     graphicsPreset="medium";graphics.effects=event.target.checked;saveGraphics();
   });
   syncGraphicsPanel();
-  refreshBest();
+  const difficultyDescriptions={
+    easy:"Relaxed energy use, gentler mistake penalties, early hints and 4 L village deliveries.",
+    normal:"Standard energy use and mistake penalties, optional hints and 4 L village deliveries.",
+    hard:"Faster energy use, stronger mistake penalties, a tighter Canyon pressure target and 6 L village deliveries."
+  };
+  const modeIds=["explorer","normal","challenge"];
+  function syncPlayStyle(){
+    const profile=playStyle();
+    const difficulty=profile.difficulty||({explorer:"easy",normal:"normal",challenge:"hard"})[profile.id]||"normal";
+    for(const id of modeIds){
+      $(id+"Mode").setAttribute("aria-checked",String(profile.id===id));
+      $(id+"Mode").setAttribute("tabindex",profile.id===id?"0":"-1");
+      $(id+"Mode").classList.toggle("is-selected",profile.id===id);
+    }
+    $("difficultySelect").value=difficulty;
+    $("difficultyDescription").textContent=difficultyDescriptions[difficulty];
+    $("playModeLabel").textContent=profile.label+" · "+difficultyDescriptions[difficulty];
+    updateUI();
+    if(state.modalOpen){
+      if(state.modalKind==="quiz")$("modalTip").textContent=quizTip();
+      if(state.modalKind==="pipe"){$("modalTip").textContent=pipeTip();if(profile.hints)showPipeHint();}
+      if(state.modalKind==="marsh")$("modalTip").textContent="Select the items you would safely remove. Disturbing wildlife and plants costs "+mistakeLabel(3)+" energy.";
+    }
+  }
+  $("difficultySelect").addEventListener("change",event=>{
+    window.TrailMode?.setDifficulty?.(event.target.value);syncPlayStyle();
+  });
+  for(const id of modeIds){
+    $(id+"Mode").addEventListener("click",()=>{window.TrailMode?.set(id);syncPlayStyle();});
+    $(id+"Mode").addEventListener("keydown",event=>{
+      if(!["ArrowLeft","ArrowRight","ArrowUp","ArrowDown","Home","End"].includes(event.key))return;
+      event.preventDefault();
+      const direction=["ArrowRight","ArrowDown"].includes(event.key)?1:-1;
+      const next=event.key==="Home"?modeIds[0]:event.key==="End"?modeIds.at(-1):modeIds[(modeIds.indexOf(id)+direction+modeIds.length)%modeIds.length];
+      window.TrailMode?.set(next);syncPlayStyle();$(next+"Mode").focus();
+    });
+  }
+  window.addEventListener("trail:mode",syncPlayStyle);syncPlayStyle();
+  supplyUI=window.TrailSupplyUI?.create($("supplyInteraction"),{caches:supplyCaches,
+    onCollect:id=>collectSupply(id,true),
+    onTravel:id=>{
+      if(state.screen!=="playing"||state.modalOpen||!graphicsPanel.hidden)return false;
+      const cache=supplyCaches.find(item=>item.id===id);if(!cache||state.supplies.has(id))return false;
+      navToPosition(cache);return true;
+    }
+  })||null;
+  window.TrailVillageLife?.init?.({
+    navigate:point=>navToPosition(point),getPlayer:()=>({x:state.x,y:state.y}),notify,
+    onChange:snapshot=>{state.community=snapshot;}
+  });
+  $("highScoreStart").textContent=safeStore.get()?safeStore.get().toLocaleString():"—";
   populateSidebar();updateUI();refreshChapters();requestAnimationFrame(loop);
   // In development tests, the read-only state snapshot can be inspected without changing gameplay.
-  window.ThirstTrail={snapshot:()=>({screen:state.screen,difficulty:state.difficulty,energy:state.energy,score:state.score,quests:[...state.done],items:[...state.inventory],x:Math.round(state.x),y:Math.round(state.y),nearby:state.nearby,elapsed:state.elapsed}),version:"2.1"};
+  window.ThirstTrail={snapshot:()=>({screen:state.screen,energy:state.energy,score:state.score,quests:[...state.done],items:[...state.inventory],x:Math.round(state.x),y:Math.round(state.y),nearby:state.nearby,elapsed:state.elapsed,
+    pumpSafetyPassed:state.pumpSafetyPassed,waterRestored:state.done.has("pump")&&state.ended,
+    watchingVillage:state.screen==="ended"&&state.done.has("pump")&&!state.modalOpen,renderer:world3d?"3d":"2d",
+    mode:playStyle().id,difficulty:playStyle().difficulty,supplies:[...state.supplies],community:window.TrailVillageLife?.snapshot?.()||null,
+    graphics:world3d?.getGraphicsStatus?.()||null}),version:"3.3"};
 
   // Self-contained renderer avoids authenticated preview requests for world3d.js.
   /* Thirst Trail - real-time, stylized Three.js world.
@@ -1348,6 +1475,8 @@
     renderer.toneMappingExposure = 1.12;
     renderer.shadowMap.enabled = graphics.shadows;
     renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    const cinematic=window.TrailCinematic?.create(THREE,{renderer,scene,camera,chapter:"valley"});
+    const surfaces=cinematic?.surfaces;
     const view = renderer.domElement;
     let effectsEnabled=graphics.effects;
     let cameraSensitivity=graphics.sensitivity;
@@ -1358,10 +1487,14 @@
       renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,1.7)*scale);
       renderer.shadowMap.enabled=!!next.shadows;
       sun.castShadow=!!next.shadows;
-      const quality=graphicsPreset==="ultra"?2048:graphicsPreset==="high"?1536:graphicsPreset==="medium"?1024:512;
-      sun.shadow.mapSize.set(quality,quality);
+      const quality=graphicsPreset==="ultra"?2048:graphicsPreset==="high"?2048:graphicsPreset==="medium"?1024:512;
+      if(sun.shadow.mapSize.x!==quality){
+        sun.shadow.map?.dispose();sun.shadow.map=null;
+        sun.shadow.mapSize.set(quality,quality);
+      }
       renderer.toneMappingExposure=graphicsPreset==="low"?1.08:graphicsPreset==="ultra"?1.16:1.2;
       scene.fog.density=graphicsPreset==="low"?.012:graphicsPreset==="ultra"?.0075:.009;
+      cinematic?.configure({...next,preset:graphicsPreset});
     }
     view.id = "world3dCanvas";
     view.tabIndex = 0;
@@ -1576,10 +1709,30 @@
     terrainGeometry.computeVertexNormals();
     const groundArt=art.grass;
     if(groundArt)groundArt.repeat.set(28,24);
-    mesh(terrainGeometry,new THREE.MeshStandardMaterial({
+    const terrainMaterial=new THREE.MeshStandardMaterial({
       vertexColors:true,map:groundArt||null,roughness:1,metalness:0,
       side:THREE.DoubleSide
-    }),scene,false);
+    });
+    mesh(terrainGeometry,terrainMaterial,scene,false);
+    surfaces?.apply(terrainMaterial,"meadow",[28,26],0xffffff,.3);
+    surfaces?.apply(mats.wood,"wood",[1,1],0xd2b68f,.28);
+    surfaces?.apply(mats.lightWood,"wood",[1,1],0xe1cba8,.22);
+    surfaces?.apply(mats.trunks,"wood",[1,2],0xa6937b,.35);
+    surfaces?.apply(mats.rock,"rock",[1,1],0xc3c5b4,.36);
+    surfaces?.apply(mats.rock2,"rock",[1,1],0xd5d2bb,.28);
+    surfaces?.meadow(scene,{height:(x,z)=>terrainElevation(x,z)+.02,count:4200,allowed:(x,z)=>{
+      const px=x*SCALE+900,py=z*SCALE+550;
+      if(blocked(px,py)||Math.abs(x-wx(riverCenter(py)))<3.6)return false;
+      if(px>310&&px<700&&py>400&&py<750)return false;
+      if(spots.some(([,sx,sy])=>Math.hypot(px-sx,py-sy)<120))return false;
+      const routes=[[[285,490],[370,630],[455,765],[610,708],[730,580],[970,580],[1180,825],[1540,690]],[[280,490],[420,435],[540,350]],[[970,580],[1170,415],[1460,265]]];
+      for(const route of routes)for(let i=1;i<route.length;i++){
+        const a=route[i-1],b=route[i],dx=b[0]-a[0],dy=b[1]-a[1],t=Math.max(0,Math.min(1,((px-a[0])*dx+(py-a[1])*dy)/(dx*dx+dy*dy)));
+        if(Math.hypot(px-a[0]-t*dx,py-a[1]-t*dy)<35)return false;
+      }
+      return true;
+    }});
+    surfaces?.quality(graphicsPreset,graphics.effects);
     // Layered distant mountain silhouettes add scale and recognizable scenery.
     // Mountains sit beyond the playable bounds and never affect navigation.
     const mountainDistant=makeMat(0x769c99),mountainNear=makeMat(0x6d887d);
@@ -1639,6 +1792,7 @@
     const waterMat=new THREE.MeshStandardMaterial({
       color:0x329fb3,metalness:.025,roughness:.38,side:THREE.DoubleSide
     });
+    waterMat.name="Valley spring and pond water";
     // Create a reusable, hand-painted flow pattern entirely in the browser.
     // Animated texture coordinates evoke moving water without a costly shader
     // pipeline or a network dependency for water assets.
@@ -1674,6 +1828,7 @@
       flowTexture.anisotropy=Math.min(4,renderer.capabilities.getMaxAnisotropy());
     }
     const riverWaterMat=waterMat.clone();
+    riverWaterMat.name="Valley river water";
     if(flowTexture)riverWaterMat.map=flowTexture;
     riverWaterMat.needsUpdate=true;
     const shallowWaterMat=new THREE.MeshBasicMaterial({
@@ -1888,7 +2043,7 @@
     // adding expensive point lights to each marker.
     const lanternGlow=new THREE.MeshBasicMaterial({color:0xffe7a2});
     const lanternLights=[];
-    for(const [px,py] of [[390,620],[610,709],[1040,650],[1310,735]]){
+    for(const [px,py] of [[390,620],[680,760],[1040,650],[1310,735]]){
       const g=new THREE.Group();g.position.set(wx(px),0,wz(py));scene.add(g);
       cyl(g,mats.wood,0,.48,0,.065,.09,.92);
       const frame=box(g,mats.dark,0,1.01,0,.30,.42,.30);
@@ -2297,6 +2452,7 @@
           // A glTF node may be a Mesh directly, without child objects.
           if(!original || !(original.isMesh || original.children?.length))continue;
           const asset=original.clone(true);
+          surfaces?.village(asset);
           asset.position.set(wx(p.x),0,wz(p.y));
           asset.scale.setScalar(p.size);
           asset.traverse(node=>{
@@ -2460,6 +2616,8 @@
       drop.scale.set(.75,1.1,.75);flowDroplets.push(drop);
     }
     pumpFlow.visible=false;
+    const villageRestoration=window.TrailValleyRestoration?.build(THREE,{scene,wx,wz});
+    const villageLifeArt=window.TrailVillageLife?.build3D?.(THREE,{scene,wx,wz});
     // The hillside waterworks is an explorable landmark, not a flat icon:
     // terraced stone, blue reservoirs, a small wooden waterwheel and distant orchard.
     const terrace=new THREE.Group();
@@ -2889,6 +3047,7 @@
         });
         if(triangleMeshes<6)throw Error("Character asset has insufficient geometry");
         characterModel=candidate;
+        cinematic?.character(candidate);
         explorer.add(candidate);
         characterRig={
           body:joints.ExplorerBody,head:joints.ExplorerHead,eyes:joints.ExplorerEyes,
@@ -3169,7 +3328,7 @@
       const actualDistance=Number.isFinite(explorer.userData.lastX)?Math.hypot(playerX-explorer.userData.lastX,playerZ-explorer.userData.lastZ):0;
       const playerY=bridgeGroundHeight(playerX,playerZ);
       explorer.position.set(playerX,playerY,playerZ);
-      const isMoving=!!state.moving&&state.screen==="playing";
+      const isMoving=!!state.moving&&(state.screen==="playing"||state.screen==="village");
       const effect=state.effect;
       const effectAge=effect?Math.max(0,time-effect.at):99;
       const celebrating=effect&&effectAge<1.5;
@@ -3283,7 +3442,7 @@
       }
       // Lay out trail lights along the actual auto-walk route, never through
       // the blocked riverbank. A route with no waypoints displays no lights.
-      const route=state.screen==="playing"?state.path||[]:[];
+      const route=(state.screen==="playing"||state.screen==="village")?state.path||[]:[];
       const routeSegments=[];
       let last={x:state.x,y:state.y},routeDistance=0;
       for(const waypoint of route){
@@ -3329,6 +3488,9 @@
         }
       }
       for(const [key,m] of Object.entries(markers)){
+        m.group.visible=playing&&state.screen!=="village"&&state.screen!=="ended";
+        const nextGoal=questDefs.find(quest=>!state.done?.has(quest.key))?.key;
+        for(const child of m.group.children)if(child.isSprite)child.visible=!state.scenic&&(key===nextGoal||state.nearby===key);
         const done=(state.done&&state.done.has(key))||(key==="river"&&state.inventory&&state.inventory.has("testKit"));
         m.mat.color.setHex(done?0x69edaa:(key==="camp"?0x8af9bf:(key==="river"||key==="spring"?0x75edff:0xffd45b)));
         m.ring.scale.setScalar(1+Math.sin(time*3+spots.findIndex(s=>s[0]===key))*.08);
@@ -3406,6 +3568,9 @@
       }
       if(!reduceMotion&&effectsEnabled)waterwheel.rotation.z=-time*(state.done?.has("pump")?0.63:0.28);
       const restored=!!state.done?.has("pump");
+      villageRestoration?.update(state,time,{reduced:reduceMotion,effects:effectsEnabled});
+      villageLifeArt?.update(time,restored&&state.screen!=="start");
+      needle.rotation.z=state.pipeReady ? .9 : -.6;
       pumpFlow.visible=restored;
       if(restored){
         for(let i=0;i<flowDroplets.length;i++){
@@ -3434,7 +3599,11 @@
       if(playing){
         // Scenic overview deliberately frames the whole explorable island;
         // the normal mode still follows the player for precise movement.
-        if(state.scenic){
+        if(restored&&state.screen==="ended"){
+          const focus=villageRestoration?.getFocus()||{x:wx(475),y:.65,z:wz(580)};
+          aim=new THREE.Vector3(focus.x,focus.y,focus.z);
+          camPos.copy(aim).add(new THREE.Vector3(8,12,15));
+        }else if(state.scenic){
           aim=new THREE.Vector3(-.8,.5,-.1);
           camPos.copy(aim).add(new THREE.Vector3(13,30,37));
         }else if(freeCamera){
@@ -3462,20 +3631,25 @@
         const floor=terrainElevation(camPos.x,camPos.z)+1.15;
         if(camPos.y<floor)camPos.y=floor;
       }
-      if(firstFrame){
+      if(firstFrame||(restored&&state.screen==="ended"&&reduceMotion)){
         camera.position.copy(camPos);camTarget.copy(aim);firstFrame=false;
       }else{
         camera.position.lerp(camPos,1-Math.exp(-3.4*cameraFrameDelta));
         camTarget.lerp(aim,1-Math.exp(-4.7*cameraFrameDelta));
       }
       camera.lookAt(camTarget);
-      characterVisibility?.update(camera,frameDelta);
-      renderer.render(scene,camera);
+      if(!playing||state.scenic||state.screen==="ended")characterVisibility?.clear?.();
+      else characterVisibility?.update(camera,frameDelta);
+      cinematic?.update(time,{reduced:reduceMotion,effects:effectsEnabled,night});
+      if(cinematic)cinematic.render();else renderer.render(scene,camera);
     }
     return {
       render,
       focus(){view.focus({preventScroll:true});},
       dispose(){
+        cinematic?.dispose();
+        villageRestoration?.dispose();
+        villageLifeArt?.dispose();
         villageAssetDisposed=true;
         characterVisibility?.dispose();
         characterAssetDisposed=true;
@@ -3515,6 +3689,7 @@
       recenterCamera,
       getAssetStatus(){return {...villageAssetState};},
       getCharacterAssetStatus(){return {...characterAssetState};}
+      ,getGraphicsStatus(){return cinematic?.status()||null;}
     };
   }
   

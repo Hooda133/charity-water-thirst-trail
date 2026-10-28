@@ -1,10 +1,15 @@
-name: Validate 3D Assets and Both Chapters
+name: Validate 3D Assets and All Chapters
 on:
   push:
     branches: [main]
     paths:
       - 'assets/village/**'
       - 'assets/characters/**'
+      - 'assets/materials/**'
+      - 'assets/illustrations/**'
+      - 'cinematic-*'
+      - 'surface-detail.js'
+      - 'supply-interactions.*'
       - 'tools/validate-village.mjs'
       - 'tools/validate-explorer.mjs'
       - 'tools/test-pipes.mjs'
@@ -16,8 +21,12 @@ on:
       - 'canyon.css'
       - 'styles.css'
       - 'progression.js'
-      - 'difficulty.js'
       - 'script.js'
+      - 'valley-restoration.js'
+      - 'village-life.*'
+      - 'expedition-mode.js'
+      - 'coast*.js'
+      - 'coast.css'
       - 'explorer.js'
       - 'tools/test-explorer-motion.mjs'
       - 'tools/**'
@@ -28,6 +37,11 @@ on:
     paths:
       - 'assets/village/**'
       - 'assets/characters/**'
+      - 'assets/materials/**'
+      - 'assets/illustrations/**'
+      - 'cinematic-*'
+      - 'surface-detail.js'
+      - 'supply-interactions.*'
       - 'tools/validate-village.mjs'
       - 'tools/validate-explorer.mjs'
       - 'tools/test-pipes.mjs'
@@ -39,8 +53,12 @@ on:
       - 'canyon.css'
       - 'styles.css'
       - 'progression.js'
-      - 'difficulty.js'
       - 'script.js'
+      - 'valley-restoration.js'
+      - 'village-life.*'
+      - 'expedition-mode.js'
+      - 'coast*.js'
+      - 'coast.css'
       - 'explorer.js'
       - 'tools/test-explorer-motion.mjs'
       - 'tools/**'
@@ -66,8 +84,6 @@ jobs:
         run: node tools/test-pipes.mjs
       - name: Test Valley unlock and Forgotten Canyon quest progression
         run: node tools/test-chapters.mjs
-      - name: Verify difficulty balance, checkpoints and legacy compatibility
-        run: node tools/test-difficulty.mjs
       - name: Verify save recovery, migration and storage-denied play
         run: node tools/test-progression.mjs
       - name: Verify Canyon checkpoint, puzzle and navigation regressions
@@ -79,6 +95,12 @@ jobs:
 
       - name: Test shared explorer grounding, victory and camera obstruction fading
         run: node tools/test-explorer-motion.mjs
+      - name: Verify play-style preferences and village resource persistence
+        run: |
+          node tools/test-expedition-mode.mjs
+          node tools/test-village-life.mjs
+      - name: Verify Coast puzzles, navigation, saves and replay
+        run: node tools/test-coast.mjs
 
   browser-gameplay:
     # Playwright 1.58 supports 24.04; ubuntu-latest has advanced to 26.04.
@@ -97,12 +119,29 @@ jobs:
         run: python -m pip install playwright==1.58.0
       - name: Play both chapters through the real interface in 2D fallback
         run: python tools/test-browser.py --browser "$(command -v google-chrome)"
-      - name: Verify clickable supply drops, collected badges and keyboard focus
-        run: python tools/test-supply-dom.py --browser "$(command -v google-chrome)"
+      - name: Play Village Life and Stormbreak Coast through the interface
+        run: python tools/test-expansion-browser.py --browser "$(command -v google-chrome)"
+      - name: Verify expansion mobile layout and touch controls
+        run: python tools/test-expansion-browser.py --mobile --browser "$(command -v google-chrome)"
+      - name: Verify difficulty Settings, saved work and chapter puzzle changes
+        run: python tools/test-difficulty-browser.py --browser "$(command -v google-chrome)"
+      - name: Verify mobile difficulty Settings and keyboard controls
+        run: python tools/test-difficulty-browser.py --mobile --browser "$(command -v google-chrome)"
+      - name: Verify DOM addition removal and changes through actual player controls
+        run: python tools/test-dom-interactions-browser.py --browser "$(command -v google-chrome)"
+      - name: Verify mobile DOM interactions and keyboard focus
+        run: python tools/test-dom-interactions-browser.py --mobile --browser "$(command -v google-chrome)"
+      - name: Compile cinematic shaders and verify actual WebGL output
+        run: python tools/test-graphics-browser.py --smoke --label ci-smoke --browser "$(command -v google-chrome)"
       - name: Preserve browser screenshots
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: gameplay-screenshots
-          path: work/browser-qa/
+          path: |
+            work/browser-qa/
+            work/expansion-qa/
+            work/graphics-qa/ci-smoke/
+            work/difficulty-qa/
+            work/dom-outcome-qa/
           if-no-files-found: ignore

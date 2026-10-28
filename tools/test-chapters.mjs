@@ -8,7 +8,6 @@ import {runInNewContext} from "node:vm";
 const root=resolve(import.meta.dirname,"..");
 const scripts={
   progress:readFileSync(resolve(root,"progression.js"),"utf8"),
-  difficulty:readFileSync(resolve(root,"difficulty.js"),"utf8"),
   valley:readFileSync(resolve(root,"script.js"),"utf8"),
   canyon:readFileSync(resolve(root,"canyon.js"),"utf8")
 };
@@ -52,10 +51,11 @@ const frameCtx=new Proxy({createLinearGradient(){return {addColorStop(){}};}},{g
 function node(id){
  const classes=new Set();
  return {
-  id,textContent:"",innerHTML:"",dataset:{},hidden:false,style:{},children:[],listeners:{},
+  id,textContent:"",innerHTML:"",dataset:{},attributes:{},hidden:false,style:{},children:[],listeners:{},
   classList:{add(n){classes.add(n);},remove(n){classes.delete(n);},contains(n){return classes.has(n);},toggle(n,enabled){if(enabled)classes.add(n);else classes.delete(n);}},
   getContext(){return frameCtx;},focus(){},append(...children){this.children.push(...children);},
-  replaceChildren(){this.children=[];},setAttribute(){},
+  replaceChildren(...children){this.children=[...children];},setAttribute(name,value){this.attributes[name]=String(value);},
+  getAttribute(name){return this.attributes[name]??null;},
   addEventListener(name,fn){this.listeners[name]=fn;},
   getBoundingClientRect(){return {width:1000,height:610,left:0,top:0};}
  };
@@ -74,7 +74,6 @@ const scheduledFrames=[];
 const sandbox={window,document,localStorage:storage,Event,
  performance:{now(){return 1000;}},requestAnimationFrame(fn){scheduledFrames.push(fn);return 1;},console};
 runInNewContext(scripts.progress,sandbox);
-runInNewContext(scripts.difficulty,sandbox);
 const progress=window.TrailProgress;
 assert.ok(progress);
 assert.equal(progress.unlocked("canyon"),false);
@@ -91,6 +90,13 @@ const testCode=noGraphics.replace(/\}\)\(\);\s*$/,
 runInNewContext(testCode,sandbox);
 const canyon=window.TrailCanyon,test=window.canyonTest;
 const select=()=>document.getElementById("canyonModalOptions").children;
+function descendants(root){return [root,...root.children.flatMap(descendants)];}
+function releaseAction(name){
+ const button=descendants(document.getElementById("canyonModalExtra")).find(el=>
+  el.dataset.releaseAction===name||el.getAttribute("data-release-action")===name);
+ assert.ok(button,"Missing water-measuring control: "+name);
+ if(!button.disabled)button.listeners.click();
+}
 function go(key){
  const p={
   surveyor:[165,270],kit:[305,455],valves:[390,165],
@@ -101,6 +107,8 @@ function go(key){
 }
 canyon.launch();
 assert.equal(canyon.snapshot().active,true);
+assert.equal(canyon.snapshot().waterRestored,false,"Water release waits for final safety inspection");
+assert.equal(document.getElementById("canyonCelebration").hidden,true);
 // Regression: Level 2 character moves independently of the free-camera state.
 const startX=canyon.snapshot().x;
 test.get().keys.add("d");
@@ -162,15 +170,50 @@ const energyBeforeWrong=test.get().energy;
 select()[1].listeners.click();
 assert.ok(test.get().energy<energyBeforeWrong);
 select()[0].listeners.click();
+assert.equal(canyon.snapshot().cisternSafetyPassed,true,"Safety inspection unlocks the measuring puzzle");
+assert.equal(canyon.snapshot().finished,false,"The safety answer alone cannot complete the chapter");
+assert.equal(canyon.snapshot().waterRestored,false);
+assert.equal(canyon.snapshot().done.length,4,"Cistern reward waits for the release puzzle");
+assert.equal(rootPanel.children[0].className,"canyon-release-puzzle");
+const energyBeforeRelease=test.get().energy,scoreBeforeRelease=test.get().score;
+select()[0].listeners.click();
+assert.equal(canyon.snapshot().finished,false,"An unmeasured release is rejected");
+assert.equal(test.get().energy,energyBeforeRelease,"Trying the release puzzle does not drain energy");
+assert.equal(test.get().score,scoreBeforeRelease,"An unsolved release does not award points");
+releaseAction("fill-large");releaseAction("pour-large");
+assert.deepEqual([...canyon.snapshot().releaseBasins],[2,3]);
+select()[2].listeners.click();canyon.suspend();canyon.launch();
+assert.equal(canyon.snapshot().cisternSafetyPassed,true,"The safety result survives reload");
+assert.deepEqual([...canyon.snapshot().releaseBasins],[2,3],"Partially measured water survives reload");
+go("cistern");
+assert.equal(rootPanel.children[0].className,"canyon-release-puzzle","Resume returns directly to the measuring puzzle");
+releaseAction("return-small");releaseAction("pour-large");releaseAction("fill-large");releaseAction("pour-large");
+assert.deepEqual([...canyon.snapshot().releaseBasins],[4,3],"The two chamber sizes can measure exactly four litres");
+assert.equal(canyon.snapshot().finished,false,"Measured water waits for the player's release action");
+select()[0].listeners.click();
 assert.equal(canyon.snapshot().finished,true);
 assert.equal(canyon.snapshot().active,false);
 assert.ok(progress.snapshot().completed.includes("canyon"));
 assert.equal(progress.saved("canyon"),null);
 assert.equal(canyon.snapshot().done.length,5);
+assert.equal(canyon.snapshot().waterRestored,true,"Completing all objectives restores the water immediately");
+assert.equal(rootPanel.children[0].className,"canyon-victory-scene","The ending includes the water celebration scene");
+const finalScore=canyon.snapshot().score;
+select()[2].listeners.click();
+assert.equal(document.getElementById("canyonModalBackdrop").hidden,true,"Watch water reveals the restored world");
+assert.equal(document.getElementById("canyonCelebration").hidden,false);
+document.getElementById("canyonViewResults").listeners.click();
+assert.equal(document.getElementById("canyonModalBackdrop").hidden,false,"Results can be reopened from the restored world");
+assert.equal(document.getElementById("canyonCelebration").hidden,true,"Celebration controls do not overlap the dialog");
+assert.equal(canyon.snapshot().score,finalScore,"Reopening results never awards the completion bonus again");
 // Replaying a completed chapter must preserve both the completion badge and a
 // new resumable checkpoint rather than silently disabling all future saves.
-canyon.launch(true);
+select()[1].listeners.click();
 assert.equal(canyon.snapshot().done.length,0);
+assert.equal(canyon.snapshot().waterRestored,false,"Replay closes the completed water release");
+assert.equal(canyon.snapshot().cisternSafetyPassed,false,"Replay resets the safety inspection");
+assert.deepEqual([...canyon.snapshot().releaseBasins],[0,0],"Replay resets the measuring chambers");
+assert.equal(document.getElementById("canyonCelebration").hidden,true,"Replay clears the celebration");
 assert.ok(progress.saved("canyon"),"A completed chapter replay can save");
 test.get().x=248;test.get().score=75;
 canyon.suspend();canyon.launch();
@@ -188,5 +231,7 @@ assert.equal(canyon.snapshot().repairStep,0);
 console.log("✓ Versioned chapter unlocking and Valley checkpoint storage");
 console.log("✓ Five canyon quests, 69 kPa valve solution, unsafe pressure penalty");
 console.log("✓ Aqueduct repair order, checkpoint restore, safety quiz and chapter completion");
+console.log("✓ Final water-measuring puzzle gates celebration, saves partial progress and resets on replay");
 console.log("✓ Existing Valley JavaScript and new chapter UI references validated");
 console.log("✓ Completed-chapter replay saving, restore and malformed-checkpoint recovery");
+console.log("✓ Immediate water restoration, watch-water/results controls, score stability and celebration reset");
