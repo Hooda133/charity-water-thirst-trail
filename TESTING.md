@@ -4,6 +4,15 @@ Current repair evidence: [October 26 gameplay audit](GAMEPLAY_AUDIT.md). It reco
 
 This project is a static HTML/CSS/JavaScript game. Run it from a local HTTP server (for example `python3 -m http.server 8000`) and open the site in Chrome or Edge. Open DevTools → Console to spot JavaScript and WebGL errors.
 
+## Interactive DOM outcomes — version 3.3
+
+```bash
+python tools/test-dom-interactions-browser.py
+python tools/test-dom-interactions-browser.py --mobile
+```
+
+The new browser check uses MutationObserver and retained element handles to verify that collecting a supply removes an HTML button, adds a badge and changes text. It also checks stable remaining nodes, keyboard focus, travel/proximity pickup, guarded rewards, saved collections, replay restoration, paused controls, and pipeline rotation/feedback through actual controls. Fixtures supply legitimate unfinished chapter checkpoints where needed; the test does not complete puzzles through injected game state. Artifacts are written to ignored `work/dom-outcome-qa/`.
+
 ## Difficulty in Settings — version 3.2
 
 ```bash

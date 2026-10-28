@@ -9,6 +9,7 @@ on:
       - 'assets/illustrations/**'
       - 'cinematic-*'
       - 'surface-detail.js'
+      - 'supply-interactions.*'
       - 'tools/validate-village.mjs'
       - 'tools/validate-explorer.mjs'
       - 'tools/test-pipes.mjs'
@@ -40,6 +41,7 @@ on:
       - 'assets/illustrations/**'
       - 'cinematic-*'
       - 'surface-detail.js'
+      - 'supply-interactions.*'
       - 'tools/validate-village.mjs'
       - 'tools/validate-explorer.mjs'
       - 'tools/test-pipes.mjs'
@@ -125,6 +127,10 @@ jobs:
         run: python tools/test-difficulty-browser.py --browser "$(command -v google-chrome)"
       - name: Verify mobile difficulty Settings and keyboard controls
         run: python tools/test-difficulty-browser.py --mobile --browser "$(command -v google-chrome)"
+      - name: Verify DOM addition removal and changes through actual player controls
+        run: python tools/test-dom-interactions-browser.py --browser "$(command -v google-chrome)"
+      - name: Verify mobile DOM interactions and keyboard focus
+        run: python tools/test-dom-interactions-browser.py --mobile --browser "$(command -v google-chrome)"
       - name: Compile cinematic shaders and verify actual WebGL output
         run: python tools/test-graphics-browser.py --smoke --label ci-smoke --browser "$(command -v google-chrome)"
       - name: Preserve browser screenshots
@@ -137,4 +143,5 @@ jobs:
             work/expansion-qa/
             work/graphics-qa/ci-smoke/
             work/difficulty-qa/
+            work/dom-outcome-qa/
           if-no-files-found: ignore

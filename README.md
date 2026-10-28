@@ -1,6 +1,19 @@
-# Thirst Trail 3.2: The Last Well
+# Thirst Trail 3.3: The Last Well
 
 **Thirst Trail** is a browser-based 3D adventure game inspired by charity: water. Restore Greenwater Valley, repair the Forgotten Canyon aqueduct, then rebuild Stormbreak Coast. Return to the restored village to deliver water, repair leaks and choose community improvements. All three chapters and Village Life have 3D environments with a playable 2D fallback.
+
+## Thirst Trail 3.3 — Clickable supplies and visible DOM reactions
+
+In Chapter 1, **Water for the trail** shows the four sealed-water supply drops beside the map. Click a nearby drop to collect it; a distant drop guides the explorer toward its cache. Collection removes the actual HTML button, inserts a named collected badge, and updates the counter, status, energy and impact. These are the existing expedition supplies: each can restore up to 12 energy and award 25 impact once per run. Walking over a cache still collects it automatically. Saved collections survive reload; replay restores the drops.
+
+| Player action | DOM outcome |
+| --- | --- |
+| Click a nearby water drop or press Enter/Space | Remove its button and add a collected badge |
+| Collect supplies | Change counter/status text; add a completion message after all four |
+| Rotate a pipeline tile | Change its visible ports, rotation attribute, accessible label and action feedback |
+| Pause or open Settings | Disable supply controls until play resumes |
+
+Remaining supply buttons keep their identity as the game updates. Keyboard focus moves to the next available drop after collection and stays on a pipe tile after rotation. Reduced motion keeps the feedback still. The controls work with both 3D and fallback rendering, while the existing difficulty levels, chapters and Village Life remain available.
 
 ## Thirst Trail 3.2 — Difficulty in Settings
 
@@ -156,3 +169,5 @@ To inspect all three 3D environments and live graphics controls, run `python too
 To load updates in an existing Codespace on the preview branch, run `git pull --ff-only origin codex/canyon-reservoir-celebration`, refresh the preview, and choose **High** or **Ultra** in the gear menu for the full visual treatment. Your saved graphics preferences and gameplay progress are preserved.
 
 Difficulty has a dedicated real-interface regression: `python tools/test-difficulty-browser.py` checks the Settings selector, keyboard controls, reloads, actual movement costs, Hard jug deliveries and live chapter puzzle changes. Add `--mobile` for the 390×844 layout and touch viewport.
+
+To verify real DOM reactions, run `python tools/test-dom-interactions-browser.py` and add `--mobile` for the 390×844 viewport. The test records DOM mutations, node identity, reward guards, reload/replay, keyboard actions and pipe rotation.

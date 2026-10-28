@@ -23,6 +23,7 @@
   <script src="cinematic-renderer.js" defer></script>
   <script src="village-life.js" defer></script>
   <script src="valley-restoration.js" defer></script>
+  <script src="supply-interactions.js" defer></script>
   <script src="script.js" defer></script>
   <script src="canyon-visuals.js" defer></script>
   <script src="canyon.js" defer></script>
@@ -32,6 +33,7 @@
   <link rel="stylesheet" href="village-life.css">
   <link rel="stylesheet" href="coast.css">
   <link rel="stylesheet" href="cinematic-ui.css">
+  <link rel="stylesheet" href="supply-interactions.css">
 </head>
 <body>
   <div class="app-shell">
@@ -145,6 +147,7 @@
             <div id="villageLifePanel" hidden></div>
             <div class="sidebar-header"><div><span class="overline">EXPEDITION LOG</span><h2>Your mission<span class="yellow">.</span></h2></div><div id="questsCompleted" class="quest-count">0 / 4</div></div>
             <p class="side-intro">Help the village restore access to a reliable source of water. Choose where to go next.</p>
+            <section id="supplyInteraction" hidden aria-label="Collect sealed water supplies"></section>
             <section class="navigator-panel" aria-labelledby="navigatorTitle">
               <div class="navigator-heading">
                 <span id="navigatorTitle" class="overline">LIVE VALLEY MAP</span>
@@ -213,7 +216,7 @@
         <div id="canyonModalOptions" class="canyon-modal-options"></div>
       </section>
     </div>
-    <footer class="footer"><span>THIRST:TRAIL 3.2 · AN INDEPENDENT WATER-ACCESS ADVENTURE</span><span>Inspired by <a href="https://www.charitywater.org/" target="_blank" rel="noopener noreferrer">charity: water</a> · Not an official game or affiliation</span></footer>
+    <footer class="footer"><span>THIRST:TRAIL 3.3 · AN INDEPENDENT WATER-ACCESS ADVENTURE</span><span>Inspired by <a href="https://www.charitywater.org/" target="_blank" rel="noopener noreferrer">charity: water</a> · Not an official game or affiliation</span></footer>
   </div>
 
   <div id="modalBackdrop" class="modal-backdrop" hidden>
@@ -232,6 +235,7 @@
       <section id="pipePuzzle" class="pipe-puzzle" aria-label="Interactive pipeline repair" hidden>
         <div class="pipe-endpoints"><span>💧 WATER IN</span><span>VILLAGE OUTLET →</span></div>
         <div id="pipeGrid" class="pipe-grid" role="group" aria-label="Rotate the nine pipe tiles to connect the water supply"></div>
+        <p id="pipeActionFeedback" class="pipe-action-feedback" role="status" aria-live="polite">Select a tile to turn it clockwise.</p>
         <p id="pipeStatus" class="pipe-status" role="status" aria-live="polite">Rotate the pieces to make one connected water route.</p>
         <button id="pipeHint" type="button" class="pipe-hint" title="Reveal the next rotation toward a valid solution without automatically moving any pipe">💡 Show next connection hint</button>
         <p class="pipe-legend"><span><i class="pipe-dot is-water"></i> Supplied</span><span><i class="pipe-dot is-leak"></i> Open / leaking joint</span><span>Rotate pieces clockwise</span></p>

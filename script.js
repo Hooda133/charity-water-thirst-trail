@@ -20,8 +20,8 @@
   // Sealed expedition drinking-water caches are placed on safe walkable banks.
   // Unlike river or rainwater, these are pre-packed supplies for the explorer.
   const supplyCaches=[
-    {id:"village",x:405,y:690},{id:"camptrail",x:610,y:455},
-    {id:"easttrail",x:1115,y:695},{id:"hillside",x:1350,y:430}
+    {id:"village",label:"Village trail",x:405,y:690},{id:"camptrail",label:"Camp trail",x:610,y:455},
+    {id:"easttrail",label:"East bank",x:1115,y:695},{id:"hillside",label:"Hillside",x:1350,y:430}
   ];
   const questDefs = [
     {key:"elder",title:"Meet the village elder", detail:"Learn what the village needs",icon:"💬"},
@@ -60,6 +60,7 @@
   };
 
   const exploring=()=>state.screen==="playing"||state.screen==="village";
+  let supplyUI=null;
   const playStyle=()=>window.TrailMode?.profile?.()||{id:"normal",label:"Normal",difficulty:"normal",energyMultiplier:1,mistakeMultiplier:1,hints:false};
   const mistakeAmount=amount=>amount*(playStyle().mistakeMultiplier??1);
   const mistakeLabel=amount=>String(Number((mistakeAmount(amount)*playStyle().energyMultiplier).toFixed(2)));
@@ -316,19 +317,23 @@
     return y<532||y>635 ? Math.abs(x-riverCenter(y))<94 : false;
   }
   function addScore(points){state.score+=points;tone(750,.13);}
+  function syncSupplyUI(){
+    supplyUI?.update({active:state.screen==="playing",paused:state.modalOpen||!$("graphicsPanel").hidden,
+      collected:[...state.supplies],x:state.x,y:state.y});
+  }
+  function collectSupply(id,manual=false){
+    if(state.screen!=="playing"||state.modalOpen||!$("graphicsPanel").hidden)return false;
+    const cache=supplyCaches.find(item=>item.id===id);
+    if(!cache||state.supplies.has(id)||Math.hypot(state.x-cache.x,state.y-cache.y)>(manual?140:42))return false;
+    state.supplies.add(id);
+    const gained=Math.min(12,100-state.energy);
+    state.energy=Math.min(100,state.energy+12);state.score+=25;
+    tone(920,.14);
+    notify("🧴 Sealed drinking-water supply found! +"+Number(gained.toFixed(1))+" energy · +25 impact");
+    updateUI();saveValley();return true;
+  }
   function collectNearbySupplies(){
-    if(state.screen!=="playing"||state.modalOpen)return;
-    for(const cache of supplyCaches){
-      if(state.supplies.has(cache.id))continue;
-      if(Math.hypot(state.x-cache.x,state.y-cache.y)>42)continue;
-      state.supplies.add(cache.id);
-      const gained=Math.min(12,100-state.energy);
-      state.energy=Math.min(100,state.energy+12);
-      state.score+=25;
-      tone(920,.14);
-      notify("🧴 Sealed drinking-water supply found! +"+Math.ceil(gained)+" energy · +25 impact");
-      updateUI();saveValley();
-    }
+    for(const cache of supplyCaches)collectSupply(cache.id);
   }
   function drain(n){
     if(state.screen==="village")return;
@@ -360,6 +365,7 @@
     state.impactTimer=setTimeout(()=>{panel.hidden=true;panel.classList.remove("replay");},victory?4200:2400);
   }
   function updateUI(){
+    syncSupplyUI();
     refreshVillageCelebration();
     $("valleyMissionTitle").textContent=state.screen==="village"?"A village worth coming home to":"Find the last well";
     if(state.screen==="ended"&&state.done.has("pump"))$("locationHint").textContent="The village water is flowing again!";
@@ -582,6 +588,7 @@
     // Reopening a puzzle should start at the top even after scrolling another
     // dialog; otherwise its title and controls can appear cut off.
     $("dialog").scrollTop=0;
+    syncSupplyUI();
     $("dialog").focus({preventScroll:true});
     tone(550,.07);
   }
@@ -590,6 +597,7 @@
     modalRevision++;
     $("modalBackdrop").hidden=true;$("pipePuzzle").hidden=true;$("rainPanel").hidden=true;$("marshPanel").hidden=true;
     state.modalOpen=false;state.modalKind="";
+    syncSupplyUI();
     $("valleyVictoryScene").hidden=true;refreshVillageCelebration();
     if(!silent)saveValley();
     if(!silent&&exploring()){
@@ -874,6 +882,7 @@
     for(let i=0;i<9;i++){
       const button=document.createElement("button");
       button.type="button";
+      button.dataset.pipeTile=String(i);button.dataset.rotation=String(pipeTurns[i]*90);
       const supplied=flow.connected.has(i);
       const leakDirections=new Set(flow.leaks.filter(leak=>leak.tile===i).map(leak=>leak.direction));
       button.className="pipe-tile"+(supplied?" is-connected":"")+
@@ -927,10 +936,14 @@
   }
   function rotatePipe(index){
     if(state.modalKind!=="pipe")return;
+    const keepFocus=document.activeElement?.dataset?.pipeTile===String(index);
     pipeTurns[index]=(pipeTurns[index]+1)%4;
     state.pipeReady=false;state.pumpQuizStep=0;state.pumpSafetyPassed=false;saveValley();
     tone(440+index*24,.045);
     renderPipePuzzle();
+    const tile=$("pipeGrid").querySelector('[data-pipe-tile="'+index+'"]');
+    tile?.classList.add("was-rotated");if(keepFocus)tile?.focus({preventScroll:true});
+    $("pipeActionFeedback").textContent="Tile "+(index+1)+" turned clockwise · now at "+pipeTurns[index]*90+"°.";
   }
   function finalPumpSafetyQuiz(){
     quiz({tag:"THE FINAL CHALLENGE",icon:"🔧",title:"Repair the Pump",
@@ -972,6 +985,7 @@
   }
   function beginPipePuzzle(){
     pipeTests=0;
+    $("pipeActionFeedback").textContent="Select a tile to turn it clockwise. Keyboard: Enter or Space.";
     openModal({tag:"PUMP REPAIR • STEP 1 OF 2",icon:"🔧",
       title:"Reconnect the water pipeline",
       description:"Connect all nine pipe sections. Water enters from middle LEFT and exits middle RIGHT. Turn the T-junctions to feed the branches and use the end caps to prevent leaks.",
@@ -1326,6 +1340,7 @@
   }
   function closeSettings(){
     graphicsPanel.hidden=true;$("graphicsButton").setAttribute("aria-expanded","false");
+    syncSupplyUI();
     $("graphicsButton").focus({preventScroll:true});
   }
   $("graphicsButton").addEventListener("click",()=>{
@@ -1395,6 +1410,14 @@
     });
   }
   window.addEventListener("trail:mode",syncPlayStyle);syncPlayStyle();
+  supplyUI=window.TrailSupplyUI?.create($("supplyInteraction"),{caches:supplyCaches,
+    onCollect:id=>collectSupply(id,true),
+    onTravel:id=>{
+      if(state.screen!=="playing"||state.modalOpen||!graphicsPanel.hidden)return false;
+      const cache=supplyCaches.find(item=>item.id===id);if(!cache||state.supplies.has(id))return false;
+      navToPosition(cache);return true;
+    }
+  })||null;
   window.TrailVillageLife?.init?.({
     navigate:point=>navToPosition(point),getPlayer:()=>({x:state.x,y:state.y}),notify,
     onChange:snapshot=>{state.community=snapshot;}
@@ -1405,8 +1428,8 @@
   window.ThirstTrail={snapshot:()=>({screen:state.screen,energy:state.energy,score:state.score,quests:[...state.done],items:[...state.inventory],x:Math.round(state.x),y:Math.round(state.y),nearby:state.nearby,elapsed:state.elapsed,
     pumpSafetyPassed:state.pumpSafetyPassed,waterRestored:state.done.has("pump")&&state.ended,
     watchingVillage:state.screen==="ended"&&state.done.has("pump")&&!state.modalOpen,renderer:world3d?"3d":"2d",
-    mode:playStyle().id,difficulty:playStyle().difficulty,community:window.TrailVillageLife?.snapshot?.()||null,
-    graphics:world3d?.getGraphicsStatus?.()||null}),version:"3.2"};
+    mode:playStyle().id,difficulty:playStyle().difficulty,supplies:[...state.supplies],community:window.TrailVillageLife?.snapshot?.()||null,
+    graphics:world3d?.getGraphicsStatus?.()||null}),version:"3.3"};
 
   // Self-contained renderer avoids authenticated preview requests for world3d.js.
   /* Thirst Trail - real-time, stylized Three.js world.
