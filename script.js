@@ -1525,9 +1525,9 @@
     view.id = "world3dCanvas";
     view.tabIndex = 0;
     view.setAttribute("aria-label","Three-dimensional Thirst Trail adventure world. Use WASD to walk, E to interact, or click the landscape.");
-    // Pointer gestures belong to the renderer. "manipulation" lets the browser
-    // cancel a drag as a scroll gesture before pointer capture can take effect.
-    view.style.touchAction = "none";
+    // CSS owns touch-action so phones can scroll vertically on the canvas,
+    // while desktop pointer drags and the dedicated touch pad still work.
+    // Do not set inline touch-action:none: it overrides mobile CSS rules.
     view.style.cursor = "grab";
     view.style.display = "block";
     const host = originalCanvas.parentElement;
