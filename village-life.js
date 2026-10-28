@@ -120,6 +120,11 @@
   function render(){
     if(!panel)return;
     panel.hidden=!active;if(!active)return;
+    // Rebuilding the card grid must not strand keyboard and screen-reader
+    // users on <body>. Preserve the focused action when it still exists; for
+    // consumed/disabled actions, return focus to the active activity tab.
+    const focused=document.activeElement;
+    const focusAction=focused&&panel.contains?.(focused)?focused.dataset?.villageAction:null;
     revision++;
     panel.replaceChildren();panel.className="village-life-panel";
     const header=element("div","village-life-header");
@@ -179,6 +184,12 @@
     panel.append(body);
     const status=element("p","village-life-status",message);status.setAttribute("role","status");status.setAttribute("aria-live","polite");panel.append(status);
     const persist=element("small","village-life-save","Village activities save independently of chapter replays in this browser.");panel.append(persist);
+    if(focusAction){
+      const actions=[...(panel.querySelectorAll?.("[data-village-action]")||[])];
+      const next=actions.find(button=>button.dataset.villageAction===focusAction&&!button.disabled)
+        ||actions.find(button=>button.dataset.villageAction==="tab-"+tab&&!button.disabled);
+      next?.focus?.({preventScroll:true});
+    }
   }
   function init(options={}){
     callbacks={...callbacks,...options};panel=$("villageLifePanel");
