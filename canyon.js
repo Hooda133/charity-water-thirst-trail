@@ -2,7 +2,7 @@
 /* Thirst Trail 2.0 — standalone second chapter with a distinct 3D world.
    Falls back to a playable 2D canyon if WebGL / CDN loading fails. */
 (() => {
-  const $=id=>document.getElementById(id),progress=window.TrailProgress;
+  const $=id=>document.getElementById(id),progress=window.TrailProgress,difficulty=window.TrailDifficulty;
   const canvas=$("canyonCanvas"),ctx=canvas?.getContext("2d");
   if(!canvas||!ctx)return;
   const W=1000,H=610;
@@ -16,6 +16,7 @@
   const questOrder=Object.keys(goals);
   const rest={x:290,y:520,title:"Shaded rest shelter",icon:"⛺"};
   const defaultState=()=>({
+    difficulty:difficulty.selected(),
     active:false,paused:false,finished:false,x:170,y:425,
     energy:100,score:0,elapsed:0,done:new Set(),keys:new Set(),
     path:[],nearby:null,modal:false,modalVersion:0,valves:[0,0,0],repairStep:0,
@@ -23,6 +24,7 @@
     lastSave:0,toastUntil:0,toast:""
   });
   let state=defaultState(),world=null,creating=false,lastFrame=0,raf=0;
+  const rules=()=>difficulty.get(state.difficulty);
   const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
   // Reuse Chapter 1's optional, muted-by-default-setting audio path. Canyon has
   // only short action cues: no oscillator, timer or ambient sound loop of its own.
@@ -30,7 +32,7 @@
   const pointDistance=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y);
   // Keep the Canyon's nonlethal recovery floor without ever granting energy
   // when a damaged or externally restored state starts below that floor.
-  const spendEnergy=amount=>{state.energy=Math.max(0,Math.min(state.energy,Math.max(7,state.energy-amount)));};
+  const spendEnergy=amount=>{state.energy=Math.max(0,Math.min(state.energy,Math.max(7,state.energy-amount*rules().energyCost)));};
   const wX=x=>(x-500)/24,wZ=y=>(y-305)/24;
   const approaches={valves:{x:390,y:223},span:{x:700,y:397},cistern:{x:820,y:235}};
   // Collision footprints include the explorer's body, so tanks and aqueduct
@@ -109,6 +111,7 @@
   function save(){
     if(!state.active||state.finished||!progress)return;
     const saved=progress.save("canyon",{
+      difficulty:state.difficulty,
       x:Math.round(state.x),y:Math.round(state.y),
       energy:Math.round(state.energy*10)/10,score:state.score,
       elapsed:Math.round(state.elapsed),
@@ -122,6 +125,7 @@
   }
   function restore(saved){
     if(!saved||typeof saved!=="object")return;
+    state.difficulty=difficulty.normalize(saved.difficulty);
     const number=(value,fallback)=>value!==null&&value!==undefined&&Number.isFinite(Number(value))?Number(value):fallback;
     state.x=clamp(number(saved.x,170),45,955);
     state.y=clamp(number(saved.y,425),45,565);
@@ -201,7 +205,7 @@
       if(state.energy>=100)return toast("You are fully rested and ready for the next mission.");
       sound();
       const before=state.energy;
-      state.energy=Math.min(100,state.energy+34);
+      state.energy=Math.min(100,state.energy+rules().canyonRecovery);
       toast("Rested in the canyon shade · +"+(Math.round((state.energy-before)*10)/10)+" energy");save();refreshUI();
       return;
     }
@@ -268,7 +272,7 @@
       if(Math.abs(state.valves[0]-state.valves[2])>1)issues.push("Bring intake and return within one setting.");
       feedback.textContent=issues.join(" ")||"✓ All operating conditions are safe. Test pressure to complete calibration.";
       root.append(feedback);
-      if(state.failedValveTests.size>=2){
+      if(state.failedValveTests.size>=rules().valveHintAfter){
         const hint=document.createElement("p");hint.className="canyon-pressure-hint";
         hint.textContent="Nia’s field note: Intake 2 + Regulator 2 + Return 1 gives 69 kPa and balanced flow.";
         root.append(hint);
@@ -340,12 +344,14 @@
     progress?.complete("canyon");refreshUI();
     modal("✦ CHAPTER COMPLETE","The aqueduct flows again!",
       "You brought the canyon system back into service and verified the water-safety steps. The Forgotten Canyon is complete! Total impact: "+
-      state.score.toLocaleString()+" points. This is a fictional training scenario, not drinking-water guidance.",
+      state.score.toLocaleString()+" points · "+rules().label+" difficulty. This is a fictional training scenario, not drinking-water guidance.",
       [{text:"◈ Return to chapter selection",primary:true,action:goHome},
        {text:"↻ Replay Forgotten Canyon",action:()=>{closeModal();launch(true);}}]);
   }
   function formatTime(t){const sec=Math.floor(t);return String(Math.floor(sec/60)).padStart(2,"0")+":"+String(sec%60).padStart(2,"0");}
   function refreshUI(){
+    $("canyonDifficulty").textContent=rules().label;
+    $("canyonDifficulty").setAttribute("aria-label","Expedition difficulty: "+rules().label);
     const n=state.done.size,next=questOrder.find(key=>!state.done.has(key));
     $("canyonProgressLabel").textContent=n+" / 5 completed";
     $("canyonProgressFill").style.width=n/5*100+"%";
@@ -371,7 +377,7 @@
       button.addEventListener("click",()=>pathTo(goal));dest.append(button);
     }
     const restBtn=document.createElement("button");restBtn.type="button";restBtn.className="canyon-destination";
-    restBtn.textContent="⛺ Shaded rest shelter · +34 energy";restBtn.addEventListener("click",()=>pathTo(rest));dest.append(restBtn);
+    restBtn.textContent="⛺ Shaded rest shelter · +"+rules().canyonRecovery+" energy";restBtn.addEventListener("click",()=>pathTo(rest));dest.append(restBtn);
     }
     const nearby=closest();state.nearby=nearby;
     $("canyonPrompt").hidden=!nearby||!state.active||state.paused||state.modal;
@@ -910,13 +916,13 @@
     }
     raf=requestAnimationFrame(frame);
   }
-  function launch(forceNew=false){
+  function launch(forceNew=false,mode=difficulty.selected()){
     if(!progress?.unlocked("canyon"))return;
     if(!raf)raf=requestAnimationFrame(frame);
     if(world){/* Reuse existing scene and renderer on replay. */}
     const saved=!forceNew?progress.saved("canyon"):null;
     if(forceNew)progress.clearSave("canyon");
-    state=defaultState();state.active=true;
+    state=defaultState();state.difficulty=difficulty.normalize(mode);state.active=true;
     lastFrame=0;
     world?.recenterCamera?.();
     if(saved)restore(saved);
@@ -998,6 +1004,7 @@
   window.TrailCanyon=Object.freeze({
     launch,suspend,goHome,pause,snapshot:()=>({
       active:state.active,paused:state.paused,finished:state.finished,
+      difficulty:state.difficulty,
       x:state.x,y:state.y,energy:state.energy,score:state.score,
       done:[...state.done],pressure:currentPressure(),valves:[...state.valves],
       repairStep:state.repairStep,renderer:world?"3d":"2d"

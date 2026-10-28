@@ -68,6 +68,26 @@ Run a local static web server (recommended because glTF models load over HTTP) a
 
 **Camera and graphics:** In 3D Valley, left-click to walk, left-drag to pan, right-drag to orbit, and press **C** to recenter. Use ⚙ for Low, Medium, High, and Ultra graphics settings.
 
+## Interactive page elements
+
+In the Valley expedition log, **Sealed Water Caches** shows four clickable water drops. Select one to walk to its real cache. The drop tilts while selected, disappears from the available list when collected, and adds a collected badge. The live message, energy bar, impact score, and supply counter update together. Collected drops stay removed when you resume a save; restarting restores all four. Mouse, touch, and keyboard activation work, and focus moves to the next available drop after collection.
+
+The pipeline repair also reacts to clicks by rotating its pieces and updating the visible connections and flow feedback. These interactions change, add, and remove HTML elements in response to player actions.
+
+## Difficulty modes
+
+Choose **Easy**, **Normal**, or **Hard** on the home screen before starting a new expedition. Both chapters show the active difficulty in their HUD. A saved chapter keeps its original mode when you continue it; changing the selection applies to new runs.
+
+| Mode | Energy costs | Valley camp | Supply caches | Canyon shelter | Canyon valve hint |
+| --- | --- | --- | --- | --- | --- |
+| Easy | 65% of Normal | 3 rests, +48 energy each | +18 energy | +51 energy | Available immediately |
+| Normal | Original balance | 2 rests, +32 energy each | +12 energy | +34 energy | After 2 different failed tests |
+| Hard | 140% of Normal | 1 rest, +24 energy | +9 energy | +26 energy | After 4 different failed tests |
+
+Energy recovery caps at 100%. All modes retain the same puzzles, water-safety rules, free pipeline hints, and chapter unlocks. Normal preserves the original adventure balance. Difficulty preferences and checkpoints are stored in this browser when storage is available.
+
+Valley emergency recovery restores 65 / 50 / 35 energy on Easy / Normal / Hard while preserving completed work. Valley best scores are tracked separately for each mode; existing best scores remain under Normal. Entering Canyon directly after finishing Valley carries the expedition's difficulty unless a Canyon checkpoint already has its own saved mode.
+
 ## Run locally
 
 ```bash
@@ -95,6 +115,7 @@ Run from the repository root:
 
 ```bash
 node tools/test-chapters.mjs
+node tools/test-difficulty.mjs
 node tools/test-canyon-regressions.mjs
 node tools/test-progression.mjs
 node tools/test-pipes.mjs
@@ -108,5 +129,7 @@ node tools/validate-explorer.mjs
 GitHub Actions runs these checks when gameplay source changes. The chapter integration test covers unlocking, autosaves, both canyon puzzles, wrong-answer penalties, final completion and checkpoint resume. **Actual WebGL visual appearance, sound and laptop frame rate still require testing in a browser.**
 
 For the real-interface Chromium walkthrough, install the optional QA tools (`python -m pip install playwright==1.58.0`, then `python -m playwright install chromium`) and run `python tools/test-browser.py`. It deliberately blocks CDN loading to test the 2D fallback. `python tools/test-browser.py --3d` tests the actual WebGL scenes and requires access to the existing Three.js CDN, or exact r170 test modules supplied with `--offline-three DIRECTORY`. Use `--browser PATH` to select a system Chromium. These are test tools; the game itself still needs no installation or build.
+
+Run `python tools/test-supply-dom.py` to verify clickable drop removal, collected badges, rewards, saved state, and keyboard focus on desktop and mobile. It uses the same optional browser tools and accepts `--browser PATH`.
 
 See [GAMEPLAY_AUDIT.md](GAMEPLAY_AUDIT.md) for the October 26 repair report, executed checks and remaining manual-test limits. Canyon now has safe landmark approaches, bidirectional valve controls and recoverable construction checkpoints. Valley saves pipe/safety progress and offers **Recover at camp** after energy depletion while retaining completed work. Storage restrictions display an honest status and keep the current session playable.

@@ -18,6 +18,7 @@
   </script>
   <script src="progression.js" defer></script>
   <script src="explorer.js" defer></script>
+  <script src="difficulty.js" defer></script>
   <script src="script.js" defer></script>
   <script src="canyon-visuals.js" defer></script>
   <script src="canyon.js" defer></script>
@@ -41,6 +42,15 @@
           <div class="eyebrow"><span class="live-dot"></span> A NEW EXPEDITION BEGINS</div>
           <h1 id="startTitle">Every drop<br><em>changes</em><br>everything<span class="yellow">.</span></h1>
           <p>One village. One broken pump. A journey across the valley. Explore a living map, meet the locals, gather supplies, and solve the challenges standing between a community and safe water.</p>
+          <fieldset id="difficultyOptions" class="difficulty-select" aria-describedby="difficultyNote">
+            <legend>CHOOSE YOUR DIFFICULTY</legend>
+            <div class="difficulty-options">
+              <label class="difficulty-choice" for="difficultyEasy"><input id="difficultyEasy" type="radio" name="difficulty" value="easy"><span class="difficulty-choice-copy"><strong>Easy</strong><small>Explore with extra supplies</small></span></label>
+              <label class="difficulty-choice" for="difficultyNormal"><input id="difficultyNormal" type="radio" name="difficulty" value="normal" checked><span class="difficulty-choice-copy"><strong>Normal</strong><small>The original adventure</small></span></label>
+              <label class="difficulty-choice" for="difficultyHard"><input id="difficultyHard" type="radio" name="difficulty" value="hard"><span class="difficulty-choice-copy"><strong>Hard</strong><small>Plan every drop of energy</small></span></label>
+            </div>
+            <p id="difficultyNote" class="difficulty-note" aria-live="polite">The original balance of exploration, recovery, and puzzle guidance. Applies to new expeditions. Saved chapters keep their difficulty.</p>
+          </fieldset>
           <div class="start-buttons">
             <button id="startButton" type="button" class="button button-primary">Start adventure <span aria-hidden="true">↗</span></button>
             <button id="instructionsButton" type="button" class="button button-ghost">How to play <span aria-hidden="true">→</span></button>
@@ -68,7 +78,7 @@
               </button>
             </div>
           </section>
-          <div class="start-highscore">🏆 <span>BEST EXPEDITION</span> <strong id="highScoreStart">—</strong></div>
+          <div class="start-highscore">🏆 <span>BEST EXPEDITION · <span id="highScoreMode">Normal</span></span> <strong id="highScoreStart">—</strong></div>
         </div>
         <div class="hero-scene" aria-hidden="true">
           <div class="hero-top-label"><span class="hero-beacon" aria-hidden="true"></span><span>GREENWATER VALLEY <b>·</b> A LIVING 3D WORLD</span></div>
@@ -84,7 +94,7 @@
 
       <section id="gameScreen" class="game-screen" hidden aria-label="Thirst Trail game">
         <div class="hud">
-          <div class="hud-mission"><span id="chapterLabel" class="overline"><span class="live-dot"></span> CHAPTER 01 / THE VALLEY</span><strong>Find the last well</strong><small id="statusLine">The village needs your help.</small><div class="mission-progress"><span id="progressLabel">0 / 4 completed</span><span class="mission-progress-track"><i id="progressBar"></i></span></div></div>
+          <div class="hud-mission"><span id="chapterLabel" class="overline"><span class="live-dot"></span> CHAPTER 01 / THE VALLEY</span><span id="valleyDifficulty" class="difficulty-badge" aria-label="Expedition difficulty">Normal</span><strong>Find the last well</strong><small id="statusLine">The village needs your help.</small><div class="mission-progress"><span id="progressLabel">0 / 4 completed</span><span class="mission-progress-track"><i id="progressBar"></i></span></div></div>
           <div class="hud-resource"><div class="resource-label"><span>💧 ENERGY</span><strong id="energyValue">100%</strong></div><div class="bar"><div id="energyBar" class="bar-fill"></div></div></div>
           <div class="hud-stat"><span>✦ IMPACT</span><strong id="scoreValue">0000</strong></div>
           <div class="hud-stat"><span>◷ TIME</span><strong id="timeValue">00:00</strong></div>
@@ -134,6 +144,13 @@
             <div class="sidebar-divider"></div>
             <div class="inventory-heading"><span class="overline">YOUR BACKPACK</span><span id="inventoryCount">0 ITEMS</span></div>
             <div id="inventoryList" class="inventory-list"><span class="muted">Your bag is empty.</span></div>
+            <section class="supply-collection" aria-labelledby="supplyDropTitle">
+              <h3 id="supplyDropTitle" class="overline" tabindex="-1">SEALED WATER CACHES</h3>
+              <p class="supply-collection-help">Select a water drop to walk to a cache. Collect it to recover energy.</p>
+              <div id="supplyDropList" class="supply-drop-list" role="group" aria-label="Available sealed water caches"></div>
+              <div id="collectedSupplyList" class="collected-supply-list" role="group" aria-label="Collected sealed water caches"></div>
+              <p id="supplyDropStatus" class="supply-drop-status" role="status" aria-live="polite" aria-atomic="true">0 / 4 caches collected.</p>
+            </section>
           </aside>
         </div>
         <div class="game-bottom"><span>💛 Every action creates impact. Plan your route and conserve your energy.</span><span>Fictional educational game · Not real-world drinking-water guidance</span></div>
@@ -142,7 +159,7 @@
       <section id="canyonScreen" class="canyon-screen" hidden aria-label="Level 2: The Forgotten Canyon">
         <div class="canyon-header">
           <div><span class="overline">CHAPTER 02 · THE FORGOTTEN CANYON</span><h2>Restore the forgotten aqueduct<span class="yellow">.</span></h2><p id="canyonSubtitle">Meet the canyon surveyor to begin.</p></div>
-          <div class="canyon-controls"><span id="canyonProgressLabel" class="canyon-progress-label">0 / 5 repaired</span><button id="canyonPause" class="button button-compact button-ghost-dark" type="button">Ⅱ Pause</button><button id="canyonToChapters" class="button button-compact button-ghost-dark" type="button">◈ Chapters</button></div>
+          <div class="canyon-controls"><span id="canyonDifficulty" class="difficulty-badge" aria-label="Expedition difficulty">Normal</span><span id="canyonProgressLabel" class="canyon-progress-label">0 / 5 repaired</span><button id="canyonPause" class="button button-compact button-ghost-dark" type="button">Ⅱ Pause</button><button id="canyonToChapters" class="button button-compact button-ghost-dark" type="button">◈ Chapters</button></div>
         </div>
         <div class="canyon-layout">
           <div class="canyon-stage">

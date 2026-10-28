@@ -57,6 +57,7 @@ const sandbox={document,window,localStorage:storage,console,
  performance:{now:()=>time},requestAnimationFrame(fn){frames.push(fn);return frames.length},
  setTimeout(fn){return 1},clearTimeout(){},Event:class{constructor(type){this.type=type}}};
 runInNewContext(readFileSync(resolve(root,"progression.js"),"utf8"),sandbox);
+runInNewContext(readFileSync(resolve(root,"difficulty.js"),"utf8"),sandbox);
 runInNewContext(script,sandbox);
 const snapshot=()=>window.ThirstTrail.snapshot();
 const dispatch=(name,event={})=>{for(const cb of handlers.get(name)||[])cb(event)};

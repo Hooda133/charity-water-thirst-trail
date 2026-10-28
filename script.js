@@ -20,8 +20,8 @@
   // Sealed expedition drinking-water caches are placed on safe walkable banks.
   // Unlike river or rainwater, these are pre-packed supplies for the explorer.
   const supplyCaches=[
-    {id:"village",x:405,y:690},{id:"camptrail",x:610,y:455},
-    {id:"easttrail",x:1115,y:695},{id:"hillside",x:1350,y:430}
+    {id:"village",name:"Village trail",x:405,y:690},{id:"camptrail",name:"Camp trail",x:610,y:455},
+    {id:"easttrail",name:"East trail",x:1115,y:695},{id:"hillside",name:"Hillside",x:1350,y:430}
   ];
   const questDefs = [
     {key:"elder",title:"Meet the village elder", detail:"Learn what the village needs",icon:"💬"},
@@ -30,8 +30,8 @@
     {key:"pump",title:"Restore the village pump",detail:"Complete the repair challenge",icon:"⚙️"}
   ];
   const safeStore = {
-    get() {try{return Number(localStorage.getItem("thirstTrailBest"))||0;}catch{return 0;}},
-    set(v) {try{localStorage.setItem("thirstTrailBest",String(v));}catch{/* optional storage */}},
+    get(mode="normal") {try{return Number(localStorage.getItem(mode==="normal"?"thirstTrailBest":"thirstTrailBest_"+mode))||0;}catch{return 0;}},
+    set(v,mode="normal") {try{localStorage.setItem(mode==="normal"?"thirstTrailBest":"thirstTrailBest_"+mode,String(v));}catch{/* optional storage */}},
     getSound() {try{return localStorage.getItem("thirstTrailSound")!=="false";}catch{return true;}},
     setSound(v) {try{localStorage.setItem("thirstTrailSound",String(v));}catch{/* optional storage */}},
     tutorialSeen() {try{return localStorage.getItem("thirstTrailTutorial")==="true";}catch{return false;}},
@@ -49,7 +49,9 @@
   const graphics={...graphicsPresets.medium,...(savedGraphics||{})};
   let graphicsPreset=savedGraphics?.preset||"medium";
   function graphicsProfile(){return {...graphics,preset:graphicsPreset};}
+  const difficulty=window.TrailDifficulty;
   const state = {
+    difficulty:difficulty.selected(),
     screen:"start", energy:100, score:0, elapsed:0, x:310, y:620, moving:false,
     walkT:0, facing:1, keys:new Set(), touch:new Set(), path:[], goal:null, destination:null,
     done:new Set(), inventory:new Set(), campUses:0, quizStep:0, modalOpen:false, modalKind:"",
@@ -59,10 +61,18 @@
   };
 
   const chapters=window.TrailProgress;
+  const rules=()=>difficulty.get(state.difficulty);
+  const energyCost=n=>Math.round(n*rules().energyCost*100)/100;
+  function refreshBest(){
+    const mode=difficulty.selected(),best=safeStore.get(mode);
+    $("highScoreStart").textContent=best?best.toLocaleString():"—";
+    $("highScoreMode").textContent=difficulty.get(mode).label;
+  }
   let lastValleySaveTime=0;
   function saveValley(){
     if(state.screen!=="playing"||!chapters||state.ended)return;
     chapters.save("valley",{
+      difficulty:state.difficulty,
       energy:Math.round(state.energy*10)/10,score:state.score,
       elapsed:Math.round(state.elapsed),x:Math.round(state.x),y:Math.round(state.y),
       done:[...state.done],inventory:[...state.inventory],
@@ -82,6 +92,8 @@
     $("canyonChapterStatus").textContent=canyonUnlocked&&canyonSave?"▶ Continue saved chapter":
       data.completed.includes("canyon")?"✓ Chapter complete · Replay":
       canyonUnlocked?"▶ Chapter unlocked":"🔒 Finish Chapter 1 to unlock";
+    if(valleySave)$("valleyChapterStatus").textContent+=" · "+difficulty.get(data.saves.valley.difficulty).label;
+    if(canyonSave&&canyonUnlocked)$("canyonChapterStatus").textContent+=" · "+difficulty.get(data.saves.canyon.difficulty).label;
   }
   function showChapters(){
     closeModal(true);
@@ -92,7 +104,7 @@
   }
   function continueValley(){
     const saved=chapters?.saved("valley");
-    start({resume:!!saved});
+    start({resume:!!saved,mode:saved?difficulty.normalize(saved.difficulty):difficulty.selected()});
     if(!saved)return;
     closeModal(true);
     const number=(value,fallback)=>value!==null&&value!==""&&
@@ -117,7 +129,7 @@
     state.pipeReady=saved.pipeReady===true&&pipeFlow().solved;
     state.pumpQuizStep=state.pipeReady?Math.max(0,Math.min(2,Math.floor(number(saved.pumpQuizStep,0)))):0;
     state.supplies=new Set((Array.isArray(saved.supplies)?saved.supplies:[]).filter(x=>supplyCaches.some(s=>s.id===x)));
-    state.campUses=Math.max(0,Math.min(2,Math.floor(number(saved.campUses,0))));
+    state.campUses=Math.max(0,Math.min(rules().campUses,Math.floor(number(saved.campUses,0))));
     state.lastStatus="";updateNearby();updateUI();notify("Welcome back — valley progress restored.");
     saveValley();
     if(state.done.has("pump"))end(true,"Your restored checkpoint confirms the pump repair. The Forgotten Canyon is ready for your next expedition.","THE LAST WELL RESTORED");
@@ -295,22 +307,84 @@
     return y<532||y>635 ? Math.abs(x-riverCenter(y))<94 : false;
   }
   function addScore(points){state.score+=points;tone(750,.13);}
+  // Cache controls are real DOM elements, separate from the canvas scenery.
+  // Reconcile only when membership changes so periodic HUD updates keep focus.
+  const supplyButtons=new Map();
+  const supplyBadges=new Map();
+  let supplyDisplayStamp=null;
+  function renderSupplyDrops(){
+    const stamp=state.difficulty+":"+[...state.supplies].sort().join(",");
+    if(stamp!==supplyDisplayStamp){
+      supplyDisplayStamp=stamp;
+      const focused=document.activeElement?.dataset?.supply;
+      const available=$("supplyDropList"),collected=$("collectedSupplyList");
+      const availableNodes=[],collectedNodes=[];
+      for(const id of supplyBadges.keys())if(!state.supplies.has(id))supplyBadges.delete(id);
+      for(const cache of supplyCaches){
+        if(state.supplies.has(cache.id)){
+          const badge=supplyBadges.get(cache.id)||document.createElement("span");
+          badge.className="collected-supply";badge.dataset.collectedSupply=cache.id;
+          badge.textContent="✓ "+cache.name;supplyBadges.set(cache.id,badge);collectedNodes.push(badge);
+          supplyButtons.delete(cache.id);
+          continue;
+        }
+        if(supplyButtons.has(cache.id)){
+          const button=supplyButtons.get(cache.id);
+          button.setAttribute("aria-label",`Collect sealed water at ${cache.name}, up to ${rules().supplyRecovery} energy and 25 impact`);
+          button.querySelector("small").textContent=`+${rules().supplyRecovery} energy · +25 impact`;
+          availableNodes.push(button);continue;
+        }
+        const button=document.createElement("button");
+        button.type="button";button.className="supply-drop";button.dataset.supply=cache.id;
+        button.setAttribute("aria-label",`Collect sealed water at ${cache.name}, up to ${rules().supplyRecovery} energy and 25 impact`);
+        const icon=document.createElement("span");icon.className="supply-drop-icon";
+        icon.setAttribute("aria-hidden","true");
+        icon.innerHTML='<svg viewBox="0 0 40 48" fill="none" focusable="false"><path d="M20 3C16 12 5 22 5 30a15 15 0 0 0 30 0C35 22 24 12 20 3Z" fill="currentColor"/><path d="M12 29c0 5 3 8 7 9" stroke="#fff" stroke-width="3" stroke-linecap="round"/></svg>';
+        const copy=document.createElement("span");copy.className="supply-drop-copy";
+        const title=document.createElement("strong");title.textContent=cache.name;
+        const reward=document.createElement("small");reward.textContent=`+${rules().supplyRecovery} energy · +25 impact`;
+        copy.append(title,reward);button.append(icon,copy);
+        button.addEventListener("click",()=>{
+          // Detached controls, paused dialogs, and repeated clicks cannot grant rewards.
+          if(state.screen!=="playing"||state.modalOpen||state.ended||state.supplies.has(cache.id)||supplyButtons.get(cache.id)!==button)return;
+          if(Math.hypot(state.x-cache.x,state.y-cache.y)<=42){collectNearbySupplies();return;}
+          navToPosition(cache);
+          if(state.goal?.x===cache.x&&state.goal?.y===cache.y){
+            renderSupplyDrops();
+            $("supplyDropStatus").textContent=`Walking to ${cache.name}. The drop will disappear when collected.`;
+          }
+        });
+        supplyButtons.set(cache.id,button);availableNodes.push(button);
+      }
+      available.replaceChildren(...availableNodes);collected.replaceChildren(...collectedNodes);
+      $("supplyDropStatus").textContent=state.supplies.size===supplyCaches.length?
+        "All four caches collected! Their sealed water has restored your energy.":
+        `${state.supplies.size} / ${supplyCaches.length} caches collected. Select a drop to find sealed water.`;
+      if(focused)(supplyButtons.get(focused)||supplyButtons.values().next().value||$("supplyDropTitle")).focus({preventScroll:true});
+    }
+    for(const cache of supplyCaches){
+      const selected=state.screen==="playing"&&!state.modalOpen&&state.goal?.x===cache.x&&state.goal?.y===cache.y;
+      supplyButtons.get(cache.id)?.classList.toggle("is-target",!!selected);
+    }
+  }
   function collectNearbySupplies(){
     if(state.screen!=="playing"||state.modalOpen)return;
     for(const cache of supplyCaches){
       if(state.supplies.has(cache.id))continue;
       if(Math.hypot(state.x-cache.x,state.y-cache.y)>42)continue;
       state.supplies.add(cache.id);
-      const gained=Math.min(12,100-state.energy);
-      state.energy=Math.min(100,state.energy+12);
+      const gained=Math.min(rules().supplyRecovery,100-state.energy);
+      state.energy=Math.min(100,state.energy+rules().supplyRecovery);
       state.score+=25;
       tone(920,.14);
       notify("🧴 Sealed drinking-water supply found! +"+Math.ceil(gained)+" energy · +25 impact");
-      updateUI();saveValley();
+      updateUI();
+      $("supplyDropStatus").textContent=`${cache.name} collected! +${Math.round(gained*10)/10} energy · +25 impact. ${state.supplies.size} / ${supplyCaches.length} caches collected.`;
+      saveValley();
     }
   }
   function drain(n){
-    state.energy=Math.max(0,state.energy-n);
+    state.energy=Math.max(0,state.energy-n*rules().energyCost);
     if(state.modalOpen&&state.energy>0)saveValley();
     if(state.energy<=0 && state.screen==="playing")end(false,"Your energy ran out before the expedition was complete. Rest at the camp, choose a shorter route, and try again.");
   }
@@ -338,6 +412,10 @@
     state.impactTimer=setTimeout(()=>{panel.hidden=true;panel.classList.remove("replay");},victory?4200:2400);
   }
   function updateUI(){
+    renderSupplyDrops();
+    $("valleyDifficulty").textContent=rules().label;
+    $("valleyDifficulty").setAttribute("aria-label",`Expedition difficulty: ${rules().label}`);
+    spots.camp.hint=`Restore ${rules().campRecovery} energy (${Math.max(0,rules().campUses-state.campUses)} uses left)`;
     $("energyValue").textContent=`${Math.ceil(state.energy)}%`;
     $("energyBar").style.width=`${state.energy}%`;
     $("energyBar").classList.toggle("low",state.energy<=28);
@@ -374,9 +452,10 @@
       b.title=`Walk to ${sp.name}`;b.addEventListener("click",()=>navigateTo(key));ds.append(b);
     }
   }
-  function start({resume=false}={}){
+  function start({resume=false,mode=difficulty.selected()}={}){
     lastValleySaveTime=0;
-    Object.assign(state,{screen:"playing",energy:100,score:0,elapsed:0,x:310,y:620,walkT:0,
+    supplyDisplayStamp=null;
+    Object.assign(state,{difficulty:difficulty.normalize(mode),screen:"playing",energy:100,score:0,elapsed:0,x:310,y:620,walkT:0,
       path:[],goal:null,destination:null,nearby:null,campUses:0,ended:false,moving:false,lastStatus:"",cameraX:0,cameraY:0,effect:null,scenic:false,pipeReady:false,pumpQuizStep:0});
     pipeTurns=[...PIPE_START];pipeTests=0;
     $("scenicViewButton").setAttribute("aria-pressed","false");
@@ -579,8 +658,9 @@
     }
   }
   function restAtCamp(){
-    if(state.campUses>=2){openModal({tag:"REST CAMP",icon:"⛺",title:"Supplies have run out",description:"This campsite's sealed drinking-water supplies have been used. Choose your remaining route carefully.",choices:[{text:"Continue expedition",primary:true,action:()=>closeModal()}]});return;}
-    openModal({tag:"SAFE SUPPLIES",icon:"⛺",title:"Take a breather",description:`A volunteer has sealed, ready-to-drink water and a place to rest. Recover 32 energy. ${2-state.campUses} rest stop(s) remaining.`,choices:[{text:"Rest and recover (+32 energy)",primary:true,action:()=>{state.energy=Math.min(100,state.energy+32);state.campUses++;addScore(25);closeModal();updateUI();notify("Rested at camp · Energy recovered!");}},{text:"Not yet",action:()=>closeModal()}]});
+    const {campUses,campRecovery}=rules();
+    if(state.campUses>=campUses){openModal({tag:"REST CAMP",icon:"⛺",title:"Supplies have run out",description:"This campsite's sealed drinking-water supplies have been used. Choose your remaining route carefully.",choices:[{text:"Continue expedition",primary:true,action:()=>closeModal()}]});return;}
+    openModal({tag:"SAFE SUPPLIES",icon:"⛺",title:"Take a breather",description:`A volunteer has sealed, ready-to-drink water and a place to rest. Recover ${campRecovery} energy. ${campUses-state.campUses} rest stop(s) remaining.`,choices:[{text:`Rest and recover (+${campRecovery} energy)`,primary:true,action:()=>{state.energy=Math.min(100,state.energy+campRecovery);state.campUses++;addScore(25);closeModal();updateUI();notify("Rested at camp · Energy recovered!");}},{text:"Not yet",action:()=>closeModal()}]});
   }
   const riverQuestions=[
     {q:"The river looks crystal clear. Does that automatically mean the water is safe to drink?",answers:["Yes, clear water is always safe.","No, appearance alone can't establish safety.","Only if the water feels cold."],right:1,feedback:"Correct! Clear water may still carry contaminants. Appearance alone does not establish safety."},
@@ -597,8 +677,8 @@
   ];
   function quiz({tag,icon,title,questions,onWin,step=0,onProgress=null}){
     const q=questions[step];
-    openModal({tag,icon,title:`${title} · ${step+1}/${questions.length}`,description:q.q,progress:step,total:questions.length,kind:"quiz",tip:"Think carefully: wrong answers cost 6 energy.",choices:q.answers.map((answer,i)=>({text:answer,action:()=>{
-      if(i!==q.right){drain(6);if(state.ended)return;quiz({tag,icon,title,questions,onWin,step,onProgress});$("modalTip").textContent="Not quite. That choice may put people at risk. Try again (−6 energy).";tone(190,.16);updateUI();return;}
+    openModal({tag,icon,title:`${title} · ${step+1}/${questions.length}`,description:q.q,progress:step,total:questions.length,kind:"quiz",tip:`Think carefully: wrong answers cost ${energyCost(6)} energy.`,choices:q.answers.map((answer,i)=>({text:answer,action:()=>{
+      if(i!==q.right){drain(6);if(state.ended)return;quiz({tag,icon,title,questions,onWin,step,onProgress});$("modalTip").textContent=`Not quite. That choice may put people at risk. Try again (−${energyCost(6)} energy).`;tone(190,.16);updateUI();return;}
       tone(850,.13);
       onProgress?.(step+1);
       if(step+1<questions.length){quiz({tag,icon,title,questions,onWin,step:step+1,onProgress});$("modalTip").textContent=q.feedback;}
@@ -656,7 +736,7 @@
     if(!item.litter){
       drain(3);if(state.ended)return;
       const status=$("marshStatus");status.className="marsh-status is-error";
-      status.textContent=item.name+" belongs in the habitat. Leave it undisturbed (−3 energy).";
+      status.textContent=item.name+` belongs in the habitat. Leave it undisturbed (−${energyCost(3)} energy).`;
       tone(190,.12);updateUI();return;
     }
     marshPicked.add(index);tone(650+index*40,.085);renderMarsh();
@@ -682,7 +762,7 @@
     openModal({tag:"OPTIONAL HABITAT MISSION",icon:"🪷",title:"Protect the Wetland Sanctuary",
       description:"A boardwalk overlooks a fragile wetland. Collect four pieces of litter, but don't disturb nests or living plants.",
       kind:"marsh",
-      tip:"Select the items you would safely remove. Disturbing wildlife and plants costs 3 energy.",
+      tip:`Select the items you would safely remove. Disturbing wildlife and plants costs ${energyCost(3)} energy.`,
       choices:[{text:"✓ Finish cleanup",primary:true,action:verifyMarsh},
         {text:"Back to the trail",action:()=>closeModal()}]});
     $("marshPanel").hidden=false;renderMarsh();
@@ -736,7 +816,7 @@
     drain(2);
     if(state.ended)return;
     const status=$("rainStatus");status.className="rain-status is-error";
-    status.textContent="This plan needs improvement. Consider roof runoff, filtration and protected storage (−2 energy).";
+    status.textContent=`This plan needs improvement. Consider roof runoff, filtration and protected storage (−${energyCost(2)} energy).`;
     updateUI();tone(220,.12);
   }
   function rainChallenge(){
@@ -905,7 +985,7 @@
     const flow=pipeFlow();
     status.textContent=(flow.delivered?"The outlet has water but the branches are incomplete. ":"No safe water reached the outlet. ")+
       flow.connected.size+"/9 pieces connected, "+flow.leaks.length+
-      " open joints. Repair the pipeline and try again (−2 energy).";
+      ` open joints. Repair the pipeline and try again (−${energyCost(2)} energy).`;
     updateUI();
     tone(210,.15);
   }
@@ -914,7 +994,7 @@
     openModal({tag:"PUMP REPAIR • STEP 1 OF 2",icon:"🔧",
       title:"Reconnect the water pipeline",
       description:"Connect all nine pipe sections. Water enters from middle LEFT and exits middle RIGHT. Turn the T-junctions to feed the branches and use the end caps to prevent leaks.",
-      kind:"pipe",tip:"IN connects to tile 4 on the left; OUT leaves tile 6 on the right. Teal shows supplied pipes, red shows open joints. Hints are free; unsuccessful flow tests cost 2 energy.",
+      kind:"pipe",tip:`IN connects to tile 4 on the left; OUT leaves tile 6 on the right. Teal shows supplied pipes, red shows open joints. Hints are free; unsuccessful flow tests cost ${energyCost(2)} energy.`,
       choices:[
         {text:"💧 Test the flow",primary:true,action:verifyPipe},
         {text:"↩ Back to the valley",action:()=>closeModal()}
@@ -933,12 +1013,12 @@
     if(!state.ended||state.screen!=="ended")return;
     // Recovery preserves the work already completed without awarding another
     // camp rest, replenishing supplies or changing the expedition timer/score.
-    Object.assign(state,{screen:"playing",ended:false,energy:50,x:approaches.camp.x,y:approaches.camp.y,
+    Object.assign(state,{screen:"playing",ended:false,energy:rules().recoveryEnergy,x:approaches.camp.x,y:approaches.camp.y,
       path:[],goal:null,destination:null,moving:false,effect:null,lastStatus:""});
     state.keys.clear();state.touch.clear();
     closeModal(true);world3d?.recenter?.();
     updateNearby();updateUI();saveValley();
-    notify("Recovered at camp · 50 energy restored. Your mission progress is safe.");
+    notify(`Recovered at camp · ${rules().recoveryEnergy} energy restored. Your mission progress is safe.`);
     if(world3d)world3d.focus();else canvas.focus({preventScroll:true});
   }
   function end(won,description,headline="EXPEDITION ENDED"){
@@ -950,11 +1030,11 @@
       if(state.impactTimer)clearTimeout(state.impactTimer);
       state.impactTimer=null;$("impactBurst").hidden=true;
     }
-    if(won){state.score+=Math.ceil(state.energy)*3;state.score+=Math.max(0,240-Math.floor(state.elapsed))*2;const best=safeStore.get();if(state.score>best)safeStore.set(state.score);chapters?.complete("valley");refreshChapters();}
-    const best=safeStore.get();$("highScoreStart").textContent=best?best.toLocaleString():"—";
+    if(won){state.score+=Math.ceil(state.energy)*3;state.score+=Math.max(0,240-Math.floor(state.elapsed))*2;const best=safeStore.get(state.difficulty);if(state.score>best)safeStore.set(state.score,state.difficulty);chapters?.complete("valley");refreshChapters();}
+    const best=safeStore.get(state.difficulty);refreshBest();
     updateUI();
     if(won)celebrate(state.done.has("pump")?"pump":"spring",0,true);
-    openModal({tag:won?"✦ MISSION COMPLETE":"RECOVERY AVAILABLE",icon:won?"🏆":"🌵",title:won?headline:"Out of energy!",description:`${description}  •  FINAL IMPACT: ${state.score.toLocaleString()}  •  TIME: ${fmtTime(state.elapsed)}  •  BEST: ${best.toLocaleString()}`,kind:"end",allowClose:false,celebrateWin:won,choices:[...(won?[{text:"🏜️ Enter the Forgotten Canyon",primary:true,action:()=>{showChapters();window.TrailCanyon?.launch();}}]:[{text:"⛺ Recover at camp (50 energy)",primary:true,action:recoverAtCamp}]),{text:"↻ Play a new expedition",action:start},{text:"↩ Chapter selection",action:showChapters}]});
+    openModal({tag:won?"✦ MISSION COMPLETE":"RECOVERY AVAILABLE",icon:won?"🏆":"🌵",title:won?headline:"Out of energy!",description:`${description}  •  ${rules().label.toUpperCase()} DIFFICULTY  •  FINAL IMPACT: ${state.score.toLocaleString()}  •  TIME: ${fmtTime(state.elapsed)}  •  BEST: ${best.toLocaleString()}`,kind:"end",allowClose:false,celebrateWin:won,choices:[...(won?[{text:"🏜️ Enter the Forgotten Canyon",primary:true,action:()=>{showChapters();window.TrailCanyon?.launch(false,state.difficulty);}}]:[{text:`⛺ Recover at camp (${rules().recoveryEnergy} energy)`,primary:true,action:recoverAtCamp}]),{text:"↻ Play a new expedition",action:start},{text:"↩ Chapter selection",action:showChapters}]});
     if(won){
       // A short three-note flourish, using the existing optional Web Audio system.
       tone(620,.13);
@@ -1158,6 +1238,7 @@
   });
   $("valleyChapters").addEventListener("click",()=>{saveValley();showChapters();});
   window.addEventListener("trail:progress",refreshChapters);
+  window.addEventListener("trail:difficulty",()=>{refreshBest();refreshChapters();});
   window.addEventListener("trail:home",showChapters);
   $("instructionsButton").addEventListener("click",help);
   $("helpButton").addEventListener("click",help);
@@ -1218,10 +1299,10 @@
     graphicsPreset="medium";graphics.effects=event.target.checked;saveGraphics();
   });
   syncGraphicsPanel();
-  $("highScoreStart").textContent=safeStore.get()?safeStore.get().toLocaleString():"—";
+  refreshBest();
   populateSidebar();updateUI();refreshChapters();requestAnimationFrame(loop);
   // In development tests, the read-only state snapshot can be inspected without changing gameplay.
-  window.ThirstTrail={snapshot:()=>({screen:state.screen,energy:state.energy,score:state.score,quests:[...state.done],items:[...state.inventory],x:Math.round(state.x),y:Math.round(state.y),nearby:state.nearby,elapsed:state.elapsed}),version:"2.0"};
+  window.ThirstTrail={snapshot:()=>({screen:state.screen,difficulty:state.difficulty,energy:state.energy,score:state.score,quests:[...state.done],items:[...state.inventory],x:Math.round(state.x),y:Math.round(state.y),nearby:state.nearby,elapsed:state.elapsed}),version:"2.1"};
 
   // Self-contained renderer avoids authenticated preview requests for world3d.js.
   /* Thirst Trail - real-time, stylized Three.js world.

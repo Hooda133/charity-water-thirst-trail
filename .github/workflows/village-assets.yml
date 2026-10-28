@@ -16,6 +16,7 @@ on:
       - 'canyon.css'
       - 'styles.css'
       - 'progression.js'
+      - 'difficulty.js'
       - 'script.js'
       - 'explorer.js'
       - 'tools/test-explorer-motion.mjs'
@@ -38,6 +39,7 @@ on:
       - 'canyon.css'
       - 'styles.css'
       - 'progression.js'
+      - 'difficulty.js'
       - 'script.js'
       - 'explorer.js'
       - 'tools/test-explorer-motion.mjs'
@@ -64,6 +66,8 @@ jobs:
         run: node tools/test-pipes.mjs
       - name: Test Valley unlock and Forgotten Canyon quest progression
         run: node tools/test-chapters.mjs
+      - name: Verify difficulty balance, checkpoints and legacy compatibility
+        run: node tools/test-difficulty.mjs
       - name: Verify save recovery, migration and storage-denied play
         run: node tools/test-progression.mjs
       - name: Verify Canyon checkpoint, puzzle and navigation regressions
@@ -93,6 +97,8 @@ jobs:
         run: python -m pip install playwright==1.58.0
       - name: Play both chapters through the real interface in 2D fallback
         run: python tools/test-browser.py --browser "$(command -v google-chrome)"
+      - name: Verify clickable supply drops, collected badges and keyboard focus
+        run: python tools/test-supply-dom.py --browser "$(command -v google-chrome)"
       - name: Preserve browser screenshots
         if: always()
         uses: actions/upload-artifact@v4
