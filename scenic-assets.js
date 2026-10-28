@@ -100,21 +100,47 @@
     root.userData.noCollision = true;
     parent.add(root);
     let disposed=false,loaderPromise=null;
-    const cache=new Map(),rows=[],failure=new Set();
+    const cache=new Map(),sources=new Set(),rows=[],failure=new Set();
     let requested=0,shown=0;
     function loader() {
       if(!loaderPromise) loaderPromise=import("three/addons/loaders/GLTFLoader.js")
         .then(({GLTFLoader}) => new GLTFLoader());
       return loaderPromise;
     }
+    // A decoded GLB source and its display clones share geometries and
+    // materials. Dispose each distinct resource exactly once when the chapter
+    // exits, including a download that finishes after its mount was removed.
+    function releaseResources(roots) {
+      const geometries=new Set(),materials=new Set(),textures=new Set();
+      for(const scene of roots)scene?.traverse?.(object => {
+        if(!object.isMesh)return;
+        if(object.geometry)geometries.add(object.geometry);
+        const mats=Array.isArray(object.material)?object.material:[object.material];
+        for(const mat of mats)if(mat){
+          materials.add(mat);
+          for(const value of Object.values(mat))if(value?.isTexture)textures.add(value);
+        }
+      });
+      for(const geometry of geometries)geometry.dispose?.();
+      for(const material of materials)material.dispose?.();
+      for(const texture of textures)texture.dispose?.();
+    }
     async function sourceModel(key) {
       if(cache.has(key)) return cache.get(key);
       const promise=(async () => {
         const gltfLoader=await loader();
-        // First try local, vendored assets. The immutable public mirror is a
-        // fallback until the automation's generated asset PR is merged.
-        try { return (await gltfLoader.loadAsync("./assets/upgraded_graphics/"+key)).scene; }
-        catch(localError) { return (await gltfLoader.loadAsync(remote(key))).scene; }
+        if(disposed)return null;
+        // Prefer checked-in assets. Do not fetch a remote fallback if a
+        // player switched chapters while the local file was loading.
+        let scene;
+        try { scene=(await gltfLoader.loadAsync("./assets/upgraded_graphics/"+key)).scene; }
+        catch(localError) {
+          if(disposed)return null;
+          scene=(await gltfLoader.loadAsync(remote(key))).scene;
+        }
+        if(disposed){releaseResources([scene]);return null;}
+        sources.add(scene);
+        return scene;
       })();
       cache.set(key,promise);
       return promise;
@@ -135,7 +161,7 @@
       if(row.requested||disposed) return;
       row.requested=true;requested++;
       sourceModel(row.asset).then(scene => {
-        if(disposed) return;
+        if(disposed||!scene) return;
         const model=scene.clone(true);
         setModelPosition(model,row.original);
         model.name="CC0 "+row.asset;
@@ -178,20 +204,9 @@
       disposed=true;
       activeMounts.delete(controller);
       root.removeFromParent();
-      const geometries=new Set(),materials=new Set(),textures=new Set();
-      root.traverse(object => {
-        if(!object.isMesh)return;
-        if(object.geometry)geometries.add(object.geometry);
-        const mats=Array.isArray(object.material)?object.material:[object.material];
-        for(const mat of mats)if(mat){
-          materials.add(mat);
-          for(const value of Object.values(mat))if(value?.isTexture)textures.add(value);
-        }
-      });
-      for(const g of geometries)g.dispose?.();
-      for(const m of materials)m.dispose?.();
-      for(const t of textures)t.dispose?.();
+      releaseResources([root,...sources]);
       root.clear();
+      sources.clear();
       cache.clear();
     }
     const controller={update,dispose,status:()=>({chapter,total:rows.length,loaded:shown,
