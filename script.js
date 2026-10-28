@@ -1086,7 +1086,7 @@
     if(!$("coastScreen").hidden){window.TrailCoast?.pause?.();return;}
     if(window.TrailCanyon?.snapshot().active){window.TrailCanyon.pause?.();return;}
     safeStore.markTutorialSeen();
-    openModal({tag:"HOW TO PLAY",icon:"🧭",title:"Your adventure guide",description:"Move using WASD or arrow keys. On phones, use the on-screen directional buttons. Click the 3D world once to walk; hold and drag with the left button to pan the camera without moving, or right-drag to rotate around the landscape. Scroll up and down the webpage as usual. Hold Alt while scrolling over the 3D world to zoom its camera, or press C to return the camera to your explorer. Arrow keys move only when the game canvas is focused, so they can scroll the page elsewhere. The live mini-map shows your location and route; click one of its markers to travel there, or press M to hide or show it. Press V or select SCENIC VIEW above the world to see the full valley, and press it again to follow your explorer. When you're near a glowing marker, press E or tap INTERACT. Solve challenges, collect items, rotate the pipe sections during the pump repair, and restore water before your energy runs out. Raincatch Ridge is an optional hands-on collection activity. Rest at the camp to recharge. Press Shift to sprint (uses more energy).",kind:"help",choices:[{text:"Got it — let's go!",primary:true,action:()=>closeModal()}],tip:"BONUS ROUTES: Earn a test kit at the River Bank to survey Hill Spring, or inspect the collection station at Raincatch Ridge. Progress saves automatically on this device. Choose Continue from chapter selection after a refresh."});
+    openModal({tag:"HOW TO PLAY",icon:"🧭",title:"Your adventure guide",description:"Move using WASD or arrow keys. On phones, use the on-screen directional buttons. Click the 3D world once to walk; hold and drag with the left button to pan the camera without moving, or right-drag to rotate around the landscape. Use the mouse wheel to zoom, and press C to return the camera to your explorer. The live mini-map shows your location and route; click one of its markers to travel there, or press M to hide or show it. Press V or select SCENIC VIEW above the world to see the full valley, and press it again to follow your explorer. When you're near a glowing marker, press E or tap INTERACT. Solve challenges, collect items, rotate the pipe sections during the pump repair, and restore water before your energy runs out. Raincatch Ridge is an optional hands-on collection activity. Rest at the camp to recharge. Press Shift to sprint (uses more energy).",kind:"help",choices:[{text:"Got it — let's go!",primary:true,action:()=>closeModal()}],tip:"BONUS ROUTES: Earn a test kit at the River Bank to survey Hill Spring, or inspect the collection station at Raincatch Ridge. Progress saves automatically on this device. Choose Continue from chapter selection after a refresh."});
   }
   const plants=[];
   let seed=24521;function random(){seed=(1664525*seed+1013904223)>>>0;return seed/4294967296;}
@@ -1231,12 +1231,7 @@
     if(!exploring()||state.modalOpen||!$("graphicsPanel").hidden)return;
     if(e.target?.closest?.('input,select,textarea,[contenteditable="true"]'))return;
     if((e.key===" "||e.key==="Enter")&&e.target?.closest?.('button,a'))return;
-    const k=e.key.toLowerCase();
-    const canvasFocused=e.target===canvas||e.target?.id==="world3dCanvas";
-    // When the page, HUD or an activity button has focus, preserve native
-    // arrow-key and Space scrolling. Canvas focus retains game controls.
-    if((["arrowup","arrowdown","arrowleft","arrowright"," "].includes(k))&&!canvasFocused)return;
-    if(["arrowup","arrowdown","arrowleft","arrowright"," "].includes(k))e.preventDefault();
+    const k=e.key.toLowerCase();if(["arrowup","arrowdown","arrowleft","arrowright"," "].includes(k))e.preventDefault();
     if(["arrowup","arrowdown","arrowleft","arrowright","w","a","s","d","shift"].includes(k))state.keys.add(k);
     if((k==="e"||k===" ")&&!e.repeat)interact();
     if(k==="p")pause();
@@ -1525,9 +1520,9 @@
     view.id = "world3dCanvas";
     view.tabIndex = 0;
     view.setAttribute("aria-label","Three-dimensional Thirst Trail adventure world. Use WASD to walk, E to interact, or click the landscape.");
-    // CSS owns touch-action so phones can scroll vertically on the canvas,
-    // while desktop pointer drags and the dedicated touch pad still work.
-    // Do not set inline touch-action:none: it overrides mobile CSS rules.
+    // Pointer gestures belong to the renderer. "manipulation" lets the browser
+    // cancel a drag as a scroll gesture before pointer capture can take effect.
+    view.style.touchAction = "none";
     view.style.cursor = "grab";
     view.style.display = "block";
     const host = originalCanvas.parentElement;
@@ -3208,10 +3203,6 @@
     let lastCameraFrame=0;
     view.addEventListener("wheel",event=>{
       if(!view.isConnected || view.parentElement===hero)return;
-      // Native wheel scrolling must move the webpage. Only an intentional
-      // Alt+wheel gesture manipulates the camera (Ctrl+wheel stays available
-      // for browser text/page zoom).
-      if(!event.altKey || event.ctrlKey || event.metaKey)return;
       event.preventDefault();
       beginFreeCamera();
       cameraDistanceTarget=Math.max(.62,Math.min(1.65,cameraDistanceTarget+event.deltaY*.0009));

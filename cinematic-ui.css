@@ -439,32 +439,3 @@ kbd{border-color:#d4e3c156;background:#173e3fd4;border-radius:4px;color:#f1edcf}
   .village-life-card-top{flex-wrap:wrap}
 }
 @media(prefers-reduced-motion:reduce){.world-mission-label{transition:none}}
-
-
-/* Scroll-aware game presentation (the scroll-layout controller only adds this
-   class when the scene fits wholly within the viewport and its log is taller).
-   On narrower screens the normal document layout stays entirely in flow. */
-@media (min-width:1100px) and (min-height:760px) and (pointer:fine){
-  .game-screen .canvas-column.scroll-sticky-active,
-  .canyon-screen .canyon-stage.scroll-sticky-active,
-  #coastScreen .coast-stage.scroll-sticky-active {
-    position:sticky;
-    top:12px;
-    align-self:start;
-    z-index:2;
-  }
-}
-/* Vertical swipes on the scenery scroll the page, rather than trapping the
-   reader inside a tall canvas. Dedicated movement pads still own touch input. */
-@media (pointer:coarse){
-  #gameCanvas,
-  .world-frame #world3dCanvas,
-  .hero-scene #world3dCanvas,
-  #canyonCanvas,
-  .canyon-stage canvas,
-  #coastCanvas,
-  .coast-webgl { touch-action:pan-y pinch-zoom; }
-  .touch-controls,.touch-controls button,
-  .canyon-touch-controls,.canyon-touch-controls button,
-  .coast-touch,.coast-touch button { touch-action:none; }
-}
