@@ -170,30 +170,21 @@
     })
     .then(engine => {worldLoading=false;world3d=engine;world3d.render(state,performance.now()/1000);setRenderLoading(false);})
     .catch(error => {worldLoading=false;setRenderLoading(false);console.warn("3D graphics unavailable; using the original 2D game.", error);});
-  let audioContext = null;
-  function tone(freq=620,duration=.09){
-    if (!state.sound) return;
-    try {
-      const AudioClass = window.AudioContext || window.webkitAudioContext;
-      if (!AudioClass) return;
-      audioContext = audioContext || new AudioClass();
-      if(audioContext.state==="suspended")audioContext.resume()?.catch(()=>{});
-      duration=Math.max(.03,Math.min(.35,duration));
-      const o=audioContext.createOscillator(),g=audioContext.createGain();
-      o.type="sine";o.frequency.setValueAtTime(freq,audioContext.currentTime);
-      o.frequency.exponentialRampToValueAtTime(Math.max(100,freq*.7),audioContext.currentTime+duration);
-      g.gain.setValueAtTime(.001,audioContext.currentTime);
-      g.gain.linearRampToValueAtTime(.032,audioContext.currentTime+.006);
-      g.gain.exponentialRampToValueAtTime(.001,audioContext.currentTime+duration);
-      o.connect(g).connect(audioContext.destination);o.start();o.stop(audioContext.currentTime+duration);
-      o.onended=()=>{o.disconnect();g.disconnect();};
-    }catch{/* Audio is optional */}
+  // Action cues are shared with Canyon, Coast and Village Life. The engine
+  // reads the old mute preference and adds independent, persisted SFX volume.
+  const audioEngine=window.TrailAudioEngine;
+  function tone(freq=540,duration=.065){
+    return state.sound ? audioEngine?.tone(freq,duration) : false;
   }
-  // Both chapters share short interaction cues and the same persisted mute setting.
-  // No ambient oscillator, sound loop or background track is created.
-  window.ThirstAudio=Object.freeze({tone,get enabled(){return state.sound;}});
-  // One gentle dawn-to-dusk cycle lasts eight in-game minutes. Exploration
-  // remains fully playable after sunset; nothing changes collision or quests.
+  function playCue(name){
+    return state.sound ? audioEngine?.play(name) : false;
+  }
+  window.ThirstAudio=Object.freeze({
+    tone,play:playCue,
+    get enabled(){return state.sound;},
+    get volume(){return audioEngine?.volume ?? .55;}
+  });
+  // Only event-triggered one-shots. Never schedule ambient audio or game loops.
   function timeOfDay(elapsed){
     const phase=(Math.max(0,elapsed)%480)/480;
     const evening=(1-Math.cos(phase*Math.PI*2))/2;
@@ -317,7 +308,7 @@
     if(x<39||y<42||x>W-40||y>H-42)return true;
     return y<532||y>635 ? Math.abs(x-riverCenter(y))<94 : false;
   }
-  function addScore(points){state.score+=points;tone(750,.13);}
+  function addScore(points){state.score+=points;playCue("reward");}
   function syncSupplyUI(){
     supplyUI?.update({active:state.screen==="playing",paused:state.modalOpen||!$("graphicsPanel").hidden,
       collected:[...state.supplies],x:state.x,y:state.y});
@@ -329,7 +320,7 @@
     state.supplies.add(id);
     const gained=Math.min(12,100-state.energy);
     state.energy=Math.min(100,state.energy+12);state.score+=25;
-    tone(920,.14);
+    playCue("collect");
     notify("🧴 Sealed drinking-water supply found! +"+Number(gained.toFixed(1))+" energy · +25 impact");
     updateUI();saveValley();return true;
   }
@@ -431,7 +422,7 @@
     closeModal(true);updateUI();
     if(!resume)saveValley();
     if(world3d)world3d.focus();else canvas.focus({preventScroll:true});
-    notify("MISSION STARTED · Visit the Village Elder to begin.");tone(480,.18);
+    notify("MISSION STARTED · Visit the Village Elder to begin.");playCue("interact");
     if(!safeStore.tutorialSeen())help();
   }
   function nearest(){let found=null,best=85;for(const [key,sp] of Object.entries(spots)){const d=dist({x:state.x,y:state.y},sp);if(d<best){found=key;best=d;}}return found;}
@@ -658,8 +649,8 @@
   function quiz({tag,icon,title,questions,onWin,step=0,onProgress=null}){
     const q=questions[step];
     openModal({tag,icon,title:`${title} · ${step+1}/${questions.length}`,description:q.q,progress:step,total:questions.length,kind:"quiz",tip:quizTip(),choices:q.answers.map((answer,i)=>({text:answer,action:()=>{
-      if(i!==q.right){drain(mistakeAmount(6));if(state.ended)return;quiz({tag,icon,title,questions,onWin,step,onProgress});$("modalTip").textContent="Not quite. That choice may put people at risk. Try again (−"+mistakeLabel(6)+" energy).";tone(190,.16);updateUI();return;}
-      tone(850,.13);
+      if(i!==q.right){drain(mistakeAmount(6));if(state.ended)return;quiz({tag,icon,title,questions,onWin,step,onProgress});$("modalTip").textContent="Not quite. That choice may put people at risk. Try again (−"+mistakeLabel(6)+" energy).";playCue("mistake");updateUI();return;}
+      playCue("confirm");
       onProgress?.(step+1);
       if(step+1<questions.length){quiz({tag,icon,title,questions,onWin,step:step+1,onProgress});$("modalTip").textContent=q.feedback;}
       else{closeModal();onWin();}
@@ -717,9 +708,9 @@
       drain(mistakeAmount(3));if(state.ended)return;
       const status=$("marshStatus");status.className="marsh-status is-error";
       status.textContent=item.name+" belongs in the habitat. Leave it undisturbed (−"+mistakeLabel(3)+" energy).";
-      tone(190,.12);updateUI();return;
+      playCue("mistake");updateUI();return;
     }
-    marshPicked.add(index);tone(650+index*40,.085);renderMarsh();
+    marshPicked.add(index);playCue("collect");renderMarsh();
   }
   function verifyMarsh(){
     if(state.modalKind!=="marsh")return;
@@ -797,7 +788,7 @@
     if(state.ended)return;
     const status=$("rainStatus");status.className="rain-status is-error";
     status.textContent="This plan needs improvement. Consider roof runoff, filtration and protected storage (−"+mistakeLabel(2)+" energy).";
-    updateUI();tone(220,.12);
+    updateUI();playCue("mistake");
   }
   function rainChallenge(){
     if(state.done.has("ridge")){
@@ -968,7 +959,7 @@
     pipeTests++;
     if(pipeFlow().solved){
       state.pipeReady=true;state.pumpQuizStep=0;state.pumpSafetyPassed=false;
-      tone(960,.17);
+      playCue("repair");
       closeModal();
       finalPumpSafetyQuiz();
       return;
@@ -982,7 +973,7 @@
       flow.connected.size+"/9 pieces connected, "+flow.leaks.length+
       " open joints. Repair the pipeline and try again (−"+mistakeLabel(2)+" energy).";
     updateUI();
-    tone(210,.15);
+    playCue("mistake");
   }
   function beginPipePuzzle(){
     pipeTests=0;
@@ -1040,11 +1031,9 @@
     state.villageSummary={won,title:won?headline:"Out of energy!",description:`${description}  •  FINAL IMPACT: ${state.score.toLocaleString()}  •  TIME: ${fmtTime(state.elapsed)}  •  BEST: ${best.toLocaleString()}`};
     showVillageResults();
     if(won){
-      // A short three-note flourish, using the existing optional Web Audio system.
-      tone(620,.13);
-      setTimeout(()=>{if(state.screen==="ended")tone(825,.15);},130);
-      setTimeout(()=>{if(state.screen==="ended")tone(1100,.24);},280);
-    }else tone(210,.22);
+      // The single one-shot victory cue contains its own gentle chord sequence.
+      playCue("victory");
+    }else playCue("failure");
   }
   function refreshVillageCelebration(){
     $("valleyCelebration").hidden=!(state.screen==="ended"&&state.done.has("pump")&&!state.modalOpen&&!$("gameScreen").hidden);
@@ -1086,7 +1075,7 @@
     if(state.screen!=="ended"||state.modalOpen||!state.done.has("pump"))return;
     const now=performance.now()/1000;
     if(now-state.villageCheerAt<1)return;
-    state.villageCheerAt=now;celebrate("pump",0,true);tone(825,.13);
+    state.villageCheerAt=now;celebrate("pump",0,true);playCue("victory");
     notify("💛 The village celebrates with you! Clean water is flowing again.");
   }
   function pause(){
@@ -1317,11 +1306,34 @@
     $("soundButton").setAttribute("aria-pressed",String(state.sound));
     $("soundButton").setAttribute("aria-label",state.sound?"Mute interaction sounds":"Enable interaction sounds");
     $("soundButton").textContent=state.sound?"♫":"♪̸";
+    $("soundEnabledToggle").checked=state.sound;
+    const percent=Math.round((audioEngine?.volume ?? .55)*100);
+    $("sfxVolume").value=String(percent);
+    $("sfxVolumeValue").textContent=percent+"%";
+    $("sfxPreview").disabled=!state.sound||percent===0;
+    $("soundStatus").textContent=!state.sound?"Sound muted":
+      percent===0?"Volume is at 0%":"Sound effects on";
+  }
+  function setSoundEnabled(next){
+    state.sound=!!next;
+    safeStore.setSound(state.sound);
+    audioEngine?.setEnabled(state.sound);
+    syncSoundButton();
   }
   $("soundButton").addEventListener("click",()=>{
-    state.sound=!state.sound;safeStore.setSound(state.sound);syncSoundButton();
-    if(state.sound)tone();
+    setSoundEnabled(!state.sound);
+    if(state.sound)playCue("preview");
   });
+  $("soundEnabledToggle").addEventListener("change",event=>{
+    setSoundEnabled(event.target.checked);
+    if(state.sound)playCue("preview");
+  });
+  $("sfxVolume").addEventListener("input",event=>{
+    audioEngine?.setVolume(Number(event.target.value)/100);
+    syncSoundButton();
+  });
+  $("sfxPreview").addEventListener("click",()=>playCue("preview"));
+  audioEngine?.setEnabled(state.sound);
   syncSoundButton();
   const graphicsPanel=$("graphicsPanel"),qualityPreset=$("qualityPreset");
   function syncGraphicsPanel(){
