@@ -8,6 +8,7 @@ import {runInNewContext} from "node:vm";
 const root=resolve(import.meta.dirname,"..");
 const scripts={
   progress:readFileSync(resolve(root,"progression.js"),"utf8"),
+  difficulty:readFileSync(resolve(root,"difficulty.js"),"utf8"),
   valley:readFileSync(resolve(root,"script.js"),"utf8"),
   canyon:readFileSync(resolve(root,"canyon.js"),"utf8")
 };
@@ -73,6 +74,7 @@ const scheduledFrames=[];
 const sandbox={window,document,localStorage:storage,Event,
  performance:{now(){return 1000;}},requestAnimationFrame(fn){scheduledFrames.push(fn);return 1;},console};
 runInNewContext(scripts.progress,sandbox);
+runInNewContext(scripts.difficulty,sandbox);
 const progress=window.TrailProgress;
 assert.ok(progress);
 assert.equal(progress.unlocked("canyon"),false);

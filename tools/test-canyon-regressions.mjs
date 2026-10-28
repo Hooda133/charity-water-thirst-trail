@@ -27,6 +27,7 @@ const sandbox={window,document,console,localStorage:{getItem:k=>values.get(k)||n
   setItem(k,v){values.set(k,v)}},performance:{now:()=>1000},requestAnimationFrame:()=>1,
   Event:class {constructor(type){this.type=type}}};
 runInNewContext(readFileSync(resolve(root,"progression.js"),"utf8"),sandbox);
+runInNewContext(readFileSync(resolve(root,"difficulty.js"),"utf8"),sandbox);
 window.TrailProgress.complete("valley");
 runInNewContext(source,sandbox);
 const game=window.TrailCanyon,test=window.canyonRegression,progress=window.TrailProgress;

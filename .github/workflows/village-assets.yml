@@ -16,6 +16,7 @@ on:
       - 'canyon.css'
       - 'styles.css'
       - 'progression.js'
+      - 'difficulty.js'
       - 'script.js'
       - 'explorer.js'
       - 'tools/test-explorer-motion.mjs'
@@ -38,6 +39,7 @@ on:
       - 'canyon.css'
       - 'styles.css'
       - 'progression.js'
+      - 'difficulty.js'
       - 'script.js'
       - 'explorer.js'
       - 'tools/test-explorer-motion.mjs'
@@ -64,6 +66,8 @@ jobs:
         run: node tools/test-pipes.mjs
       - name: Test Valley unlock and Forgotten Canyon quest progression
         run: node tools/test-chapters.mjs
+      - name: Verify difficulty balance, checkpoints and legacy compatibility
+        run: node tools/test-difficulty.mjs
       - name: Verify save recovery, migration and storage-denied play
         run: node tools/test-progression.mjs
       - name: Verify Canyon checkpoint, puzzle and navigation regressions
