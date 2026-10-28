@@ -9,7 +9,14 @@ from pathlib import Path
 import shutil
 import threading
 from playwright.sync_api import sync_playwright
-from test_graphics_browser import ROOT, QuietServer, seed, isolate_valley
+import importlib.util
+spec = importlib.util.spec_from_file_location(
+    "graphics_qa", Path(__file__).with_name("test-graphics-browser.py"))
+graphics_qa = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(graphics_qa)
+ROOT, QuietServer, seed, isolate_valley = (
+    graphics_qa.ROOT, graphics_qa.QuietServer,
+    graphics_qa.seed, graphics_qa.isolate_valley)
 
 OUT = ROOT / "work" / "scenic-qa"
 
