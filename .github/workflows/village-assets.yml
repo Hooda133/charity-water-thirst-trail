@@ -10,6 +10,7 @@ on:
       - 'assets/fonts/**'
       - 'typography.js'
       - 'audio-system.js'
+      - 'scroll-layout.js'
       - 'world-labels.js'
       - 'cinematic-*'
       - 'surface-detail.js'
@@ -46,6 +47,7 @@ on:
       - 'assets/fonts/**'
       - 'typography.js'
       - 'audio-system.js'
+      - 'scroll-layout.js'
       - 'world-labels.js'
       - 'cinematic-*'
       - 'surface-detail.js'
@@ -106,6 +108,8 @@ jobs:
         run: node tools/test-world-labels.mjs
       - name: Verify Canyon minimap keyboard routes and skip unnecessary frame redraws
         run: node tools/test-canyon-map.mjs
+      - name: Verify scroll-aware chapter layout, native wheel and touch input contracts
+        run: node tools/test-scroll-layout.mjs
       - name: Verify licensed 3D model placement and fallback across all four scenes
         run: node tools/test-scenic-assets.mjs
       - name: Verify decorative model lifecycle, stale downloads and resource cleanup
@@ -209,4 +213,27 @@ jobs:
         with:
           name: audio-settings-screenshots
           path: work/audio-qa/
+          if-no-files-found: ignore
+
+  scroll-browser:
+    # Cross-chapter real WebGL and mobile touchscreen scrolling regression.
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install Playwright
+        run: python -m pip install playwright==1.58.0
+      - name: Verify native scrolling, camera zoom and scroll-friendly game panels
+        run: python tools/test-scroll-browser.py
+      - name: Save responsive gameplay screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: scroll-responsive-screenshots
+          path: work/scroll-qa/
           if-no-files-found: ignore

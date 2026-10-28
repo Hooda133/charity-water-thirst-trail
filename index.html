@@ -35,6 +35,7 @@
   <script src="canyon-map.js" defer></script>
   <script src="coast-visuals.js" defer></script>
   <script src="coast.js" defer></script>
+  <script src="scroll-layout.js" defer></script>
   <link rel="stylesheet" href="village-life.css">
   <link rel="stylesheet" href="coast.css">
   <link rel="stylesheet" href="cinematic-ui.css">
@@ -130,14 +131,14 @@
             <div class="world-frame">
               <div class="frame-label"><span>🌿 GREENWATER VALLEY</span><div class="frame-tools"><span id="locationHint">Follow the golden markers</span><button id="villageOpenActivities" type="button" class="camera-reset" aria-controls="villageLifePanel" aria-expanded="false">🏡 Activities</button><button id="scenicViewButton" type="button" class="scenic-button" aria-pressed="false" title="Toggle a scenic overview of the valley (V)">◈ SCENIC VIEW</button><button id="valleyCameraReset" type="button" class="camera-reset" title="Return camera to your explorer (C)">⌖ RECENTER</button></div></div>
               <div id="renderLoading" class="render-loading" role="status" aria-live="polite"><span class="render-loading-mark">◈</span><div><strong>Preparing the valley</strong><small>Loading the 3D expedition view…</small></div><i aria-hidden="true"></i></div>
-              <canvas id="gameCanvas" width="1000" height="610" tabindex="0" role="img" aria-label="Stylized 2.5D adventure map of Greenwater Valley. Use WASD or arrow keys to move, E to interact, or use the destination buttons in the mission panel.">Your browser does not support canvas.</canvas>
+              <canvas id="gameCanvas" width="1000" height="610" tabindex="0" role="img" aria-label="Stylized 2.5D adventure map of Greenwater Valley. Use WASD or the arrow keys while focused to move, E to interact, or use destination buttons. Scroll the webpage normally; Alt plus scroll changes camera zoom.">Your browser does not support canvas.</canvas>
               <div id="impactBurst" class="impact-burst" role="status" aria-live="polite" aria-atomic="true" hidden>
                 <span class="impact-burst-medal" id="impactBurstIcon" aria-hidden="true">✦</span>
                 <div class="impact-burst-copy"><span class="impact-burst-eyebrow">MISSION PROGRESS</span><strong id="impactBurstTitle">Quest completed!</strong><small id="impactBurstPoints"></small></div>
               </div>
               <div class="canvas-top-left"><div class="chapter-pill" id="daypartLabel">☀️ DAY ONE · MORNING</div><div class="chapter-pill supply-pill" id="supplyCount">🧴 SEALED SUPPLIES 0 / 4</div></div>
               <div id="nearbyPrompt" class="nearby-prompt" hidden><span id="nearbyName">Talk to the Elder</span><button id="interactButton" type="button">E · INTERACT</button></div>
-              <div class="canvas-bottom"><span><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> MOVE</span><span><kbd>E</kbd> INTERACT</span><span>CLICK TO WALK · DRAG TO EXPLORE · RIGHT DRAG ROTATE · C RECENTER</span></div>
+              <div class="canvas-bottom"><span><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> MOVE</span><span><kbd>E</kbd> INTERACT</span><span>CLICK TO WALK · DRAG TO EXPLORE · ALT + SCROLL ZOOM · C RECENTER</span></div>
               <div id="touchControls" class="touch-controls" aria-label="Touch movement controls"><button type="button" class="touch-up" data-dir="up" aria-label="Move up">↑</button><button type="button" class="touch-left" data-dir="left" aria-label="Move left">←</button><button type="button" class="touch-down" data-dir="down" aria-label="Move down">↓</button><button type="button" class="touch-right" data-dir="right" aria-label="Move right">→</button><button type="button" class="touch-action" id="touchAction" aria-label="Interact with nearby location">✦ ACT</button></div>
               <div id="valleyCelebration" class="valley-celebration" hidden>
                 <div role="status"><span>✦ GREENWATER VALLEY RESTORED</span><strong>You brought the water home!</strong><small>The village fountain is flowing. Celebrate with your community.</small></div>
@@ -187,7 +188,7 @@
         <div class="canyon-layout">
           <div class="canyon-stage">
             <div class="canyon-stage-heading"><span>🏜️ SUNSTONE CANYON · OPEN WORLD</span><span id="canyonPositionLabel">Explore the red cliffs</span><button id="canyonCameraReset" class="camera-reset" type="button" title="Return camera to explorer (C)">⌖ RECENTER</button></div>
-            <canvas id="canyonCanvas" width="1000" height="610" tabindex="0" role="img" aria-label="Playable canyon environment. Use WASD or arrow keys to walk, E to interact, click to walk, hold and drag the mouse to explore without walking, or press C to recenter.">Your browser does not support canvas.</canvas>
+            <canvas id="canyonCanvas" width="1000" height="610" tabindex="0" role="img" aria-label="Playable canyon environment. Use WASD or focused arrow keys to walk, E to interact, click to walk, hold and drag to explore, Alt plus scroll to zoom, or C to recenter. Scroll the webpage normally.">Your browser does not support canvas.</canvas>
             <div class="canyon-overlay-hud"><span id="canyonEnergy">⚡ 100% energy</span><span id="canyonScore">✦ 0 impact</span><span id="canyonTimer">◷ 00:00</span></div>
             <div id="canyonCelebration" class="canyon-celebration" hidden>
               <div role="status"><span>✦ CANYON RESTORED</span><strong>Clean water flows again!</strong><small>You brought the canyon back to life.</small></div>
@@ -195,7 +196,7 @@
               <button id="canyonNextCoast" type="button">🌊 Chapter 3 →</button>
             </div>
             <div id="canyonPrompt" class="canyon-prompt" hidden><span id="canyonPromptText">Talk to the surveyor</span><button id="canyonInteract" type="button">E · INTERACT</button></div>
-            <div class="canyon-key-hint"><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> MOVE <kbd>E</kbd> INTERACT <span>DRAG TO LOOK AROUND · CLICK TO WALK · C RECENTER</span></div>
+            <div class="canyon-key-hint"><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> MOVE <kbd>E</kbd> INTERACT <span>DRAG TO LOOK AROUND · ALT + SCROLL ZOOM · C RECENTER</span></div>
             <div class="canyon-touch-controls" aria-label="Canyon movement controls"><button data-canyon-move="up" type="button" aria-label="Move up">↑</button><button data-canyon-move="left" type="button" aria-label="Move left">←</button><button data-canyon-move="down" type="button" aria-label="Move down">↓</button><button data-canyon-move="right" type="button" aria-label="Move right">→</button><button id="canyonTouchInteract" type="button" aria-label="Interact with nearby location">✦ ACT</button></div>
             <p id="canyonToast" class="canyon-toast" role="status" aria-live="polite" hidden></p>
           </div>

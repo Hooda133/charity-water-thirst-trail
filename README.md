@@ -10,6 +10,14 @@ These changes are under review; the branch needs automated checks and visual gam
 
 The game uses locally hosted **Nunito Sans** to evoke charity: water's Proxima Nova/Avenir typography. One shared family spans headings, body copy, controls, chapter menus, footer links, map labels, and 3D nameplates, with weight and spacing providing hierarchy. The variable font loads without a font service, keeps text visible while loading, and includes a readable fallback stack. Source, build details, and the open font license are in [assets/fonts/README.md](assets/fonts/README.md).
 
+## Scroll-friendly responsive gameplay
+
+The entire page now scrolls naturally through the game worlds, mission logs, settings and footer. Ordinary mouse-wheel movement (including while hovering over a Three.js canvas) scrolls the page; **hold Alt while using the mouse wheel** to change the world camera zoom deliberately. Ctrl+wheel remains available for the browser's normal zoom. After focusing the playable canvas, arrow keys control the explorer; otherwise arrow keys and Space retain the normal page-scroll behavior. WASD, E and the on-screen movement/interaction controls retain their established game actions.
+
+On a large desktop where the game is **shorter than the visible viewport** and the mission log is longer, the world panel stays within view as you scroll through its adjacent tasks. On smaller laptop screens, phones and tablets, the game follows the document normally instead of pinning an oversized world. Vertical finger swipes over any world canvas can scroll the page, while the dedicated directional pads continue to move the explorer. No zoom, scroll or layout preference is stored; chapter saves and audio/graphics preferences are untouched.
+
+Automated QA: `node tools/test-scroll-layout.mjs` exercises layout eligibility, screen visibility and keyboard/wheel/touch contracts. `python tools/test-scroll-browser.py` exercises real 3D scroll behavior, Alt+wheel zoom, sticky stages, shorter viewports and mobile touchscreen swipes. CI saves responsive screenshots for review.
+
 ## Action-only sound effects and player volume settings
 
 The game's shared `audio-system.js` provides a small, original Web Audio palette for collecting items, successful repairs, incorrect answers, water deliveries, village building projects and chapter victories. **No background music, ambient loops, external audio downloads or recurring sound timers** are used. All notes stop within one second, repeated identical cues are rate-limited, and Web Audio initializes only after an action actually requests sound. Missing audio support never stops gameplay.

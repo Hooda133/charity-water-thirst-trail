@@ -6,7 +6,7 @@
   if(!screen)return;
   screen.innerHTML=`
     <header class="coast-header"><div><span class="overline">CHAPTER 03 · AFTER THE STORM</span><h2>Stormbreak Coast<span class="yellow">.</span></h2><p id="coastObjective">Meet engineer Mara at the harbor.</p></div><div class="coast-header-actions"><span id="coastMode"></span><button id="coastPause" type="button">Ⅱ Pause</button><button id="coastHome" type="button">◈ Chapters</button></div></header>
-    <div class="coast-layout"><div class="coast-stage"><div class="coast-stage-label"><span>◈ STORMBREAK HARBOR</span><button id="coastRecenter" type="button">⌖ Recenter</button></div><canvas id="coastCanvas" width="1000" height="610" tabindex="0" role="img" aria-label="Stormbreak Coast. Walk with WASD or arrows, interact with E, or choose a destination."></canvas><div class="coast-hud"><span id="coastEnergy"></span><span id="coastScore"></span><span id="coastTime"></span></div><div id="coastPrompt" class="coast-prompt" hidden><span id="coastPromptText"></span><button id="coastInteract" type="button">E · INTERACT</button></div><p id="coastToast" class="coast-toast" role="status" aria-live="polite" hidden></p><div class="coast-touch" aria-label="Coast movement"><button data-coast-key="w" type="button" aria-label="Move up">↑</button><button data-coast-key="a" type="button" aria-label="Move left">←</button><button data-coast-key="s" type="button" aria-label="Move down">↓</button><button data-coast-key="d" type="button" aria-label="Move right">→</button><button id="coastTouchAct" type="button">✦ ACT</button></div><div id="coastCelebration" class="coast-celebration" hidden><div><span>✦ STORMBREAK RESTORED</span><strong>The coast has water again!</strong><small>The harbor crew is celebrating your work.</small></div><div><button id="coastCheer" type="button">✦ Celebrate with the crew</button><button id="coastResults" type="button">View results</button><button id="coastFinishHome" type="button">Chapters →</button></div></div></div>
+    <div class="coast-layout"><div class="coast-stage"><div class="coast-stage-label"><span>◈ STORMBREAK HARBOR</span><button id="coastRecenter" type="button">⌖ Recenter</button></div><canvas id="coastCanvas" width="1000" height="610" tabindex="0" role="img" aria-label="Stormbreak Coast. Walk with WASD or the arrow keys while the canvas is focused, interact with E or choose a destination. Scroll the page normally; Alt plus scroll zooms the camera."></canvas><div class="coast-hud"><span id="coastEnergy"></span><span id="coastScore"></span><span id="coastTime"></span></div><div id="coastPrompt" class="coast-prompt" hidden><span id="coastPromptText"></span><button id="coastInteract" type="button">E · INTERACT</button></div><p id="coastToast" class="coast-toast" role="status" aria-live="polite" hidden></p><div class="coast-touch" aria-label="Coast movement"><button data-coast-key="w" type="button" aria-label="Move up">↑</button><button data-coast-key="a" type="button" aria-label="Move left">←</button><button data-coast-key="s" type="button" aria-label="Move down">↓</button><button data-coast-key="d" type="button" aria-label="Move right">→</button><button id="coastTouchAct" type="button">✦ ACT</button></div><div id="coastCelebration" class="coast-celebration" hidden><div><span>✦ STORMBREAK RESTORED</span><strong>The coast has water again!</strong><small>The harbor crew is celebrating your work.</small></div><div><button id="coastCheer" type="button">✦ Celebrate with the crew</button><button id="coastResults" type="button">View results</button><button id="coastFinishHome" type="button">Chapters →</button></div></div></div>
     <aside class="coast-sidebar"><span class="overline">HARBOR REPAIR LOG</span><h3>A stronger shore<span class="yellow">.</span></h3><p>Restore the power, balance the cargo bridge, seal the storage tank and open the distribution gates.</p><div class="coast-progress"><i id="coastProgressFill"></i></div><strong id="coastProgressLabel"></strong><div id="coastQuests" class="coast-quests"></div><span class="overline">GO SOMEWHERE</span><div id="coastDestinations" class="coast-destinations"></div><p id="coastSaveStatus" class="coast-save-note">Progress saves in this browser.</p><p class="coast-controls-note">WASD / arrows · E interact · Shift sprint · P pause · click ground to walk. Rest at the harbor shelter whenever you need energy.</p><div id="coastBonus" class="coast-bonus" hidden></div></aside></div>
     <div id="coastModalBackdrop" class="coast-modal-backdrop" hidden><section id="coastModal" class="coast-modal" role="dialog" aria-modal="true" aria-labelledby="coastModalTitle" aria-describedby="coastModalText" tabindex="-1"><span id="coastModalTag" class="coast-modal-tag"></span><h2 id="coastModalTitle"></h2><p id="coastModalText"></p><div id="coastModalExtra"></div><div id="coastModalOptions" class="coast-modal-options"></div></section></div>`;
   const canvas=$("coastCanvas"),ctx=canvas.getContext("2d"),progress=window.TrailProgress;
@@ -374,7 +374,7 @@
         if(g){g.fillStyle="#123b46";g.fillRect(0,0,512,96);g.strokeStyle="#e8d3a1";g.lineWidth=8;g.strokeRect(0,0,512,96);g.textAlign="center";g.fillStyle="#fff5d7";g.font=`bold 28px ${FONT_FAMILY}`;g.fillText(goal.title,256,59);const label=new THREE.Sprite(new THREE.SpriteMaterial({map:new THREE.CanvasTexture(labelCanvas),depthTest:false}));label.position.y=3.8;label.scale.set(4.5,.85,1);group.add(label);}
         marks.push({key,group,ring});
       }
-      const dom=renderer.domElement;dom.className="coast-webgl";dom.tabIndex=0;dom.style.cssText="display:block;width:100%;height:auto;aspect-ratio:1000/610;touch-action:none";
+      const dom=renderer.domElement;dom.className="coast-webgl";dom.tabIndex=0;dom.style.cssText="display:block;width:100%;height:auto;aspect-ratio:1000/610;";
       let missionLabels=null;
       try{
         missionLabels=window.TrailWorldLabels?.create?.(THREE,{camera,canvas:dom,
@@ -387,7 +387,10 @@
         const hit=new THREE.Vector3();if(raycaster.ray.intersectPlane(new THREE.Plane(new THREE.Vector3(0,1,0),0),hit))selectPoint({x:hit.x*24+500,y:hit.z*24+305});
       });
       let zoom=1,first=true,last=0,lastX=state.x,lastY=state.y,width=0,height=0;
-      dom.addEventListener("wheel",event=>{event.preventDefault();zoom=clamp(zoom+Math.sign(event.deltaY)*.09,.75,1.7);},{passive:false});
+      dom.addEventListener("wheel",event=>{
+        if(!event.altKey||event.ctrlKey||event.metaKey||!state.active||state.modal||state.paused)return;
+        event.preventDefault();zoom=clamp(zoom+Math.sign(event.deltaY)*.09,.75,1.7);
+      },{passive:false});
       world={dom,recenter(){zoom=1;first=true;},setGraphicsSettings:applyGraphics,getGraphicsStatus(){return cinematic?.status()||null;},draw(time){
         const w=Math.max(300,Math.floor(dom.clientWidth||1000)),h=Math.max(180,Math.floor(dom.clientHeight||610));if(width!==w||height!==h){renderer.setSize(w,h,false);camera.aspect=w/h;camera.updateProjectionMatrix();width=w;height=h;}
         const dx=state.x-lastX,dy=state.y-lastY,dt=last?clamp(time-last,0,.05):.016;last=time;lastX=state.x;lastY=state.y;
@@ -447,7 +450,10 @@
     if(screen.hidden||!state.active)return;
     if(state.modal){if(event.key==="Escape"&&!state.finished){state.paused=false;close();}return;}
     if(["INPUT","SELECT","TEXTAREA"].includes(event.target?.tagName))return;if(["BUTTON","A"].includes(event.target?.tagName)&&["Enter"," "].includes(event.key))return;
-    const key=event.key.toLowerCase();if(["arrowleft","arrowright","arrowup","arrowdown"," "].includes(key))event.preventDefault();
+    const key=event.key.toLowerCase();
+    const canvasFocused=event.target===canvas||event.target===world?.dom;
+    if(["arrowleft","arrowright","arrowup","arrowdown"," "].includes(key)&&!canvasFocused)return;
+    if(["arrowleft","arrowright","arrowup","arrowdown"," "].includes(key))event.preventDefault();
     if(["w","a","s","d","arrowleft","arrowright","arrowup","arrowdown","shift"].includes(key))state.keys.add(key);
     if(!event.repeat&&(key==="e"||key===" "))interact();if(!event.repeat&&key==="p")pause();if(!event.repeat&&key==="c")world?.recenter();
   });
