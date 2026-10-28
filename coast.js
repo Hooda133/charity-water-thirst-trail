@@ -371,6 +371,11 @@
         marks.push({key,group,ring});
       }
       const dom=renderer.domElement;dom.className="coast-webgl";dom.tabIndex=0;dom.style.cssText="display:block;width:100%;height:auto;aspect-ratio:1000/610;touch-action:none";
+      let missionLabels=null;
+      try{
+        missionLabels=window.TrailWorldLabels?.create?.(THREE,{camera,canvas:dom,
+          labels:marks.map(mark=>({id:mark.key,title:goals[mark.key].title,anchor:mark.group,offset:[0,3.8,0]}))})||null;
+      }catch(error){console.warn("Coast mission label overlay unavailable; retaining sprites.",error);}
       canvas.parentElement.insertBefore(dom,canvas);canvas.style.display="none";
       const raycaster=new THREE.Raycaster(),pointer=new THREE.Vector2();
       dom.addEventListener("click",event=>{
@@ -390,13 +395,14 @@
         const next=order.find(key=>!state.done.has(key));
         for(const mark of marks){
           mark.ring.material.color.set(state.done.has(mark.key)?0x82d8b6:0xffd783);mark.group.visible=!state.finished;
-          for(const child of mark.group.children)if(child.isSprite)child.visible=mark.key===next||nearest()===mark.key;
+          for(const child of mark.group.children)if(child.isSprite)child.visible=!missionLabels&&(mark.key===next||nearest()===mark.key);
         }
+        missionLabels?.update({visible:!state.finished,completed:state.done,activeKey:next||null});
         art?.update(time,{reduced:reduced(),effects:graphics.effects!==false});
         if(state.finished)characterVisibility?.clear?.();else characterVisibility?.update(camera,dt);
         cinematic?.update(time,{reduced:reduced(),effects:graphics.effects!==false});
         if(cinematic)cinematic.render();else renderer.render(scene,camera);
-      },dispose(){characterVisibility?.dispose();art?.dispose();cinematic?.dispose();renderer.dispose();dom.remove();canvas.style.display="";}};
+      },dispose(){missionLabels?.dispose();characterVisibility?.dispose();art?.dispose();cinematic?.dispose();renderer.dispose();dom.remove();canvas.style.display="";}};
     }catch(error){console.warn("Coast 3D unavailable; using the playable harbor map.",error);canvas.style.display="";}finally{creating=false;}
   }
   function selectPoint(point){
