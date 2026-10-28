@@ -2,6 +2,8 @@
 
 **Thirst Trail** is a browser-based 3D adventure game inspired by charity: water. Restore Greenwater Valley, repair the Forgotten Canyon aqueduct, then rebuild Stormbreak Coast. Return to the restored village to deliver water, repair leaks and choose community improvements. All three chapters and Village Life have 3D environments with a playable 2D fallback.
 
+The game uses locally hosted **Nunito Sans** to evoke charity: water's Proxima Nova/Avenir typography. One shared family spans headings, body copy, controls, chapter menus, footer links, map labels, and 3D nameplates, with weight and spacing providing hierarchy. The variable font loads without a font service, keeps text visible while loading, and includes a readable fallback stack. Source, build details, and the open font license are in [assets/fonts/README.md](assets/fonts/README.md).
+
 ## Thirst Trail 3.3 — Clickable supplies and visible DOM reactions
 
 In Chapter 1, **Water for the trail** shows the four sealed-water supply drops beside the map. Click a nearby drop to collect it; a distant drop guides the explorer toward its cache. Collection removes the actual HTML button, inserts a named collected badge, and updates the counter, status, energy and impact. These are the existing expedition supplies: each can restore up to 12 energy and award 25 impact once per run. Walking over a cache still collects it automatically. Saved collections survive reload; replay restores the drops.

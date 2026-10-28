@@ -1,6 +1,7 @@
 "use strict";
 /* Stormbreak Coast — the third playable Thirst Trail expedition. */
 (() => {
+  const FONT_FAMILY = window.TrailTypography?.family || "sans-serif";
   const $=id=>document.getElementById(id),screen=$("coastScreen");
   if(!screen)return;
   screen.innerHTML=`
@@ -311,7 +312,7 @@
     if(!state.done.has("bridge")){c.strokeStyle="#f4cf76";c.lineWidth=8;c.beginPath();c.moveTo(478,339);c.lineTo(566,396);c.stroke();}
     for(const [key,goal] of Object.entries(goals)){
       c.fillStyle=state.done.has(key)?"#73b8a1":"#f3dfa7";c.beginPath();c.arc(goal.x,goal.y,22,0,Math.PI*2);c.fill();
-      c.fillStyle="#173b47";c.textAlign="center";c.font="23px system-ui";c.fillText(goal.icon,goal.x,goal.y+8);c.font="800 13px system-ui";c.fillText(goal.title,goal.x,goal.y-32);
+      c.fillStyle="#173b47";c.textAlign="center";c.font=`23px ${FONT_FAMILY}`;c.fillText(goal.icon,goal.x,goal.y+8);c.font=`800 13px ${FONT_FAMILY}`;c.fillText(goal.title,goal.x,goal.y-32);
     }
     c.fillStyle="#2e6c77";c.fillRect(315,150,50,38);powerOutputs().forEach((on,i)=>{c.fillStyle=on?"#98f5b5":"#667f7c";c.beginPath();c.arc(325+i*15,168,5,0,Math.PI*2);c.fill();});
     c.fillStyle="#709fa1";c.fillRect(713,142,54,65);c.fillStyle="#d6dbc0";c.fillRect(709,137,62,10);
@@ -323,14 +324,15 @@
       if(!reduced()){c.setLineDash([6,15]);c.lineDashOffset=-time*20;c.strokeStyle="#d5fff2";c.lineWidth=2;c.stroke();c.setLineDash([]);}
       for(let i=0;i<6;i++){const a=i*Math.PI/3;c.fillStyle="#72b97b";c.beginPath();c.ellipse(850+Math.cos(a)*57,415+Math.sin(a)*40,7,13,a,0,Math.PI*2);c.fill();}
     }
-    c.fillStyle="#e3c47c";c.font="24px system-ui";c.fillText("⛺",shelter.x,shelter.y);
-    for(const cache of caches)if(!state.bonus.has(cache.id)){c.fillStyle="#fff0ae";c.font="22px system-ui";c.fillText("✦",cache.x,cache.y);}
+    c.fillStyle="#e3c47c";c.font=`24px ${FONT_FAMILY}`;c.fillText("⛺",shelter.x,shelter.y);
+    for(const cache of caches)if(!state.bonus.has(cache.id)){c.fillStyle="#fff0ae";c.font=`22px ${FONT_FAMILY}`;c.fillText("✦",cache.x,cache.y);}
     c.fillStyle="#f1ca3f";c.fillRect(state.x-9,state.y-14,18,22);c.fillStyle="#2e8e8e";c.beginPath();c.ellipse(state.x,state.y+1,10,12,0,0,Math.PI*2);c.fill();c.fillStyle="#794529";c.beginPath();c.arc(state.x,state.y-9,7,0,Math.PI*2);c.fill();
   }
   async function buildWorld(){
     if(world||creating)return;creating=true;
     try{
       const THREE=await import("https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js");
+      await window.TrailTypography?.ready;
       if((!state.active&&!state.finished)||screen.hidden)return;
       let graphics={preset:"high",resolution:1.1,shadows:true,effects:true};try{graphics={...graphics,...(JSON.parse(localStorage.getItem("thirstTrailGraphics")||"null")||{})};}catch{}
       const scene=new THREE.Scene();scene.background=new THREE.Color(0x93c4cd);scene.fog=new THREE.FogExp2(0xbed6cf,.006);
@@ -365,7 +367,7 @@
         const group=new THREE.Group();group.position.set(wx(goal.x),.2,wz(goal.y));scene.add(group);
         const ring=new THREE.Mesh(new THREE.TorusGeometry(.55,.06,6,24),new THREE.MeshBasicMaterial({color:0xffd783}));ring.rotation.x=-Math.PI/2;group.add(ring);
         const labelCanvas=document.createElement("canvas");labelCanvas.width=512;labelCanvas.height=96;const g=labelCanvas.getContext("2d");
-        if(g){g.fillStyle="#123b46";g.fillRect(0,0,512,96);g.strokeStyle="#e8d3a1";g.lineWidth=8;g.strokeRect(0,0,512,96);g.textAlign="center";g.fillStyle="#fff5d7";g.font="bold 28px sans-serif";g.fillText(goal.title,256,59);const label=new THREE.Sprite(new THREE.SpriteMaterial({map:new THREE.CanvasTexture(labelCanvas),depthTest:false}));label.position.y=3.8;label.scale.set(4.5,.85,1);group.add(label);}
+        if(g){g.fillStyle="#123b46";g.fillRect(0,0,512,96);g.strokeStyle="#e8d3a1";g.lineWidth=8;g.strokeRect(0,0,512,96);g.textAlign="center";g.fillStyle="#fff5d7";g.font=`bold 28px ${FONT_FAMILY}`;g.fillText(goal.title,256,59);const label=new THREE.Sprite(new THREE.SpriteMaterial({map:new THREE.CanvasTexture(labelCanvas),depthTest:false}));label.position.y=3.8;label.scale.set(4.5,.85,1);group.add(label);}
         marks.push({key,group,ring});
       }
       const dom=renderer.domElement;dom.className="coast-webgl";dom.tabIndex=0;dom.style.cssText="display:block;width:100%;height:auto;aspect-ratio:1000/610;touch-action:none";

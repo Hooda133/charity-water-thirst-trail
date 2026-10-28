@@ -1,6 +1,7 @@
 "use strict";
 /* Playable post-restoration village activities; independent of chapter rewards. */
 (() => {
+  const FONT_FAMILY = window.TrailTypography?.family || "sans-serif";
   const $=id=>document.getElementById(id),capacity=8;
   const fountain={id:"fountain",x:475,y:660,name:"Village fountain",icon:"💧"};
   const residents=[
@@ -214,13 +215,13 @@
     for(const person of residents){
       const delivered=data.served.includes(person.id);
       ctx.fillStyle=delivered?"#78d49b":"#f6d683";ctx.beginPath();ctx.arc(person.x,person.y-29,11,0,Math.PI*2);ctx.fill();
-      ctx.fillStyle="#173e40";ctx.font="bold 12px system-ui";ctx.textAlign="center";ctx.fillText(delivered?"✓":request()+"L",person.x,person.y-25);
+      ctx.fillStyle="#173e40";ctx.font=`bold 12px ${FONT_FAMILY}`;ctx.textAlign="center";ctx.fillText(delivered?"✓":request()+"L",person.x,person.y-25);
     }
     for(const leak of leaks){
       const fixed=data.fixed.includes(leak.id);ctx.fillStyle=fixed?"#86b579":"#55c9d8aa";
       ctx.beginPath();ctx.ellipse(leak.x,leak.y,24,fixed?6:12,0,0,Math.PI*2);ctx.fill();
       if(!fixed&&!reduced){ctx.strokeStyle="#c2fff2";ctx.lineWidth=2;ctx.beginPath();ctx.ellipse(leak.x,leak.y,8+(time*9%14),4+(time*4%7),0,0,Math.PI*2);ctx.stroke();}
-      if(data.found.includes(leak.id)){ctx.fillStyle="#15424b";ctx.font="bold 12px system-ui";ctx.textAlign="center";ctx.fillText(fixed?"✓ SEALED":"LEAK",leak.x,leak.y+27);}
+      if(data.found.includes(leak.id)){ctx.fillStyle="#15424b";ctx.font=`bold 12px ${FONT_FAMILY}`;ctx.textAlign="center";ctx.fillText(fixed?"✓ SEALED":"LEAK",leak.x,leak.y+27);}
     }
     if(data.upgrades.includes("station")){
       ctx.fillStyle="#e5ca6f";ctx.fillRect(410,493,40,45);ctx.fillStyle="#50c9cb";ctx.fillRect(417,510,26,22);ctx.fillStyle="#296867";ctx.fillRect(425,538,10,13);
@@ -239,7 +240,7 @@
     if(data.delivered.school>0){for(let i=0;i<6;i++){ctx.fillStyle=i%2?"#f8d474":"#eab6bc";ctx.beginPath();ctx.arc(313+i*12,385+(i%2)*7,4,0,Math.PI*2);ctx.fill();}}
     const player=callbacks.getPlayer?.();
     if(player&&Number.isFinite(player.x)&&Number.isFinite(player.y)){
-      ctx.fillStyle="#17383cde";ctx.fillRect(player.x-24,player.y-66,48,18);ctx.fillStyle="#f8e398";ctx.textAlign="center";ctx.font="bold 11px system-ui";ctx.fillText(data.jug+" / 8 L",player.x,player.y-53);
+      ctx.fillStyle="#17383cde";ctx.fillRect(player.x-24,player.y-66,48,18);ctx.fillStyle="#f8e398";ctx.textAlign="center";ctx.font=`bold 11px ${FONT_FAMILY}`;ctx.fillText(data.jug+" / 8 L",player.x,player.y-53);
     }
     ctx.restore();
   }

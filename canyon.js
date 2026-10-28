@@ -2,6 +2,7 @@
 /* Thirst Trail 2.0 — standalone second chapter with a distinct 3D world.
    Falls back to a playable 2D canyon if WebGL / CDN loading fails. */
 (() => {
+  const FONT_FAMILY = window.TrailTypography?.family || "sans-serif";
   const $=id=>document.getElementById(id),progress=window.TrailProgress;
   const canvas=$("canyonCanvas"),ctx=canvas?.getContext("2d");
   if(!canvas||!ctx)return;
@@ -605,8 +606,8 @@
       c.beginPath();c.arc(o.x,o.y,19,0,Math.PI*2);
       c.fillStyle=state.done.has(key)?"#75bf93":"#fce7a4";c.fill();
       c.strokeStyle="#283d42";c.lineWidth=3;c.stroke();
-      c.font="20px system-ui";c.textAlign="center";c.fillStyle="#fff";c.fillText(o.icon,o.x,o.y+7);
-      c.font="800 13px system-ui";c.fillStyle="#243a40";c.fillText(o.title,o.x,o.y-26);
+      c.font=`20px ${FONT_FAMILY}`;c.textAlign="center";c.fillStyle="#fff";c.fillText(o.icon,o.x,o.y+7);
+      c.font=`800 13px ${FONT_FAMILY}`;c.fillStyle="#243a40";c.fillText(o.title,o.x,o.y-26);
     }
     // The lightweight fallback keeps the same dark-skinned, teal-clad explorer
     // and a single yellow jug on his back (above the torso in this top view).
@@ -709,6 +710,7 @@
     creating=true;
     try{
       const THREE=await import("https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js");
+      await window.TrailTypography?.ready;
       const scene=new THREE.Scene();scene.background=new THREE.Color(0x93b9c9);
       // Widen the entire traversable 3D valley without changing quest logic or save coordinates.
       const worldSpread=1.42;scene.scale.set(worldSpread,1,worldSpread);
@@ -925,7 +927,7 @@
           tc.fillStyle="#153d42e6";
           tc.beginPath();tc.roundRect(6,7,372,58,15);tc.fill();
           tc.strokeStyle="#ffe2a8";tc.lineWidth=3;tc.stroke();
-          tc.fillStyle="#fff8df";tc.font="bold 26px sans-serif";
+          tc.fillStyle="#fff8df";tc.font=`bold 26px ${FONT_FAMILY}`;
           tc.textAlign="center";tc.textBaseline="middle";
           tc.fillText(obj.title,192,36,352);
           const texture=new THREE.CanvasTexture(tag);
