@@ -730,7 +730,7 @@
       const cinematic=window.TrailCinematic?.create(THREE,{renderer,scene,camera,chapter:"canyon"});
       const surfaces=cinematic?.surfaces;
       const dom=renderer.domElement;dom.className="canyon-webgl";
-      dom.style.cssText="display:block;width:100%;height:auto;aspect-ratio:1000/610;touch-action:none;outline:none";
+      dom.style.cssText="display:block;width:100%;height:auto;aspect-ratio:1000/610;outline:none";
       dom.tabIndex=0;
       const parent=canvas.parentElement;parent.insertBefore(dom,canvas.nextSibling);
       canvas.style.display="none";
