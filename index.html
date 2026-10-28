@@ -144,6 +144,13 @@
             <div class="sidebar-divider"></div>
             <div class="inventory-heading"><span class="overline">YOUR BACKPACK</span><span id="inventoryCount">0 ITEMS</span></div>
             <div id="inventoryList" class="inventory-list"><span class="muted">Your bag is empty.</span></div>
+            <section class="supply-collection" aria-labelledby="supplyDropTitle">
+              <h3 id="supplyDropTitle" class="overline" tabindex="-1">SEALED WATER CACHES</h3>
+              <p class="supply-collection-help">Select a water drop to walk to a cache. Collect it to recover energy.</p>
+              <div id="supplyDropList" class="supply-drop-list" role="group" aria-label="Available sealed water caches"></div>
+              <div id="collectedSupplyList" class="collected-supply-list" role="group" aria-label="Collected sealed water caches"></div>
+              <p id="supplyDropStatus" class="supply-drop-status" role="status" aria-live="polite" aria-atomic="true">0 / 4 caches collected.</p>
+            </section>
           </aside>
         </div>
         <div class="game-bottom"><span>💛 Every action creates impact. Plan your route and conserve your energy.</span><span>Fictional educational game · Not real-world drinking-water guidance</span></div>

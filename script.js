@@ -20,8 +20,8 @@
   // Sealed expedition drinking-water caches are placed on safe walkable banks.
   // Unlike river or rainwater, these are pre-packed supplies for the explorer.
   const supplyCaches=[
-    {id:"village",x:405,y:690},{id:"camptrail",x:610,y:455},
-    {id:"easttrail",x:1115,y:695},{id:"hillside",x:1350,y:430}
+    {id:"village",name:"Village trail",x:405,y:690},{id:"camptrail",name:"Camp trail",x:610,y:455},
+    {id:"easttrail",name:"East trail",x:1115,y:695},{id:"hillside",name:"Hillside",x:1350,y:430}
   ];
   const questDefs = [
     {key:"elder",title:"Meet the village elder", detail:"Learn what the village needs",icon:"💬"},
@@ -307,6 +307,66 @@
     return y<532||y>635 ? Math.abs(x-riverCenter(y))<94 : false;
   }
   function addScore(points){state.score+=points;tone(750,.13);}
+  // Cache controls are real DOM elements, separate from the canvas scenery.
+  // Reconcile only when membership changes so periodic HUD updates keep focus.
+  const supplyButtons=new Map();
+  const supplyBadges=new Map();
+  let supplyDisplayStamp=null;
+  function renderSupplyDrops(){
+    const stamp=state.difficulty+":"+[...state.supplies].sort().join(",");
+    if(stamp!==supplyDisplayStamp){
+      supplyDisplayStamp=stamp;
+      const focused=document.activeElement?.dataset?.supply;
+      const available=$("supplyDropList"),collected=$("collectedSupplyList");
+      const availableNodes=[],collectedNodes=[];
+      for(const id of supplyBadges.keys())if(!state.supplies.has(id))supplyBadges.delete(id);
+      for(const cache of supplyCaches){
+        if(state.supplies.has(cache.id)){
+          const badge=supplyBadges.get(cache.id)||document.createElement("span");
+          badge.className="collected-supply";badge.dataset.collectedSupply=cache.id;
+          badge.textContent="✓ "+cache.name;supplyBadges.set(cache.id,badge);collectedNodes.push(badge);
+          supplyButtons.delete(cache.id);
+          continue;
+        }
+        if(supplyButtons.has(cache.id)){
+          const button=supplyButtons.get(cache.id);
+          button.setAttribute("aria-label",`Collect sealed water at ${cache.name}, up to ${rules().supplyRecovery} energy and 25 impact`);
+          button.querySelector("small").textContent=`+${rules().supplyRecovery} energy · +25 impact`;
+          availableNodes.push(button);continue;
+        }
+        const button=document.createElement("button");
+        button.type="button";button.className="supply-drop";button.dataset.supply=cache.id;
+        button.setAttribute("aria-label",`Collect sealed water at ${cache.name}, up to ${rules().supplyRecovery} energy and 25 impact`);
+        const icon=document.createElement("span");icon.className="supply-drop-icon";
+        icon.setAttribute("aria-hidden","true");
+        icon.innerHTML='<svg viewBox="0 0 40 48" fill="none" focusable="false"><path d="M20 3C16 12 5 22 5 30a15 15 0 0 0 30 0C35 22 24 12 20 3Z" fill="currentColor"/><path d="M12 29c0 5 3 8 7 9" stroke="#fff" stroke-width="3" stroke-linecap="round"/></svg>';
+        const copy=document.createElement("span");copy.className="supply-drop-copy";
+        const title=document.createElement("strong");title.textContent=cache.name;
+        const reward=document.createElement("small");reward.textContent=`+${rules().supplyRecovery} energy · +25 impact`;
+        copy.append(title,reward);button.append(icon,copy);
+        button.addEventListener("click",()=>{
+          // Detached controls, paused dialogs, and repeated clicks cannot grant rewards.
+          if(state.screen!=="playing"||state.modalOpen||state.ended||state.supplies.has(cache.id)||supplyButtons.get(cache.id)!==button)return;
+          if(Math.hypot(state.x-cache.x,state.y-cache.y)<=42){collectNearbySupplies();return;}
+          navToPosition(cache);
+          if(state.goal?.x===cache.x&&state.goal?.y===cache.y){
+            renderSupplyDrops();
+            $("supplyDropStatus").textContent=`Walking to ${cache.name}. The drop will disappear when collected.`;
+          }
+        });
+        supplyButtons.set(cache.id,button);availableNodes.push(button);
+      }
+      available.replaceChildren(...availableNodes);collected.replaceChildren(...collectedNodes);
+      $("supplyDropStatus").textContent=state.supplies.size===supplyCaches.length?
+        "All four caches collected! Their sealed water has restored your energy.":
+        `${state.supplies.size} / ${supplyCaches.length} caches collected. Select a drop to find sealed water.`;
+      if(focused)(supplyButtons.get(focused)||supplyButtons.values().next().value||$("supplyDropTitle")).focus({preventScroll:true});
+    }
+    for(const cache of supplyCaches){
+      const selected=state.screen==="playing"&&!state.modalOpen&&state.goal?.x===cache.x&&state.goal?.y===cache.y;
+      supplyButtons.get(cache.id)?.classList.toggle("is-target",!!selected);
+    }
+  }
   function collectNearbySupplies(){
     if(state.screen!=="playing"||state.modalOpen)return;
     for(const cache of supplyCaches){
@@ -318,7 +378,9 @@
       state.score+=25;
       tone(920,.14);
       notify("🧴 Sealed drinking-water supply found! +"+Math.ceil(gained)+" energy · +25 impact");
-      updateUI();saveValley();
+      updateUI();
+      $("supplyDropStatus").textContent=`${cache.name} collected! +${Math.round(gained*10)/10} energy · +25 impact. ${state.supplies.size} / ${supplyCaches.length} caches collected.`;
+      saveValley();
     }
   }
   function drain(n){
@@ -350,6 +412,7 @@
     state.impactTimer=setTimeout(()=>{panel.hidden=true;panel.classList.remove("replay");},victory?4200:2400);
   }
   function updateUI(){
+    renderSupplyDrops();
     $("valleyDifficulty").textContent=rules().label;
     $("valleyDifficulty").setAttribute("aria-label",`Expedition difficulty: ${rules().label}`);
     spots.camp.hint=`Restore ${rules().campRecovery} energy (${Math.max(0,rules().campUses-state.campUses)} uses left)`;
@@ -391,6 +454,7 @@
   }
   function start({resume=false,mode=difficulty.selected()}={}){
     lastValleySaveTime=0;
+    supplyDisplayStamp=null;
     Object.assign(state,{difficulty:difficulty.normalize(mode),screen:"playing",energy:100,score:0,elapsed:0,x:310,y:620,walkT:0,
       path:[],goal:null,destination:null,nearby:null,campUses:0,ended:false,moving:false,lastStatus:"",cameraX:0,cameraY:0,effect:null,scenic:false,pipeReady:false,pumpQuizStep:0});
     pipeTurns=[...PIPE_START];pipeTests=0;
