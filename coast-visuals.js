@@ -1,7 +1,8 @@
 "use strict";
 /* Stormbreak Coast: procedural scenery only. Routes, puzzles and saves live in coast.js. */
 (() => {
-  function build(THREE,{scene,getState,wx=x=>(x-500)/24,wz=y=>(y-305)/24,surfaces=null}){
+  function build(THREE,{scene,getState,wx=x=>(x-500)/24,wz=y=>(y-305)/24,surfaces=null,
+    getGraphics=()=>({preset:"high"})}){
     const root=new THREE.Group();root.name="StormbreakCoastScenery";scene.add(root);
     let seed=732061;
     const rand=()=>((seed=(Math.imul(seed,1664525)+1013904223)>>>0)/4294967296);
@@ -102,6 +103,21 @@
         rock.scale.set(1.25,.55,1);
       }
     }
+    // Tide-polished beach pebbles are outside the walkable south boundary. One
+    // instanced mesh replaces hundreds of small draw calls, with quality LOD.
+    const beachPebbles=new THREE.InstancedMesh(new THREE.DodecahedronGeometry(.15,0),mats.edge,180);
+    const pebbleDummy=new THREE.Object3D();let pebbleCount=0;
+    for(let i=0;i<180;i++){
+      const x=i%2?590+rand()*360:45+rand()*405;
+      const z=wz(576+rand()*17),size=.45+rand()*1.3;
+      pebbleDummy.position.set(wx(x),-.26,z);
+      pebbleDummy.rotation.set(0,rand()*Math.PI*2,(rand()-.5)*.4);
+      pebbleDummy.scale.set(size*1.15,size*.48,size);
+      pebbleDummy.updateMatrix();beachPebbles.setMatrixAt(pebbleCount++,pebbleDummy.matrix);
+    }
+    beachPebbles.instanceMatrix.needsUpdate=true;
+    beachPebbles.castShadow=false;beachPebbles.receiveShadow=true;
+    root.add(beachPebbles);
     // Stone inlet retaining edges preserve the exact bridge crossing corridor.
     for(const logicalX of [468,572])for(const logicalY of [105,150,195,240,285,440,485,530]){
       const stone=box(mats.rock,wx(logicalX),-.28,wz(logicalY),.35,.56,1.55);
@@ -383,6 +399,10 @@
       update(time,{reduced=false,effects=true}={}){
         const state=getState()||{},finished=!!state.finished;
         const t=Number.isFinite(time)?time:0;
+        const quality=getGraphics()?.preset||"high";
+        const density={low:.36,medium:.65,high:1,ultra:1}[quality]||1;
+        shoreGrass.count=Math.max(1,Math.floor(grassCount*density));
+        beachPebbles.count=Math.max(1,Math.floor(pebbleCount*density));
         const since=Number.isFinite(state.waterAt)?Math.max(0,t-state.waterAt):0;
         const fill=reduced?1:clamp(since/2.4);
         mats.surf.opacity=reduced||!effects ? .20 : .17+Math.sin(t*.75)*.055;
