@@ -29,27 +29,32 @@ MAX_TOTAL_BYTES = 55 * 1024 * 1024
 FORMATS = {".glb", ".gltf", ".fbx", ".png", ".jpg", ".jpeg", ".webp", ".bin"}
 LICENSES = {"CC0-1.0", "CC-BY-4.0", "CC-BY-3.0"}
 
-# Source archives and SHA-256s cross-checked with Kenney's official pack pages
-# and a published archive-provenance record. Keep pinned until reviewed again.
-KENNEY_PACKS = [
-    {
-        "name": "nature_kit",
-        "page": "https://kenney.nl/assets/nature-kit",
-        "url": "https://kenney.nl/media/pages/assets/nature-kit/37ac38a37b-1677698939/kenney_nature-kit.zip",
-        "sha256": "fa7974a0d342bfe63c38664ba9f8ec1a4aab8ea25f099bdc56870e33588c4d9d",
-        "members": ["Models/GLTF format/" + f + ".glb" for f in (
-            "cactus_short", "cactus_tall", "fence_gate", "fence_simple",
-            "rock_largeA", "rock_smallA", "sign", "tree_default", "tree_oak")],
-    },
-    {
-        "name": "survival_kit",
-        "page": "https://kenney.nl/assets/survival-kit",
-        "url": "https://kenney.nl/media/pages/assets/survival-kit/4065a8185b-1712149243/kenney_survival-kit.zip",
-        "sha256": "c3586341b5932c87eb43d75d915434f47daed168b17ed36a03e8ca9977c7443e",
-        "members": ["Models/GLB format/" + f for f in (
-            "barrel-open.glb", "barrel.glb", "signpost.glb", "Textures/colormap.png")],
-    },
-]
+# Pin a known CC0 Kenney mirror to a specific immutable Git commit.
+# https://github.com/Hidencod/tge-assets/blob/main/LICENSE credits Kenney under CC0.
+# The original Kenney archive endpoint returns HTTP 403 from GitHub Actions,
+# so the mirrored self-contained GLBs are more reliable for automation.
+KENNEY_MIRROR = "https://github.com/Hidencod/tge-assets"
+KENNEY_COMMIT = "e26d410c77163293bcf3c07614e024552a308c69"
+KENNEY_SELECTION = {
+    "nature-kit": [
+        "tree-oak.glb", "tree-default.glb", "tree-palmdetailedshort.glb",
+        "tree-palmdetailedtall.glb", "rock-largea.glb", "rock-smalla.glb",
+        "cactus-short.glb", "cactus-tall.glb", "flower-yellowa.glb",
+        "flower-purplea.glb", "grass.glb", "bridge-wood.glb",
+        "fence-simple.glb", "fence-gate.glb",
+    ],
+    "city-kit-suburban": [
+        "building-type-a.glb", "building-type-c.glb",
+        "planter.glb", "tree-small.glb",
+    ],
+    "pirate-kit": [
+        "palm-detailed-straight.glb", "boat-row-small.glb",
+        "structure-platform-dock-small.glb", "barrel.glb",
+    ],
+    "mini-characters": [
+        "character-female-a.glb", "character-male-a.glb",
+    ],
+}
 
 
 def sha(data: bytes) -> str:
@@ -62,7 +67,7 @@ def safe_url(url: str, provider: str) -> None:
         raise ValueError(f"Only public HTTPS downloads are supported: {url}")
     host = p.hostname.lower()
     approved = {
-        "kenney": {"kenney.nl"},
+        "kenney": {"kenney.nl", "raw.githubusercontent.com"},
         "ambientcg": {"ambientcg.com", "www.ambientcg.com"},
         "poly_pizza_api": {"api.poly.pizza"},
         "poly_pizza": {"poly.pizza", "static.poly.pizza", "cdn.poly.pizza", "assets.poly.pizza"},
@@ -110,7 +115,8 @@ def valid_asset(path: PurePosixPath, data: bytes) -> None:
 
 
 def remember(relative: str, data: bytes, *, provider: str, source: str,
-             license_id: str, records: dict, creator: str = "") -> None:
+             license_id: str, records: dict, creator: str = "",
+             download_url: str = "") -> None:
     if license_id not in LICENSES:
         raise ValueError(f"Unapproved license for {source}: {license_id}")
     if license_id.startswith("CC-BY") and not creator.strip():
@@ -129,6 +135,8 @@ def remember(relative: str, data: bytes, *, provider: str, source: str,
         print(f"Added {target.relative_to(ROOT)} ({len(data):,} bytes)")
     records[relative] = {"source": source, "provider": provider,
                          "license": license_id, "creator": creator,
+                         "license_url": "https://creativecommons.org/publicdomain/zero/1.0/" if license_id == "CC0-1.0" else "https://creativecommons.org/licenses/by/" + license_id.split("-")[-1] + "/",
+                         "download_url": download_url,
                          "sha256": sha(data), "bytes": len(data)}
     if sum(row["bytes"] for row in records.values()) > MAX_TOTAL_BYTES:
         raise ValueError("Total curated asset budget exceeded")
@@ -166,13 +174,21 @@ def unpack_archive(archive: bytes, allowed: list[str] | None, prefix: str, *,
 
 
 def import_kenney(records: dict) -> None:
-    for pack in KENNEY_PACKS:
-        print("Fetching official Kenney pack:", pack["name"])
-        archive = fetch(pack["url"], "kenney")
-        if sha(archive) != pack["sha256"]:
-            raise ValueError(f"Kenney archive checksum changed: {pack['name']}; review source before updating")
-        unpack_archive(archive, pack["members"], f"kenney/{pack['name']}",
-                       provider="kenney", source=pack["page"], license_id="CC0-1.0", records=records)
+    """Import small, professionally authored CC0 GLBs from a pinned GitHub mirror."""
+    for pack, files in KENNEY_SELECTION.items():
+        print("Fetching CC0 Kenney models:", pack)
+        source_page = f"https://kenney.nl/assets/{pack}"
+        if pack == "mini-characters":
+            source_page = "https://kenney.nl/assets/mini-characters"
+        for filename in files:
+            if not re.fullmatch(r"[a-z0-9-]+\\.glb", filename):
+                raise ValueError("Unexpected curated model name")
+            url = (f"https://raw.githubusercontent.com/Hidencod/tge-assets/"
+                   f"{KENNEY_COMMIT}/packs/{pack}/{filename}")
+            data = fetch(url, "kenney", MAX_FILE_BYTES)
+            remember(f"kenney/{pack}/{filename}", data, provider="kenney",
+                     source=source_page, license_id="CC0-1.0", creator="Kenney",
+                     records=records, download_url=url)
 
 
 def import_ambientcg(records: dict) -> None:
