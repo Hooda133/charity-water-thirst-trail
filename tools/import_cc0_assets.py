@@ -56,6 +56,16 @@ KENNEY_SELECTION = {
     ],
 }
 
+# Quaternius' CC0 Stylized Nature / Downtown City models, optimized for GLB
+# and redistributed with provenance in a pinned public GitHub repository.
+# Creator license: https://quaternius.com/packs/stylizednaturemegakit.html
+# Mirror provenance: https://github.com/anshaneja5/skyline-run/blob/main/CREDITS.md
+QUATERNIUS_COMMIT = "0c41526d8d4130c37c15e219c2c3737fa8cb4ad8"
+QUATERNIUS_SELECTION = {
+    "nature": ["tree1.glb", "tree3.glb", "bush.glb"],
+    "buildings": ["b_small.glb"],
+}
+
 
 def sha(data: bytes) -> str:
     return hashlib.sha256(data).hexdigest()
@@ -191,6 +201,24 @@ def import_kenney(records: dict) -> None:
                      records=records, download_url=url)
 
 
+def import_quaternius_mirror(records: dict) -> None:
+    """Import a tiny verified CC0 subset from a pinned public Git mirror."""
+    print("Fetching CC0 Quaternius models from pinned GitHub mirror")
+    for family, filenames in QUATERNIUS_SELECTION.items():
+        source = ("https://quaternius.com/packs/stylizednaturemegakit.html"
+                  if family == "nature" else
+                  "https://quaternius.com/packs/downtowncitymegakit.html")
+        for filename in filenames:
+            if not re.fullmatch(r"[a-z0-9_-]+\.glb", filename):
+                raise ValueError("Unexpected curated Quaternius file name")
+            url = (f"https://raw.githubusercontent.com/anshaneja5/skyline-run/"
+                   f"{QUATERNIUS_COMMIT}/public/assets/models/{filename}")
+            data = fetch(url, "quaternius", MAX_FILE_BYTES)
+            remember(f"quaternius/{family}/{filename}", data, provider="quaternius",
+                     source=source, license_id="CC0-1.0", creator="Quaternius",
+                     records=records, download_url=url)
+
+
 def import_ambientcg(records: dict) -> None:
     for query in ("rock", "wood"):
         url = "https://ambientcg.com/api/v3/assets?" + urllib.parse.urlencode({
@@ -276,6 +304,7 @@ def main() -> int:
     parser.add_argument("--include-poly-pizza",action="store_true",help="Use optional POLY_PIZZA_API_KEY")
     parser.add_argument("--skip-ambientcg",action="store_true",help="Skip additional CC0 PBR materials")
     parser.add_argument("--skip-kenney",action="store_true",help="Skip curated Kenney packs")
+    parser.add_argument("--skip-quaternius",action="store_true",help="Skip curated CC0 Quaternius mirror files")
     args=parser.parse_args()
     OUTPUT.mkdir(parents=True,exist_ok=True)
     manifest=OUTPUT/"manifest.json"
@@ -284,6 +313,8 @@ def main() -> int:
     records=old.get("assets",{})
     if not args.skip_kenney:
         import_kenney(records)
+    if not args.skip_quaternius:
+        import_quaternius_mirror(records)
     if not args.skip_ambientcg:
         import_ambientcg(records)
     if args.include_poly_pizza:
