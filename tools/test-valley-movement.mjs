@@ -8,7 +8,7 @@ import {runInNewContext} from "node:vm";
 const root=resolve(import.meta.dirname,"..");
 let script=readFileSync(resolve(root,"script.js"),"utf8");
 const begin=script.indexOf("  createWorld(canvas, {");
-const end=script.indexOf("  let audioContext = null;",begin);
+const end=script.indexOf("  // Action cues are shared with Canyon",begin);
 assert.ok(begin>=0&&end>begin,"Expected asynchronous renderer initialization");
 script=script.slice(0,begin)+"  // Skip WebGL initialization; exercise genuine gameplay and movement.\n"+script.slice(end);
 // Test-only access to transition state; the shipped source stays read-only.
