@@ -123,8 +123,9 @@ jobs:
             echo 'No outstanding asset changes to review.'
             exit 0
           fi
-          if gh pr view automation/cc0-graphics --json url >/dev/null 2>&1; then
-            gh pr view automation/cc0-graphics --json url --jq .url
+          OPEN_PR="$(gh pr list --state open --head automation/cc0-graphics --base main --json url --jq '.[0].url // ""')"
+          if [[ -n "$OPEN_PR" ]]; then
+            echo "Existing asset review PR: $OPEN_PR"
           else
             gh pr create --draft \
               --base main --head automation/cc0-graphics \
