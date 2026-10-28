@@ -181,7 +181,7 @@ def import_kenney(records: dict) -> None:
         if pack == "mini-characters":
             source_page = "https://kenney.nl/assets/mini-characters"
         for filename in files:
-            if not re.fullmatch(r"[a-z0-9-]+\\.glb", filename):
+            if not re.fullmatch(r"[a-z0-9-]+\.glb", filename):
                 raise ValueError("Unexpected curated model name")
             url = (f"https://raw.githubusercontent.com/Hidencod/tge-assets/"
                    f"{KENNEY_COMMIT}/packs/{pack}/{filename}")
