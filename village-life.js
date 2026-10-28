@@ -186,7 +186,10 @@
     const persist=element("small","village-life-save","Village activities save independently of chapter replays in this browser.");panel.append(persist);
     if(focusAction){
       const actions=[...(panel.querySelectorAll?.("[data-village-action]")||[])];
-      const next=actions.find(button=>button.dataset.villageAction===focusAction&&!button.disabled)
+      // When a tab changed, do not refocus the formerly selected tab simply
+      // because that control still exists in the newly rendered tab bar.
+      const preferred=focusAction.startsWith("tab-")?"tab-"+tab:focusAction;
+      const next=actions.find(button=>button.dataset.villageAction===preferred&&!button.disabled)
         ||actions.find(button=>button.dataset.villageAction==="tab-"+tab&&!button.disabled);
       next?.focus?.({preventScroll:true});
     }
