@@ -34,7 +34,7 @@ for(const chapter of chapters){
   }
 }
 assert.ok(total>=35,"all four scenes need a meaningful visual pass");
-assert.deepEqual(api.placements("nonexistent"),[]);
+assert.equal(api.placements("nonexistent").length,0);
 assert.ok(scenic.includes("assets/upgraded_graphics/"));
 assert.match(scenic,/gltfLoader\.loadAsync\(remote\(key\)\)/,"pinned remote fallback");
 assert.match(scenic,/model\.traverse\(/);
