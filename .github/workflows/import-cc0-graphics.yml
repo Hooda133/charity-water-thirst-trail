@@ -9,6 +9,13 @@ on:
         default: false
   schedule:
     - cron: '17 10 * * 1' # Weekly Monday, 10:17 UTC
+  pull_request:
+    paths:
+      - 'tools/import_cc0_assets.py'
+      - 'tools/test_import_cc0_assets.py'
+      - 'tools/asset_sources.json'
+      - '.github/workflows/import-cc0-graphics.yml'
+      - 'assets/upgraded_graphics/**'
 
 permissions:
   contents: write
@@ -19,7 +26,37 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  validate-importer:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Check importer syntax and run offline security tests
+        run: |
+          python -m py_compile tools/import_cc0_assets.py tools/test_import_cc0_assets.py
+          python tools/test_import_cc0_assets.py
+      - name: Smoke-test real CC0 package downloads without committing anything
+        run: |
+          python tools/import_cc0_assets.py
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          root = Path('assets/upgraded_graphics')
+          assets = json.loads((root/'manifest.json').read_text())['assets']
+          assert any(k.startswith('kenney/') for k in assets), 'No Kenney assets fetched'
+          assert any(k.startswith('ambientcg/') for k in assets), 'No ambientCG materials fetched'
+          assert all((root/k).is_file() for k in assets), 'Manifest refers to missing assets'
+          print(f'Validated {len(assets)} imported assets from real public downloads')
+          PY
+
   import-assets:
+    if: github.event_name != 'pull_request'
     runs-on: ubuntu-latest
     timeout-minutes: 12
     steps:
