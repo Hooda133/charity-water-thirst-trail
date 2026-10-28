@@ -45,7 +45,7 @@ assert.equal(overlay.status().visible,3,"projected markers should appear");
 assert.equal(host.children.length,1,"overlay should attach beside canvas");
 // An expanding sidebar can shift the canvas without changing its dimensions.
 // Projected labels must follow its new offset on the very next update.
-canvasLeft=73;canvasTop=51;overlay.update();
+canvasLeft=73;canvasTop=51;overlay.update({completed:new Set(["goal0"]),activeKey:"goal1"});
 assert.equal(host.children[0].style.left,"33px","follow horizontal canvas layout shifts");
 assert.equal(host.children[0].style.top,"31px","follow vertical canvas layout shifts");
 const [first,second]=host.children[0].children;
