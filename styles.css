@@ -340,6 +340,15 @@
 .graphics-check{display:flex;align-items:center;gap:9px;margin:13px 0;color:#c8e1e2;font-size:11px;font-weight:700}
 .graphics-check input{accent-color:var(--yellow)}
 .graphics-note{color:#8eafb3;font-size:10px;line-height:1.55;margin:18px 0 0}
+/* One-screen settings on phones; no horizontal scrolling or overlapping controls. */
+.graphics-panel{max-height:calc(100dvh - 94px);overflow-y:auto;overscroll-behavior:contain}
+.sound-settings-row{display:flex;align-items:center;flex-wrap:wrap;gap:10px;margin-top:8px}
+.sound-preview{min-height:42px;border:1px solid #e7d69a8a;border-radius:9px;background:#365952;color:#fff0bd;padding:10px 15px;font:800 11px var(--font-ui);cursor:pointer}
+.sound-preview:hover:not(:disabled){background:#487565}
+.sound-preview:disabled{opacity:.47;cursor:not-allowed}
+#soundStatus{font-size:11px;color:#b7d5c7}
+#sfxVolume{min-height:28px;cursor:pointer}
+#sfxVolume:focus-visible,.sound-preview:focus-visible{outline:3px solid #ffe3a0;outline-offset:3px}
 
 
 /* SHOWCASE PASS — cinematic composition, clearer world controls and premium HUD. */
