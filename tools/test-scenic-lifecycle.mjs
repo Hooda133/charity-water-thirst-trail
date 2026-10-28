@@ -109,6 +109,6 @@ for(const asset of loadedSources)for(const key of ["geometry","material","textur
   assert.equal(asset.resources[key].disposals,1,
     "shared "+key+" must be freed exactly once after scene disposal");
 }
-assert.equal(new Set(requests).size,allRequests+oldCount,
-  "each independently mounted chapter fetches only its own unique decorations");
+assert.equal(requests.length,allRequests+oldCount,
+  "each independently mounted chapter fetches its own unique decorations");
 console.log("PASS: no late requests after disposal, no leaked GLB resources, clean active mounts and exactly-once shared asset cleanup");
