@@ -355,7 +355,7 @@
         cinematic?.configure({...graphics,preset:quality});
       }
       applyGraphics(graphics);
-      const art=window.TrailCoastVisuals?.build(THREE,{scene,getState:()=>state,wx,wz,surfaces:cinematic?.surfaces});
+      const art=window.TrailCoastVisuals?.build(THREE,{scene,getState:()=>state,wx,wz,surfaces:cinematic?.surfaces,getGraphics:()=>graphics});
       if(!art){const ground=new THREE.Mesh(new THREE.PlaneGeometry(45,29),new THREE.MeshStandardMaterial({color:0xd8c896}));ground.rotation.x=-Math.PI/2;ground.position.y=-.05;scene.add(ground);}
       const player=window.ThirstExplorer?.create(THREE)||new THREE.Group();
       if(!player.children.length){const body=new THREE.Mesh(new THREE.CylinderGeometry(.2,.24,.65,8),new THREE.MeshStandardMaterial({color:0x2d9892}));body.position.y=.6;player.add(body);}
