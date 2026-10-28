@@ -120,6 +120,11 @@
   function render(){
     if(!panel)return;
     panel.hidden=!active;if(!active)return;
+    // Rebuilding the card grid must not strand keyboard and screen-reader
+    // users on <body>. Preserve the focused action when it still exists; for
+    // consumed/disabled actions, return focus to the active activity tab.
+    const focused=document.activeElement;
+    const focusAction=focused&&panel.contains?.(focused)?focused.dataset?.villageAction:null;
     revision++;
     panel.replaceChildren();panel.className="village-life-panel";
     const header=element("div","village-life-header");
@@ -179,6 +184,15 @@
     panel.append(body);
     const status=element("p","village-life-status",message);status.setAttribute("role","status");status.setAttribute("aria-live","polite");panel.append(status);
     const persist=element("small","village-life-save","Village activities save independently of chapter replays in this browser.");panel.append(persist);
+    if(focusAction){
+      const actions=[...(panel.querySelectorAll?.("[data-village-action]")||[])];
+      // When a tab changed, do not refocus the formerly selected tab simply
+      // because that control still exists in the newly rendered tab bar.
+      const preferred=focusAction.startsWith("tab-")?"tab-"+tab:focusAction;
+      const next=actions.find(button=>button.dataset.villageAction===preferred&&!button.disabled)
+        ||actions.find(button=>button.dataset.villageAction==="tab-"+tab&&!button.disabled);
+      next?.focus?.({preventScroll:true});
+    }
   }
   function init(options={}){
     callbacks={...callbacks,...options};panel=$("villageLifePanel");
@@ -189,9 +203,17 @@
     if(window.TrailProgress?.snapshot&&!window.TrailProgress.snapshot().completed?.includes("valley")){
       callbacks.notify?.("Restore the village pump before starting community activities.");return false;
     }
-    if(!initialized)init();active=true;lastNearby="";render();return true;
+    if(!initialized)init();active=true;lastNearby="";
+    $("villageOpenActivities")?.setAttribute?.("aria-expanded","true");
+    render();return true;
   }
-  function close(){active=false;revision++;if(panel)panel.hidden=true;}
+  function close(){
+    const manual=panel?.contains?.(document.activeElement)
+      &&document.activeElement?.dataset?.villageAction==="close";
+    active=false;revision++;if(panel)panel.hidden=true;
+    $("villageOpenActivities")?.setAttribute?.("aria-expanded","false");
+    if(manual)$("villageOpenActivities")?.focus?.({preventScroll:true});
+  }
   function getDestinations(){return [fountain,...residents,...leaks,...(data.upgrades.includes("station")?[{...projects[0],name:"New drinking-water station"}]:[])].map(clone);}
   function closest(){let point=null,distance=70;for(const item of getDestinations()){const d=pointDistance(item);if(d<distance){point=item;distance=d;}}return point;}
   function interactNear(){

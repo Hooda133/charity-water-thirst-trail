@@ -104,8 +104,12 @@ jobs:
         run: node tools/test-canyon-visuals.mjs
       - name: Validate screen-space mission labels in all three chapters
         run: node tools/test-world-labels.mjs
+      - name: Verify Canyon minimap keyboard routes and skip unnecessary frame redraws
+        run: node tools/test-canyon-map.mjs
       - name: Verify licensed 3D model placement and fallback across all four scenes
         run: node tools/test-scenic-assets.mjs
+      - name: Verify decorative model lifecycle, stale downloads and resource cleanup
+        run: node tools/test-scenic-lifecycle.mjs
 
       - name: Test shared explorer grounding, victory and camera obstruction fading
         run: node tools/test-explorer-motion.mjs

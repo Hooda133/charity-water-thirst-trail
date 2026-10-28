@@ -8,6 +8,7 @@
     layer.hidden = true;
     const point = new THREE.Vector3(), cameraPoint = new THREE.Vector3();
     let parent = null, dirty = true, width = 0, height = 0, visibleCount = 0;
+    let offsetLeft = NaN, offsetTop = NaN;
     const entries = labels.map(label => {
       const element = document.createElement("span");
       element.className = "world-mission-label";
@@ -29,14 +30,23 @@
       if (parent !== canvas.parentElement) {
         parent = canvas.parentElement;
         parent.append(layer);
+        offsetLeft = offsetTop = NaN;
         dirty = true;
       }
       layer.hidden = false;
+      // The canvas can move within its parent when a sidebar or HUD expands,
+      // without changing width/height. Track its actual position each update
+      // so labels never drift away from their world-space mission markers.
+      const view = canvas.getBoundingClientRect(), frame = parent.getBoundingClientRect();
+      const left = view.left - frame.left - parent.clientLeft;
+      const top = view.top - frame.top - parent.clientTop;
+      if(left !== offsetLeft || top !== offsetTop){
+        layer.style.left = `${left}px`;
+        layer.style.top = `${top}px`;
+        offsetLeft=left;offsetTop=top;
+      }
       if (dirty || width !== canvas.clientWidth || height !== canvas.clientHeight) {
         width = canvas.clientWidth; height = canvas.clientHeight;
-        const view = canvas.getBoundingClientRect(), frame = parent.getBoundingClientRect();
-        layer.style.left = `${view.left - frame.left - parent.clientLeft}px`;
-        layer.style.top = `${view.top - frame.top - parent.clientTop}px`;
         layer.style.width = `${width}px`; layer.style.height = `${height}px`;
         for (const entry of entries) {
           entry.element.hidden = false;
