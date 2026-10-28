@@ -1,0 +1,70 @@
+name: Vendor CC0 models into Thirst Trail's four 3D worlds
+
+# Runs once when this workflow is first committed on the feature branch.
+# Future periodic CC0 imports are handled by import-cc0-graphics.yml on main.
+on:
+  push:
+    branches:
+      - feature/integrate-upgraded-3d-world-assets
+    paths:
+      - .github/workflows/vendor-cc0-world-assets.yml
+
+permissions:
+  contents: write
+
+concurrency:
+  group: vendor-cc0-world-models
+  cancel-in-progress: false
+
+jobs:
+  vendor:
+    if: github.repository == 'Hooda133/charity-water-thirst-trail'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout exact feature branch (keep other work untouched)
+        uses: actions/checkout@v4
+        with:
+          ref: feature/integrate-upgraded-3d-world-assets
+          fetch-depth: 0
+          persist-credentials: true
+      - name: Python for verified CC0 importer
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Check existing game integration and importer
+        run: |
+          node tools/test-scenic-assets.mjs
+          python tools/test_import_cc0_assets.py
+      - name: Fetch Kenney Quaternius and ambientCG assets
+        run: python tools/import_cc0_assets.py
+      - name: Verify vendored files and source records
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          folder=Path('assets/upgraded_graphics')
+          assets=json.loads((folder/'manifest.json').read_text())['assets']
+          assert len(assets)>=40, f'Expected 40+ imported art files, got {len(assets)}'
+          for prefix in ('kenney/','quaternius/','ambientcg/'):
+              assert any(name.startswith(prefix) for name in assets), f'Missing {prefix} vendor'
+          for path,meta in assets.items():
+              file=folder/path
+              assert file.is_file(), f'Missing {file}'
+              assert meta['license']=='CC0-1.0'
+              assert meta['bytes']==file.stat().st_size
+          print('Validated',len(assets),'CC0 art files and source records')
+          PY
+      - name: Commit and push new graphics to the feature branch
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -- assets/upgraded_graphics/
+          if git diff --cached --quiet; then
+            echo 'All curated assets are already present in the branch.'
+            exit 0
+          fi
+          git commit -m "Vendor verified CC0 3D models and PBR materials for all worlds"
+          git push origin HEAD:refs/heads/feature/integrate-upgraded-3d-world-assets
