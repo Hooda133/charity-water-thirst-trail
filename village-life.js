@@ -203,9 +203,17 @@
     if(window.TrailProgress?.snapshot&&!window.TrailProgress.snapshot().completed?.includes("valley")){
       callbacks.notify?.("Restore the village pump before starting community activities.");return false;
     }
-    if(!initialized)init();active=true;lastNearby="";render();return true;
+    if(!initialized)init();active=true;lastNearby="";
+    $("villageOpenActivities")?.setAttribute?.("aria-expanded","true");
+    render();return true;
   }
-  function close(){active=false;revision++;if(panel)panel.hidden=true;}
+  function close(){
+    const manual=panel?.contains?.(document.activeElement)
+      &&document.activeElement?.dataset?.villageAction==="close";
+    active=false;revision++;if(panel)panel.hidden=true;
+    $("villageOpenActivities")?.setAttribute?.("aria-expanded","false");
+    if(manual)$("villageOpenActivities")?.focus?.({preventScroll:true});
+  }
   function getDestinations(){return [fountain,...residents,...leaks,...(data.upgrades.includes("station")?[{...projects[0],name:"New drinking-water station"}]:[])].map(clone);}
   function closest(){let point=null,distance=70;for(const item of getDestinations()){const d=pointDistance(item);if(d<distance){point=item;distance=d;}}return point;}
   function interactNear(){
