@@ -2,7 +2,7 @@
 /* Thirst Trail 2.0 — standalone second chapter with a distinct 3D world.
    Falls back to a playable 2D canyon if WebGL / CDN loading fails. */
 (() => {
-  const $=id=>document.getElementById(id),progress=window.TrailProgress,difficulty=window.TrailDifficulty;
+  const $=id=>document.getElementById(id),progress=window.TrailProgress;
   const canvas=$("canyonCanvas"),ctx=canvas?.getContext("2d");
   if(!canvas||!ctx)return;
   const W=1000,H=610;
@@ -11,29 +11,36 @@
     kit:{x:305,y:455,title:"Recover the seal kit",icon:"🎒",detail:"Search the weathered supply shelter"},
     valves:{x:390,y:165,title:"Balance the pressure valves",icon:"🎛️",detail:"Regulate flow through three control valves"},
     span:{x:700,y:365,title:"Rebuild the aqueduct",icon:"🛠️",detail:"Repair the broken crossing in order"},
-    cistern:{x:820,y:175,title:"Test the village cistern",icon:"💧",detail:"Complete the water-safety inspection"}
+    cistern:{x:820,y:175,title:"Test the village cistern",icon:"💧",detail:"Pass the inspection and solve the reservoir lock"}
   };
   const questOrder=Object.keys(goals);
   const rest={x:290,y:520,title:"Shaded rest shelter",icon:"⛺"};
   const defaultState=()=>({
-    difficulty:difficulty.selected(),
-    active:false,paused:false,finished:false,x:170,y:425,
+    active:false,paused:false,finished:false,celebrationStart:0,x:170,y:425,
     energy:100,score:0,elapsed:0,done:new Set(),keys:new Set(),
     path:[],nearby:null,modal:false,modalVersion:0,valves:[0,0,0],repairStep:0,
-    failedValveTests:new Set(),cisternMistake:false,
+    failedValveTests:new Set(),cisternMistake:false,cisternSafetyPassed:false,
+    releaseBasins:[0,0],releaseHint:false,
     lastSave:0,toastUntil:0,toast:""
   });
-  let state=defaultState(),world=null,creating=false,lastFrame=0,raf=0;
-  const rules=()=>difficulty.get(state.difficulty);
+  let state=defaultState(),world=null,creating=false,lastFrame=0,raf=0,refreshDifficulty=null;
   const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+  const reducedMotion=()=>!!window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+  const celebrationTime=()=>state.finished?Math.max(0,(performance.now()-state.celebrationStart)/1000):0;
   // Reuse Chapter 1's optional, muted-by-default-setting audio path. Canyon has
-  // only short action cues: no oscillator, timer or ambient sound loop of its own.
+  // only short action cues and a finite victory chime, with no ambient loop.
   const sound=(frequency=620,duration=.09)=>window.ThirstAudio?.tone(frequency,duration);
   const pointDistance=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y);
+  const mode=()=>window.TrailMode?.profile?.()||{id:"normal",label:"Normal",difficulty:"normal",energyMultiplier:1,mistakeMultiplier:1,hints:false,pressureMin:65,pressureMax:73};
   // Keep the Canyon's nonlethal recovery floor without ever granting energy
   // when a damaged or externally restored state starts below that floor.
-  const spendEnergy=amount=>{state.energy=Math.max(0,Math.min(state.energy,Math.max(7,state.energy-amount*rules().energyCost)));};
+  const spendEnergy=amount=>{const scale=mode().energyMultiplier||1;state.energy=Math.max(0,Math.min(state.energy,Math.max(7,state.energy-amount*scale)));};
+  const mistakeCost=amount=>spendEnergy(amount*(mode().mistakeMultiplier||1));
   const wX=x=>(x-500)/24,wZ=y=>(y-305)/24;
+  const isWaterGarden=(x,z)=>{
+    const dx=x-wX(goals.cistern.x),dz=z-wZ(goals.cistern.y);
+    return dx>-.9&&dx<5.1&&dz>1.2&&dz<8.3;
+  };
   const approaches={valves:{x:390,y:223},span:{x:700,y:397},cistern:{x:820,y:235}};
   // Collision footprints include the explorer's body, so tanks and aqueduct
   // masonry cannot swallow the character. Markers remain at their landmarks.
@@ -104,19 +111,20 @@
     const el=$("canyonToast");el.textContent=message;el.hidden=false;
   }
   function currentPressure(){return 16*state.valves[0]+13*state.valves[1]+11*state.valves[2];}
-  function pressureSafe(){
+  function valvesSafe(minimum,maximum){
     const [a,b,c]=state.valves,p=currentPressure();
-    return p>=65&&p<=73&&b>=1&&Math.abs(a-c)<=1;
+    return p>=minimum&&p<=maximum&&b>=1&&Math.abs(a-c)<=1;
   }
+  function pressureSafe(){return valvesSafe(mode().pressureMin??65,mode().pressureMax??73);}
   function save(){
     if(!state.active||state.finished||!progress)return;
     const saved=progress.save("canyon",{
-      difficulty:state.difficulty,
       x:Math.round(state.x),y:Math.round(state.y),
       energy:Math.round(state.energy*10)/10,score:state.score,
       elapsed:Math.round(state.elapsed),
       done:[...state.done],valves:[...state.valves],repairStep:state.repairStep,
-      failedValveTests:[...state.failedValveTests],cisternMistake:state.cisternMistake
+      failedValveTests:[...state.failedValveTests],cisternMistake:state.cisternMistake,
+      cisternSafetyPassed:state.cisternSafetyPassed,releaseBasins:[...state.releaseBasins],releaseHint:state.releaseHint
     });
     $("canyonSaveStatus").textContent=saved?"✓ Checkpoint saved in this browser":
       progress.storageStatus?.().reason==="newer-save"?"Session checkpoint ready · newer browser save preserved":
@@ -125,7 +133,6 @@
   }
   function restore(saved){
     if(!saved||typeof saved!=="object")return;
-    state.difficulty=difficulty.normalize(saved.difficulty);
     const number=(value,fallback)=>value!==null&&value!==undefined&&Number.isFinite(Number(value))?Number(value):fallback;
     state.x=clamp(number(saved.x,170),45,955);
     state.y=clamp(number(saved.y,425),45,565);
@@ -144,11 +151,17 @@
     state.failedValveTests=new Set((Array.isArray(saved.failedValveTests)?saved.failedValveTests:[])
       .filter(value=>typeof value==="string"&&/^[0-3],[0-3],[0-3]$/.test(value)));
     state.cisternMistake=saved.cisternMistake===true;
+    state.cisternSafetyPassed=saved.cisternSafetyPassed===true;
+    state.releaseHint=saved.releaseHint===true;
+    if(Array.isArray(saved.releaseBasins)&&saved.releaseBasins.length===2)
+      state.releaseBasins=saved.releaseBasins.map((value,i)=>
+        Number.isInteger(value)&&value>=0&&value<=[5,3][i]?value:0);
     // Completed later work proves that its prerequisites were completed. Keep
     // earned work when repairing an older or interrupted checkpoint.
     const lastDone=Math.max(-1,...[...state.done].map(key=>questOrder.indexOf(key)));
     for(let i=0;i<=lastDone;i++)state.done.add(questOrder[i]);
-    if(state.done.has("valves")&&!pressureSafe())state.valves=[2,2,1];
+    // A stricter difficulty cannot undo calibration already earned on an older run.
+    if(state.done.has("valves")&&!valvesSafe(65,73))state.valves=[2,2,1];
     if(state.done.has("span"))state.repairStep=4;
     // Step four used to be saved before the span flag, leaving no clickable
     // repair step after a reload. Reconcile it without giving a second reward.
@@ -156,18 +169,27 @@
       state.done.add("span");state.score+=310;
     }
     if(!state.done.has("valves"))state.repairStep=0;
+    // Keep completed older expeditions complete; unfinished saves get the new lock.
+    if(state.done.has("cistern")){
+      state.cisternSafetyPassed=true;
+      if(state.releaseBasins[0]!==4)state.releaseBasins=[4,0];
+    }else if(!state.done.has("span")||!state.cisternSafetyPassed){
+      if(!state.done.has("span"))state.cisternSafetyPassed=false;
+      state.releaseBasins=[0,0];state.releaseHint=false;
+    }
   }
   function completeQuest(key,points){
     if(!state.active||state.finished||state.done.has(key))return;
     const index=questOrder.indexOf(key);
     if(index<0||questOrder.slice(0,index).some(previous=>!state.done.has(previous)))return;
+    if(key==="cistern"&&(!state.cisternSafetyPassed||state.releaseBasins[0]!==4))return;
     state.done.add(key);state.score+=points;
     if(key!=="cistern")sound(750,.13);
     save();refreshUI();
     toast("✓ "+goals[key].title+" complete! +"+points+" impact");
   }
   function modal(tag,title,text,choices,extra){
-    state.modal=true;state.keys.clear();state.path=[];
+    state.modal=true;state.keys.clear();state.path=[];refreshDifficulty=null;
     const owner=state,version=++state.modalVersion;
     refreshUI();
     save();
@@ -192,7 +214,7 @@
     sound(550,.07);
   }
   function closeModal(){
-    state.modal=false;$("canyonModalBackdrop").hidden=true;
+    state.modal=false;refreshDifficulty=null;$("canyonModalBackdrop").hidden=true;
     refreshUI();
     (world?.dom||canvas).focus({preventScroll:true});
   }
@@ -205,13 +227,13 @@
       if(state.energy>=100)return toast("You are fully rested and ready for the next mission.");
       sound();
       const before=state.energy;
-      state.energy=Math.min(100,state.energy+rules().canyonRecovery);
+      state.energy=Math.min(100,state.energy+34);
       toast("Rested in the canyon shade · +"+(Math.round((state.energy-before)*10)/10)+" energy");save();refreshUI();
       return;
     }
     if(key==="surveyor"){
       modal("CHAPTER 02 · CANYON SURVEY", "The old aqueduct", 
-        "Surveyor Nia explains: a flash flood destroyed the stone aqueduct. Recover sealing tools, balance the old valves, rebuild the span, and inspect the cistern before anyone uses the water.",
+        "Surveyor Nia explains: a flash flood destroyed the stone aqueduct. Recover sealing tools, balance the old valves, rebuild the span, and inspect the cistern. Finally, solve its two-chamber measuring lock to release the water.",
         [{text:state.done.has(key)?"Review the route":"Begin the canyon restoration (+90 impact)",primary:true,action:()=>{
           closeModal();completeQuest(key,90);
         }},{text:"Return to trail",action:closeModal}]);
@@ -236,8 +258,9 @@
   function valveChallenge(){
     function redraw(root){
       root.replaceChildren();
+      const minimum=mode().pressureMin??65,maximum=mode().pressureMax??73;
       const heading=document.createElement("div");heading.className="canyon-pressure-hint";
-      heading.textContent="Adjust each valve from 0 to 3. Target: 65–73 kPa. Keep the regulator at 1 or higher; intake and return must differ by no more than one setting.";
+      heading.textContent="Adjust each valve from 0 to 3. Target: "+minimum+"–"+maximum+" kPa. Keep the regulator at 1 or higher; intake and return must differ by no more than one setting.";
       root.append(heading);
       for(let i=0;i<3;i++){
         const row=document.createElement("div");row.className="canyon-valve";
@@ -266,13 +289,13 @@
       const feedback=document.createElement("p");feedback.className="canyon-pressure-hint";
       feedback.setAttribute("role","status");
       const issues=[];
-      if(currentPressure()<65)issues.push("Increase pressure to at least 65 kPa.");
-      if(currentPressure()>73)issues.push("Reduce pressure to 73 kPa or less.");
+      if(currentPressure()<minimum)issues.push("Increase pressure to at least "+minimum+" kPa.");
+      if(currentPressure()>maximum)issues.push("Reduce pressure to "+maximum+" kPa or less.");
       if(state.valves[1]<1)issues.push("Open the regulator.");
       if(Math.abs(state.valves[0]-state.valves[2])>1)issues.push("Bring intake and return within one setting.");
       feedback.textContent=issues.join(" ")||"✓ All operating conditions are safe. Test pressure to complete calibration.";
       root.append(feedback);
-      if(state.failedValveTests.size>=rules().valveHintAfter){
+      if(state.failedValveTests.size>=2||mode().hints){
         const hint=document.createElement("p");hint.className="canyon-pressure-hint";
         hint.textContent="Nia’s field note: Intake 2 + Regulator 2 + Return 1 gives 69 kPa and balanced flow.";
         root.append(hint);
@@ -284,13 +307,13 @@
         if(pressureSafe()){closeModal();completeQuest("valves",250);return;}
         const setting=state.valves.join(",");
         if(!state.failedValveTests.has(setting)){
-          state.failedValveTests.add(setting);spendEnergy(4);
+          state.failedValveTests.add(setting);mistakeCost(4);
         }
         sound(180,.10);
         toast("Unsafe configuration. Check the conditions shown below the pressure meter.");
         valveChallenge();save();
       }},{text:"↩ Continue exploring",action:()=>{save();closeModal();}}],
-      el=>{const root=document.createElement("div");root.className="canyon-pressure";el.append(root);redraw(root);});
+      el=>{const root=document.createElement("div");root.className="canyon-pressure";el.append(root);refreshDifficulty=()=>redraw(root);redraw(root);});
   }
   const repairOrder=["Anchor supports","Brace the span","Seat the pipe","Apply the seal"];
   function bridgeChallenge(){
@@ -325,41 +348,167 @@
       root=>draw(root));
   }
   function cisternChallenge(){
+    if(state.cisternSafetyPassed){releaseChallenge();return;}
     modal("FINAL INSPECTION","Is the repaired water safe?",
       (state.cisternMistake?"Clear water can still contain invisible contamination. ":"")+"Water is reaching the cistern. What must the team do before distributing it to households?",
       [{text:"Test water quality and follow local treatment and monitoring procedures",primary:true,action:()=>{
-        closeModal();completeQuest("cistern",430);finish();
+        state.cisternSafetyPassed=true;save();refreshUI();releaseChallenge();
       }},{text:"If the water looks clear, it must be safe",action:()=>{
-        if(!state.cisternMistake)spendEnergy(5);
+        if(!state.cisternMistake)mistakeCost(5);
         state.cisternMistake=true;
         sound(180,.10);
         toast("Appearance does not prove drinking-water safety. Test and treat the water before use.");
         cisternChallenge();save();
       }},{text:"Return to the canyon",action:closeModal}]);
   }
+  function releaseChallenge(){
+    if(!state.active||state.finished||!state.done.has("span")||!state.cisternSafetyPassed)return;
+    const owner=state;
+    let version=0,render=()=>{};
+    const valid=()=>state===owner&&state.active&&state.modal&&state.modalVersion===version&&!state.finished;
+    modal("SUNSTONE CISTERN · FINAL PUZZLE","Unlock the reservoir",
+      "Use the 5-litre and 3-litre chambers to measure exactly 4 litres in the larger one. Then open the release gate to bring the water home.",
+      [{text:"💧 Open the release gate",primary:true,action:()=>{
+        if(state.releaseBasins[0]!==4){
+          render("The gate is still locked. You need exactly 4 L in the larger chamber. Try filling and pouring, or ask Nia for a hint.");
+          sound(230,.07);return;
+        }
+        closeModal();completeQuest("cistern",430);finish();
+      }},{text:"Nia’s hint",action:()=>{
+        state.releaseHint=true;save();render("Nia’s field note is open below the controls.");
+      }},{text:"↩ Return to the canyon",action:()=>{save();closeModal();}}],root=>{
+        version=state.modalVersion;
+        const board=document.createElement("div");board.className="canyon-release-puzzle";
+        const target=document.createElement("div");target.className="canyon-release-target";
+        const targetLabel=document.createElement("span");targetLabel.textContent="RELEASE TARGET";
+        const targetValue=document.createElement("strong");targetValue.textContent="4 L";
+        const targetNote=document.createElement("small");targetNote.textContent="in the 5-litre chamber";
+        target.append(targetLabel,targetValue,targetNote);board.append(target);
+        const chambers=document.createElement("div");chambers.className="canyon-release-chambers";
+        const meters=[],levels=[],values=[];
+        for(const capacity of [5,3]){
+          const card=document.createElement("div");card.className="canyon-release-chamber";
+          const label=document.createElement("strong");label.textContent=capacity+"-LITRE CHAMBER";
+          const meter=document.createElement("div");meter.className="canyon-release-meter";
+          meter.setAttribute("role","meter");meter.setAttribute("aria-label",capacity+"-litre chamber water level");
+          meter.setAttribute("aria-valuemin","0");meter.setAttribute("aria-valuemax",String(capacity));
+          const level=document.createElement("span");level.className="canyon-release-water";
+          meter.append(level);
+          if(capacity===5){
+            const mark=document.createElement("span");mark.className="canyon-release-mark";mark.textContent="4 L TARGET";
+            mark.setAttribute("aria-hidden","true");meter.append(mark);
+          }
+          const value=document.createElement("strong");value.className="canyon-release-value";
+          card.append(label,meter,value);chambers.append(card);
+          meters.push(meter);levels.push(level);values.push(value);
+        }
+        board.append(chambers);
+        const guide=document.createElement("p");guide.className="canyon-release-guide";
+        guide.textContent="Fill a chamber, pour until the other is full or the source is empty, or empty it back to the supply. Experiment freely—there is no energy penalty.";
+        board.append(guide);
+        const controls=document.createElement("div");controls.className="canyon-release-controls";
+        const buttons=[];
+        const actions=[
+          ["fill-large","Fill 5 L",()=>{state.releaseBasins[0]=5;}],
+          ["fill-small","Fill 3 L",()=>{state.releaseBasins[1]=3;}],
+          ["pour-large","Pour 5 L → 3 L",()=>{
+            const amount=Math.min(state.releaseBasins[0],3-state.releaseBasins[1]);
+            state.releaseBasins[0]-=amount;state.releaseBasins[1]+=amount;
+          }],
+          ["pour-small","Pour 3 L → 5 L",()=>{
+            const amount=Math.min(state.releaseBasins[1],5-state.releaseBasins[0]);
+            state.releaseBasins[1]-=amount;state.releaseBasins[0]+=amount;
+          }],
+          ["return-large","Empty 5 L → supply",()=>{state.releaseBasins[0]=0;}],
+          ["return-small","Empty 3 L → supply",()=>{state.releaseBasins[1]=0;}],
+          ["reset","Start this puzzle over",()=>{state.releaseBasins=[0,0];}]
+        ];
+        for(const [key,label,action] of actions){
+          const button=document.createElement("button");button.type="button";button.textContent=label;
+          button.dataset.releaseAction=key;
+          button.addEventListener("click",()=>{
+            if(!valid())return;
+            action();sound(480,.05);save();render();
+          });controls.append(button);buttons.push(button);
+        }
+        const status=document.createElement("p");status.className="canyon-release-status";
+        status.setAttribute("role","status");status.setAttribute("aria-live","polite");status.setAttribute("aria-atomic","true");
+        const hint=document.createElement("p");hint.className="canyon-release-hint";
+        hint.textContent="Nia’s note: Fill 5 L → pour into 3 L (2 L remain). Return the 3 L to supply → pour those 2 L into it. Fill 5 L again → pour into the smaller chamber until it is full. Exactly 4 L remain in the larger one!";
+        board.append(controls,status,hint);root.append(board);
+        render=message=>{
+          const [a,b]=state.releaseBasins;
+          for(let i=0;i<2;i++){
+            const value=state.releaseBasins[i],capacity=[5,3][i];
+            levels[i].style.height=value/capacity*100+"%";
+            values[i].textContent=value+" / "+capacity+" L";
+            meters[i].setAttribute("aria-valuenow",String(value));meters[i].setAttribute("aria-valuetext",value+" of "+capacity+" litres");
+          }
+          const disabled=[a===5,b===3,a===0||b===3,b===0||a===5,a===0,b===0,a===0&&b===0];
+          buttons.forEach((button,i)=>{button.disabled=disabled[i];});
+          hint.hidden=!state.releaseHint&&!mode().hints;
+          board.classList.toggle("is-ready",a===4);
+          status.textContent=message||(a===4?"✓ Exactly 4 L! Open the release gate to restore the canyon.":
+            "5-litre chamber: "+a+" L · 3-litre chamber: "+b+" L. Target: 4 L in the larger chamber.");
+        };
+        refreshDifficulty=()=>render();render();
+      });
+  }
   function finish(){
     if(state.finished||questOrder.some(key=>!state.done.has(key)))return;
     state.finished=true;state.active=false;state.score+=Math.round(state.energy)*2;
+    state.celebrationStart=performance.now();
+    world?.recenterCamera?.();
+    $("canyonToast").hidden=true;
     sound(990,.18);
+    const owner=state;
+    for(const [delay,note] of [[150,1245],[320,1480]])window.setTimeout?.(()=>{
+      if(state===owner&&state.finished&&!$("canyonScreen").hidden)sound(note,.2);
+    },delay);
     progress?.complete("canyon");refreshUI();
-    modal("✦ CHAPTER COMPLETE","The aqueduct flows again!",
-      "You brought the canyon system back into service and verified the water-safety steps. The Forgotten Canyon is complete! Total impact: "+
-      state.score.toLocaleString()+" points · "+rules().label+" difficulty. This is a fictional training scenario, not drinking-water guidance.",
-      [{text:"◈ Return to chapter selection",primary:true,action:goHome},
-       {text:"↻ Replay Forgotten Canyon",action:()=>{closeModal();launch(true);}}]);
+    showCelebration();
+  }
+  function showCelebration(){
+    if(!state.finished)return;
+    modal("✦ CHAPTER 02 COMPLETE · COAST UNLOCKED","You brought the water home!",
+      "Clean water flows through Sunstone Canyon again. You rebuilt the aqueduct, passed the safety inspection, and unlocked the reservoir. The canyon is alive again! Total impact: "+
+      state.score.toLocaleString()+" points.",
+      [{text:"◈ Return to chapter selection",action:goHome},
+       {text:"↻ Replay Forgotten Canyon",action:()=>{closeModal();launch(true);}},
+       {text:"💧 Watch the water flow",action:()=>{
+         closeModal();$("canyonViewResults").focus({preventScroll:true});
+       }},{text:"🌊 Continue to Stormbreak Coast",primary:true,action:()=>{suspend();window.TrailCoast?.launch();}}],root=>{
+         const scene=document.createElement("div");scene.className="canyon-victory-scene";
+         scene.setAttribute("aria-hidden","true");
+         for(const name of ["sun","cliff cliff-left","cliff cliff-right","cistern","spout","stream","pool","plant plant-left","plant plant-right"]){
+           const part=document.createElement("span");part.className="victory-"+name;
+           scene.append(part);
+         }
+         for(let i=0;i<14;i++){
+           const spark=document.createElement("i");spark.className="victory-spark";
+           spark.style.left=(5+i*37%90)+"%";spark.style.top=(8+i*23%65)+"%";
+           spark.style.animationDelay=-(i*.31)+"s";scene.append(spark);
+         }
+         const caption=document.createElement("span");caption.className="victory-scene-caption";
+         caption.textContent="RESTORED BY YOU";scene.append(caption);
+         const note=document.createElement("small");note.className="canyon-victory-note";
+         note.textContent="Fictional educational game · Not real-world drinking-water guidance";
+         root.append(scene,note);
+       });
   }
   function formatTime(t){const sec=Math.floor(t);return String(Math.floor(sec/60)).padStart(2,"0")+":"+String(sec%60).padStart(2,"0");}
   function refreshUI(){
-    $("canyonDifficulty").textContent=rules().label;
-    $("canyonDifficulty").setAttribute("aria-label","Expedition difficulty: "+rules().label);
+    $("canyonModeLabel").textContent=mode().label+" difficulty";
     const n=state.done.size,next=questOrder.find(key=>!state.done.has(key));
     $("canyonProgressLabel").textContent=n+" / 5 completed";
     $("canyonProgressFill").style.width=n/5*100+"%";
     $("canyonSubtitle").textContent=state.finished?"Canyon restored — chapter complete!":
+      state.cisternSafetyPassed?"Final puzzle: measure 4 L at the cistern to release the water.":
       next?"Next mission: "+goals[next].title:"The canyon water system is restored.";
     $("canyonEnergy").textContent="⚡ "+Math.ceil(state.energy)+"% energy";
     $("canyonScore").textContent="✦ "+state.score.toLocaleString()+" impact";
     $("canyonTimer").textContent="◷ "+formatTime(state.elapsed);
+    $("canyonCelebration").hidden=!state.finished||state.modal||$("canyonScreen").hidden;
     const quests=$("canyonQuestList"),dest=$("canyonDestinations");
     const questStamp=[...state.done].sort().join("|");
     if(state.questStamp!==questStamp){
@@ -377,7 +526,7 @@
       button.addEventListener("click",()=>pathTo(goal));dest.append(button);
     }
     const restBtn=document.createElement("button");restBtn.type="button";restBtn.className="canyon-destination";
-    restBtn.textContent="⛺ Shaded rest shelter · +"+rules().canyonRecovery+" energy";restBtn.addEventListener("click",()=>pathTo(rest));dest.append(restBtn);
+    restBtn.textContent="⛺ Shaded rest shelter · +34 energy";restBtn.addEventListener("click",()=>pathTo(rest));dest.append(restBtn);
     }
     const nearby=closest();state.nearby=nearby;
     $("canyonPrompt").hidden=!nearby||!state.active||state.paused||state.modal;
@@ -431,6 +580,27 @@
     c.strokeStyle="#f8d595";c.lineWidth=13;c.lineCap="round";
     const paths=[[[165,270],[305,455],[442,350]],[[390,165],[420,280],[440,350]],[[571,350],[700,365],[820,175]]];
     for(const pts of paths){c.beginPath();pts.forEach((p,i)=>i?c.lineTo(...p):c.moveTo(...p));c.stroke();}
+    // A dry outlet becomes a flowing channel only after the safety inspection.
+    const reveal=reducedMotion()?1:clamp(celebrationTime()/2,0,1);
+    c.strokeStyle="#896758";c.lineWidth=21;c.beginPath();c.moveTo(830,193);c.lineTo(875,245);c.lineTo(890,302);c.stroke();
+    c.beginPath();c.ellipse(890,320,44,30,0,0,Math.PI*2);c.fillStyle="#896758";c.fill();
+    if(state.finished){
+      c.save();c.strokeStyle="#67e5e1";c.lineWidth=13;
+      c.setLineDash([170*reveal,170]);c.beginPath();c.moveTo(830,193);c.lineTo(875,245);c.lineTo(890,302);c.stroke();
+      c.setLineDash([]);c.fillStyle="#49c8cc";
+      c.beginPath();c.ellipse(890,320,40*Math.max(.02,reveal),26*Math.max(.02,reveal),0,0,Math.PI*2);c.fill();
+      if(!reducedMotion()){
+        c.strokeStyle="#e1fff1";c.lineWidth=3;c.setLineDash([6,17]);c.lineDashOffset=-celebrationTime()*25;
+        c.beginPath();c.moveTo(830,193);c.lineTo(875,245);c.lineTo(890,302);c.stroke();
+        c.setLineDash([]);c.beginPath();c.ellipse(890,320,12+celebrationTime()*9%26,7+celebrationTime()*5%15,0,0,Math.PI*2);c.stroke();
+      }
+      c.restore();
+    }
+    for(const [x,y] of [[851,278],[937,317],[853,353],[920,361]]){
+      c.strokeStyle=state.finished?"#35896c":"#99805a";c.lineWidth=5;
+      c.beginPath();c.moveTo(x,y);c.lineTo(x-7,y-15);c.moveTo(x,y);c.lineTo(x+9,y-20);c.stroke();
+      if(state.finished){c.fillStyle="#74c482";c.beginPath();c.ellipse(x-9,y-16,7,4,.6,0,Math.PI*2);c.fill();c.beginPath();c.ellipse(x+9,y-20,8,5,-.6,0,Math.PI*2);c.fill();}
+    }
     for(const [key,o] of [...Object.entries(goals),["rest",rest]]){
       c.beginPath();c.arc(o.x,o.y,19,0,Math.PI*2);
       c.fillStyle=state.done.has(key)?"#75bf93":"#fce7a4";c.fill();
@@ -445,6 +615,95 @@
     c.beginPath();c.arc(state.x,state.y-7,8,0,Math.PI*2);c.fillStyle="#603820";c.fill();
     c.fillStyle="#191719";c.fillRect(state.x-7,state.y-15,14,5);
   }
+  function buildRestoredWater(THREE,scene){
+    // A visible outlet, stone channel and garden beside the final cistern.
+    // This is part of the ending, so it stays visible with effects disabled.
+    const group=new THREE.Group();scene.add(group);
+    const stone=new THREE.MeshStandardMaterial({color:0xd9b68b,roughness:.95});
+    const copper=new THREE.MeshStandardMaterial({color:0x9a9f82,metalness:.4,roughness:.5});
+    const clean=new THREE.MeshStandardMaterial({color:0x63e1de,emissive:0x105c67,
+      emissiveIntensity:.38,roughness:.22,metalness:.12,transparent:true,opacity:.9});
+    clean.name="Canyon restored water";
+    const foam=new THREE.MeshBasicMaterial({color:0xe4fff3,transparent:true,opacity:.8});
+    const leaves=new THREE.MeshStandardMaterial({color:0x72bc7b,roughness:1,flatShading:true});
+    const mesh=(geometry,material,x,y,z)=>{
+      const o=new THREE.Mesh(geometry,material);o.position.set(x,y,z);group.add(o);return o;
+    };
+    const x=wX(820),z=wZ(175);
+    const spout=mesh(new THREE.CylinderGeometry(.18,.18,.85,12),copper,x,.97,z+1.35);
+    spout.rotation.x=Math.PI/2;
+    mesh(new THREE.CylinderGeometry(.21,.21,.15,12),copper,x,.94,z+1.77).rotation.x=Math.PI/2;
+    const start={x,z:z+1.80},end={x:x+2.8,z:z+5.4};
+    const length=Math.hypot(end.x-start.x,end.z-start.z),angle=Math.atan2(end.x-start.x,end.z-start.z);
+    const trough=new THREE.Group();trough.position.set(start.x,.07,start.z);trough.rotation.y=angle;group.add(trough);
+    const troughPart=(material,dx,y,width,height)=>{
+      const part=new THREE.Mesh(new THREE.BoxGeometry(width,height,length),material);
+      part.position.set(dx,y,length/2);trough.add(part);return part;
+    };
+    troughPart(stone,0,0,.87,.11);
+    for(const side of [-1,1])troughPart(stone,side*.43,.13,.12,.30);
+    const channel=troughPart(clean,0,.13,.72,.055);
+    const pool=mesh(new THREE.CylinderGeometry(1.35,1.45,.22,28),stone,end.x,.04,end.z+.55);
+    const poolWater=mesh(new THREE.CircleGeometry(1.24,32),clean,end.x,.165,end.z+.55);
+    poolWater.rotation.x=-Math.PI/2;
+    const stream=mesh(new THREE.CylinderGeometry(.115,.17,.78,12),clean,x,.55,start.z);
+    const ripples=[];
+    for(let i=0;i<3;i++){
+      const ring=mesh(new THREE.TorusGeometry(.29,.016,5,32),foam,end.x,.18+i*.002,end.z+.55);
+      ring.rotation.x=-Math.PI/2;ripples.push(ring);
+    }
+    const glints=[];
+    for(let i=0;i<7;i++){
+      const glint=new THREE.Mesh(new THREE.BoxGeometry(.38,.012,.09),foam);
+      trough.add(glint);glints.push(glint);
+    }
+    const plants=[];
+    for(let i=0;i<8;i++){
+      const a=i/8*Math.PI*2,r=1.65+(i%2)*.3;
+      const plant=new THREE.Group();plant.position.set(end.x+Math.cos(a)*r,.13,end.z+.55+Math.sin(a)*r);
+      for(let j=0;j<3;j++){
+        const leaf=new THREE.Mesh(new THREE.ConeGeometry(.18,.65,5),leaves);
+        leaf.position.set((j-1)*.14,.22,0);leaf.rotation.z=(j-1)*-.36;plant.add(leaf);
+      }
+      group.add(plant);plants.push(plant);
+    }
+    const sparkles=[];
+    for(let i=0;i<18;i++)sparkles.push(mesh(new THREE.OctahedronGeometry(.045,0),foam,0,0,0));
+    return {
+      update(){
+        const restored=state.finished,reduced=reducedMotion(),t=celebrationTime();
+        const fill=reduced?1:clamp((t-.35)/1.8,0,1);
+        stream.visible=channel.visible=poolWater.visible=restored;
+        stream.scale.setScalar(reduced?1:clamp(t/.45,0,1));
+        channel.scale.z=Math.max(.001,fill);channel.position.z=length*fill/2;
+        poolWater.scale.setScalar(reduced?1:Math.max(.001,clamp((t-1.4)/1.8,0,1)));
+        for(let i=0;i<ripples.length;i++){
+          const ring=ripples[i];ring.visible=restored;
+          ring.scale.setScalar(reduced?1+i:1+((t*.65+i/3)%1)*3);
+        }
+        for(let i=0;i<glints.length;i++){
+          const phase=(t*.32+i/7)%1;
+          glints[i].visible=restored&&!reduced&&phase<fill;
+          glints[i].position.set(Math.sin(i*2)*.12,.17,phase*length);
+        }
+        for(const plant of plants){
+          plant.visible=restored;
+          plant.scale.setScalar(reduced?1:clamp((t-1.8)/1.4,0,1));
+        }
+        for(let i=0;i<sparkles.length;i++){
+          const spark=sparkles[i],phase=(t*.35+i/18)%1;
+          spark.visible=restored&&!reduced&&t<7;
+          spark.position.set(x+Math.sin(i*2.4)*2.4,.6+phase*3.5,start.z+Math.cos(i*2.4)*2.4);
+          spark.rotation.z=t+i;
+        }
+      },
+      dispose(){
+        group.traverse(o=>o.geometry?.dispose());
+        for(const material of [stone,copper,clean,foam,leaves])material.dispose();
+        scene.remove(group);
+      }
+    };
+  }
   async function buildWorld(){
     if(world||creating)return;
     creating=true;
@@ -457,11 +716,11 @@
       const camera=new THREE.PerspectiveCamera(47,1000/610,.1,300);
       camera.position.set(7.4,10.5,13.6);camera.lookAt(0,0,0);
       // Honor the player's saved Valley graphics profile in Canyon as well.
-      let graphics={};
-      try{graphics=JSON.parse(localStorage.getItem("thirstTrailGraphics")||"null")||{};}
+      let graphics={preset:"high",resolution:1.1,shadows:true,effects:true};
+      try{graphics={...graphics,...(JSON.parse(localStorage.getItem("thirstTrailGraphics")||"null")||{})};}
       catch{/* use safe defaults when browser storage is disabled */}
       let graphicsQuality=["low","medium","high","ultra"].includes(graphics.preset)?
-        graphics.preset:"medium";
+        graphics.preset:"high";
       const renderer=new THREE.WebGLRenderer({alpha:false,antialias:true,powerPreference:"high-performance"});
       const requestedScale=clamp(Number(graphics.resolution)||1,.65,1.5);
       renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,1.7)*requestedScale);
@@ -469,6 +728,8 @@
       renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.14;
       renderer.shadowMap.enabled=graphics.shadows!==false;
       renderer.shadowMap.type=THREE.PCFSoftShadowMap;
+      const cinematic=window.TrailCinematic?.create(THREE,{renderer,scene,camera,chapter:"canyon"});
+      const surfaces=cinematic?.surfaces;
       const dom=renderer.domElement;dom.className="canyon-webgl";
       dom.style.cssText="display:block;width:100%;height:auto;aspect-ratio:1000/610;touch-action:none;outline:none";
       dom.tabIndex=0;
@@ -477,7 +738,7 @@
       const mat=(color,metalness=0)=>new THREE.MeshStandardMaterial({color,roughness:.87,metalness,flatShading:true});
       const rock=[mat(0xd58c68),mat(0xaa6454),mat(0xeeaf77),mat(0x86535a)];
       const sand=mat(0xd8aa76),path=mat(0xf1d2a0),timber=mat(0x86624b),iron=mat(0x768d90,.25),teal=mat(0x5a9e9b);
-      const water=new THREE.MeshStandardMaterial({color:0x50b1b9,roughness:.31,metalness:.05,transparent:true,opacity:.91});
+      const water=new THREE.MeshStandardMaterial({name:"Canyon river water",color:0x50b1b9,roughness:.31,metalness:.05,transparent:true,opacity:.91});
       const hemi=new THREE.HemisphereLight(0xdff3f5,0x8d6656,1.55);scene.add(hemi);
       const sun=new THREE.DirectionalLight(0xffd6a0,3.2);
       sun.position.set(-18,29,12);sun.castShadow=renderer.shadowMap.enabled;
@@ -485,6 +746,7 @@
         graphicsQuality==="high"?1536:2048;
       sun.shadow.mapSize.set(shadowSize,shadowSize);sun.shadow.camera.left=-36;sun.shadow.camera.right=36;
       sun.shadow.camera.top=29;sun.shadow.camera.bottom=-29;sun.shadow.bias=-.0003;
+      sun.shadow.normalBias=.025;sun.shadow.radius=2;
       scene.add(sun);const fill=new THREE.DirectionalLight(0xa9dadd,.65);fill.position.set(16,12,-9);scene.add(fill);
       const put=(geometry,material,x,y,z,shadow=true)=>{
         const o=new THREE.Mesh(geometry,material);o.position.set(x,y,z);
@@ -507,6 +769,7 @@
       }
       // Terraced sandstone mesas and layered cliffs at the skyline.
       let seed=31415;const rng=()=>((seed=(Math.imul(seed,1664525)+1013904223)>>>0)/4294967296);
+      const skylineFallback=[];
       for(let i=0;i<44;i++){
         let x=(i%2?-1:1)*(10+rng()*24);const z=-24+rng()*52;
         const radius=1.1+rng()*2.5,height=2.5+rng()*7;
@@ -515,9 +778,10 @@
         if(Math.abs(x)-radius<22.8)x=Math.sign(x)*(22.8+radius);
         const column=put(new THREE.CylinderGeometry(radius*.70,radius,height,7,1),rock[i%4],x,height/2-.20,z,false);
         column.rotation.y=rng()*6.28;
+        skylineFallback.push(column);
         for(let layer=0;layer<3;layer++)
-          put(new THREE.CylinderGeometry(radius*(.82+layer*.065),radius*(.82+layer*.065),.15,7),
-            rock[(i+layer+1)%4],x,layer*height/4+.2,z,false);
+          skylineFallback.push(put(new THREE.CylinderGeometry(radius*(.82+layer*.065),radius*(.82+layer*.065),.15,7),
+            rock[(i+layer+1)%4],x,layer*height/4+.2,z,false));
       }
       // Distinct winding desert roads.
       const roads=[
@@ -577,6 +841,7 @@
       const cactus=mat(0x4c8b65),leaves=mat(0x8c9959);
       for(let i=0;i<105;i++){
         const side=i%2?-1:1,x=side*(3.4+rng()*15.4),z=-13.4+rng()*27;
+        if(isWaterGarden(x,z))continue;
         if(Math.hypot(x-wX(390),z-wZ(165))<2.7||Math.hypot(x-wX(820),z-wZ(175))<2.7)continue;
         const scale=.5+rng()*1.1;
         if(i%3===0){
@@ -591,6 +856,7 @@
       for(let i=0;i<175;i++){
         const side=i%2?-1:1;
         const x=side*(3.5+rng()*17.5),z=-14.5+rng()*29;
+        if(isWaterGarden(x,z))continue;
         const stone=put(new THREE.DodecahedronGeometry(.12+rng()*.31,0),
           i%3===0?rock[1]:sandstone,x,.12,z,false);
         stone.rotation.y=rng()*Math.PI;stone.scale.y=.52+rng()*.85;
@@ -614,11 +880,16 @@
       let canyonArt=null;
       try{
         canyonArt=window.ThirstCanyonVisuals?.build(THREE,{
-          scene,camera,worldSpread,getState:()=>state
+          scene,camera,worldSpread,getState:()=>state,isWaterGarden,surfaces
         })||null;
       }catch(error){
         console.warn("Canyon advanced scenery unavailable; using safe original terrain.",error);
       }
+      if(canyonArt)for(const mesh of skylineFallback)mesh.visible=false;
+      surfaces?.apply(timber,"wood",[1,1],0xc1a080,.28);
+      for(const m of rock)surfaces?.apply(m,"rock",[1,1],null,.28);
+      const restoredWater=buildRestoredWater(THREE,scene);
+      restoredWater.update();
       const canyonEffects=[];
       scene.traverse(o=>{
         if(o.isPoints||(o.isMesh&&o.geometry?.type==="IcosahedronGeometry"&&o.material?.transparent&&o.material.opacity<.4))
@@ -635,6 +906,7 @@
           sun.shadow.mapSize.set(size,size);sun.shadow.needsUpdate=true;
         }
         for(const o of canyonEffects)o.visible=graphics.effects!==false;
+        cinematic?.configure({...graphics,preset:graphicsQuality});
       }
       applyGraphicsSettings(graphics);
       // Floating, player-facing world mission labels.
@@ -663,7 +935,7 @@
           sprite.scale.set(3.9,.74,1);
           sprite.renderOrder=1000;sprite.position.y=2.65;group.add(sprite);
         }
-        marks.push({key,ring,pillar});
+        marks.push({key,group,ring,pillar});
       }
       // Character: local procedural fallback renders immediately.
       const player=new THREE.Group();scene.add(player);
@@ -730,6 +1002,7 @@
           });
           if(parts<6)throw Error("Explorer model has too few meshes");
           player.add(candidate);
+          cinematic?.character(candidate);
           fallbackParts.forEach(part=>part.visible=false);
           explorerRig=rig;explorerRig.model=candidate;explorerStatus.status="ready";
           console.info("Forgotten Canyon: shared animated 3D explorer loaded.");
@@ -796,7 +1069,9 @@
         }
       }
       dom.addEventListener("click",select);
-      if(!state.active){
+      if(!state.active&&!(state.finished&&!$("canyonScreen").hidden)){
+        explorerDisposed=true;canyonArt?.dispose();restoredWater.dispose();
+        cinematic?.dispose();
         renderer.dispose();dom.remove();canvas.style.display="";
         return;
       }
@@ -805,7 +1080,7 @@
       const playerMotion={lastTime:0,lastX:state.x,lastY:state.y,blend:0};
       const reducedMotion=!!window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
       const desiredCameraPosition=new THREE.Vector3();
-      let renderWidth=0,renderHeight=0,cameraFirstFrame=true,lastArtDone=-1;
+      let renderWidth=0,renderHeight=0,cameraFirstFrame=true;
       world={
         dom,renderer,scene,camera,player,limbs,marks,broken,pipeMesh,water,
         recenterCamera,setGraphicsSettings:applyGraphicsSettings,
@@ -870,30 +1145,43 @@
           if(state.path.length||state.keys.size)pan.set(0,0,0);
           // Clamp the free camera within the entire expanded canyon; player stays put.
           const baseX=px*worldSpread,baseZ=pz*worldSpread;
-          cameraTarget.set(clamp(baseX+pan.x,-31,31),.65,clamp(baseZ+pan.z,-23,23));
-          pan.x=cameraTarget.x-baseX;pan.z=cameraTarget.z-baseZ;
+          if(state.finished){
+            // Frame the cistern outlet and its garden after the final answer.
+            cameraTarget.set((wX(820)+1.1)*worldSpread,.65,(wZ(175)+3.4)*worldSpread);
+          }else{
+            cameraTarget.set(clamp(baseX+pan.x,-31,31),.65,clamp(baseZ+pan.z,-23,23));
+            pan.x=cameraTarget.x-baseX;pan.z=cameraTarget.z-baseZ;
+          }
           desiredCameraPosition.set(cameraTarget.x+7.4*zoom,10.5*zoom,cameraTarget.z+13.6*zoom);
-          if(cameraFirstFrame){camera.position.copy(desiredCameraPosition);cameraFirstFrame=false;}
+          if(cameraFirstFrame||(state.finished&&reducedMotion)){camera.position.copy(desiredCameraPosition);cameraFirstFrame=false;}
           else camera.position.lerp(desiredCameraPosition,1-Math.exp(-delta*5.65));
           camera.lookAt(cameraTarget);
           for(const m of marks){
             const done=state.done.has(m.key);
+            m.group.visible=!state.finished;
+            const next=questOrder.find(key=>!state.done.has(key));
+            for(const child of m.group.children)if(child.isSprite)child.visible=!done&&(m.key===next||state.nearby===m.key);
             m.pillar.visible=!done;m.ring.material.color.set(done?0x70c5a4:0xffd787);
             m.ring.scale.setScalar(reducedMotion||graphics.effects===false?1:1+Math.sin(time*2.2)*.08);
           }
           broken.visible=!state.done.has("span");
           water.color.set(state.done.has("cistern")?0x55c4cb:0x50b1b9);
+          restoredWater.update();
+          // Keep valve/repair visuals current even when ambient motion is off.
           if(graphics.effects!==false)canyonArt?.update(time);
-          else if(lastArtDone!==state.done.size)canyonArt?.update(0);
-          lastArtDone=state.done.size;
-          characterVisibility?.update(camera,delta);
-          renderer.render(scene,camera);
+          else canyonArt?.update(0);
+          if(state.finished)characterVisibility?.clear?.();else characterVisibility?.update(camera,delta);
+          cinematic?.update(time,{reduced:reducedMotion,effects:graphics.effects!==false});
+          if(cinematic)cinematic.render();else renderer.render(scene,camera);
         },
         getExplorerAssetStatus(){return {...explorerStatus};},
+        getGraphicsStatus(){return cinematic?.status()||null;},
         dispose(){
           characterVisibility?.dispose();
+          cinematic?.dispose();
           explorerDisposed=true;
           canyonArt?.dispose();
+          restoredWater.dispose();
           dom.remove();renderer.dispose();canvas.style.display="";
         }
       };
@@ -916,13 +1204,13 @@
     }
     raf=requestAnimationFrame(frame);
   }
-  function launch(forceNew=false,mode=difficulty.selected()){
+  function launch(forceNew=false){
     if(!progress?.unlocked("canyon"))return;
     if(!raf)raf=requestAnimationFrame(frame);
     if(world){/* Reuse existing scene and renderer on replay. */}
     const saved=!forceNew?progress.saved("canyon"):null;
     if(forceNew)progress.clearSave("canyon");
-    state=defaultState();state.difficulty=difficulty.normalize(mode);state.active=true;
+    state=defaultState();state.active=true;
     lastFrame=0;
     world?.recenterCamera?.();
     if(saved)restore(saved);
@@ -940,11 +1228,12 @@
   function suspend(){
     if(state.active&&!state.finished)save();
     state.active=false;state.paused=false;state.keys.clear();state.path=[];
-    $("canyonModalBackdrop").hidden=true;state.modal=false;
+    $("canyonModalBackdrop").hidden=true;state.modal=false;refreshDifficulty=null;
+    $("canyonCelebration").hidden=true;
   }
   function recenterCanyonCamera(){
     world?.recenterCamera?.();
-    toast("Camera returned to your explorer.");
+    if(!state.finished)toast("Camera returned to your explorer.");
   }
   function goHome(){
     suspend();
@@ -974,6 +1263,8 @@
   $("canyonToChapters").addEventListener("click",goHome);
   $("canyonPause").addEventListener("click",pause);
   $("canyonCameraReset").addEventListener("click",recenterCanyonCamera);
+  $("canyonViewResults").addEventListener("click",showCelebration);
+  $("canyonNextCoast").addEventListener("click",()=>{if(state.finished){suspend();window.TrailCoast?.launch();}});
   for(const btn of document.querySelectorAll("[data-canyon-move]")){
     const key={up:"w",down:"s",left:"a",right:"d"}[btn.dataset.canyonMove];
     if(!key)continue;
@@ -1001,13 +1292,14 @@
     if(document.hidden&&state.active&&!state.modal)pause();
   });
   window.addEventListener("trail:graphics",event=>world?.setGraphicsSettings?.(event.detail));
+  window.addEventListener("trail:mode",()=>{if(state.active||state.finished){refreshUI();refreshDifficulty?.();}});
   window.TrailCanyon=Object.freeze({
     launch,suspend,goHome,pause,snapshot:()=>({
-      active:state.active,paused:state.paused,finished:state.finished,
-      difficulty:state.difficulty,
+      active:state.active,paused:state.paused,modal:state.modal,finished:state.finished,waterRestored:state.finished,
       x:state.x,y:state.y,energy:state.energy,score:state.score,
       done:[...state.done],pressure:currentPressure(),valves:[...state.valves],
-      repairStep:state.repairStep,renderer:world?"3d":"2d"
+      cisternSafetyPassed:state.cisternSafetyPassed,releaseBasins:[...state.releaseBasins],
+      repairStep:state.repairStep,mode:mode().id,difficulty:mode().difficulty,renderer:world?"3d":"2d",graphics:world?.getGraphicsStatus?.()||null
     })
   });
 })();
