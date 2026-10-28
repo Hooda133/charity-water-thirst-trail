@@ -120,6 +120,7 @@ button{min-height:44px;min-width:44px}
   padding:11px 16px;border:1px solid #c3d5b36b;border-radius:10px;color:#fff0c6;
   font-size:14px;font-weight:800;line-height:1.5;text-decoration:underline;text-underline-offset:3px;
 }
+.footer-link svg{flex-shrink:0}
 .footer .footer-link:hover{background:#315b5a;border-color:#f4d27c}
 .footer .footer-link-donate{background:#f4d27c;border-color:#f4d27c;color:#152e32}
 .footer .footer-link-donate:hover{background:#ffe3a0;border-color:#ffe3a0}
