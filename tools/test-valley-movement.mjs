@@ -354,6 +354,30 @@ assert.equal(state.modalKind,'pipe');
 assert.equal(snapshot().waterRestored,false);
 console.log('✓ Legacy pump completion recovers; invalid safety flags cannot bypass the pipe puzzle');
 
+// Load the actual shared preferences after the legacy baseline, then exercise
+// the existing puzzle callbacks with each difficulty while keeping saved work.
+runInNewContext(readFileSync(resolve(root,'expedition-mode.js'),'utf8'),sandbox);
+const partialPipeline=JSON.stringify(window.TrailProgress.saved('valley').pipeTurns);
+for(const [difficulty,cost] of [['easy',.35],['normal',2],['hard',3.6]]){
+ window.TrailMode.setDifficulty(difficulty);state.energy=70;
+ choose(0);
+ assert.ok(Math.abs(70-state.energy-cost)<1e-9,'Pipe mistake uses '+difficulty+' penalties');
+ assert.ok(nodes.get('pipeStatus').textContent.includes('−'+cost+' energy'),'Pipe feedback shows the actual energy cost');
+ assert.equal(JSON.stringify(window.TrailProgress.saved('valley').pipeTurns),partialPipeline,'Changing difficulty preserves pipe rotations');
+ assert.equal(snapshot().difficulty,difficulty);
+ assert.equal(nodes.get('difficultySelect').value,difficulty,'Settings reflects the shared preference');
+}
+choose(1);go(705,610);
+assert.equal(state.modalKind,'quiz');
+for(const [difficulty,cost] of [['easy',1.05],['normal',6],['hard',10.8]]){
+ window.TrailMode.setDifficulty(difficulty);state.energy=70;
+ choose(0);
+ assert.ok(Math.abs(70-state.energy-cost)<1e-9,'Safety mistake uses '+difficulty+' penalties');
+ assert.ok(nodes.get('modalTip').textContent.includes('−'+cost+' energy'),'Safety feedback shows the actual energy cost');
+ assert.equal(state.modalKind,'quiz','Wrong answers keep the current question available');
+}
+console.log('✓ Shared Settings difficulty scales actual pipe/quiz penalties and preserves saved puzzle work');
+
 
 // Exercise the REAL camera-controller click and release functions in isolation.
 // This catches JavaScript ReferenceErrors that a keyboard-only regression misses.

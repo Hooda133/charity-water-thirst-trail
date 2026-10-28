@@ -1,7 +1,7 @@
 "use strict";
 /* Playable post-restoration village activities; independent of chapter rewards. */
 (() => {
-  const $=id=>document.getElementById(id),capacity=8,request=4;
+  const $=id=>document.getElementById(id),capacity=8;
   const fountain={id:"fountain",x:475,y:660,name:"Village fountain",icon:"💧"};
   const residents=[
     {id:"home",x:310,y:560,name:"Amina’s home",person:"Amina",role:"Village elder",icon:"🏡",before:"The fountain is running, but some neighbours still need a hand carrying water home.",after:"Thank you. My family can spend this afternoon together instead of walking for water."},
@@ -40,8 +40,10 @@
   const pointDistance=point=>{const p=callbacks.getPlayer?.()||{};return Number.isFinite(p.x)&&Number.isFinite(p.y)?Math.hypot(p.x-point.x,p.y-point.y):Infinity;};
   const near=point=>pointDistance(point)<=70;
   const mode=()=>window.TrailMode?.get?.()||"explorer";
-  function snapshot(){return {...clone(data),active,tab,jugCapacity:capacity,deliveryRequest:request,roundComplete:data.served.length===residents.length,
-    completedProjects:data.upgrades.length,foundLeaks:data.found.length,fixedLeaks:data.fixed.length,mode:mode()};}
+  const difficulty=()=>window.TrailMode?.profile?.().difficulty||(mode()==="challenge"?"hard":mode()==="normal"?"normal":"easy");
+  const request=()=>window.TrailMode?.profile?.().deliveryRequest===6||(!window.TrailMode?.profile&&mode()==="challenge")?6:4;
+  function snapshot(){return {...clone(data),active,tab,jugCapacity:capacity,deliveryRequest:request(),roundComplete:data.served.length===residents.length,
+    completedProjects:data.upgrades.length,foundLeaks:data.found.length,fixedLeaks:data.fixed.length,mode:mode(),difficulty:difficulty()};}
   function announce(text){message=text;callbacks.notify?.(text);render();}
   function save(){
     if(mode()==="challenge"&&!data.bonus&&data.fixed.length===3&&residents.every(p=>data.delivered[p.id]>0)){
@@ -55,15 +57,18 @@
   function fill(point=fountain){
     if(!active||!requireNear(point))return;
     if(data.jug===capacity)return announce("Your jug is already full: 8 / 8 litres.");
-    data.jug=capacity;message="Jug filled: 8 / 8 litres. You can make two 4-litre deliveries.";
+    data.jug=capacity;
+    const litres=request(),deliveries=Math.floor(capacity/litres);
+    message="Jug filled: 8 / 8 litres. "+(deliveries===1?"Each delivery uses "+litres+" litres; refill before visiting the next neighbour.":"You can make "+deliveries+" deliveries of "+litres+" litres.");
     window.ThirstAudio?.tone?.(680,.08);save();
   }
   function deliver(person){
     if(!active||!requireNear(person))return;
     if(data.served.includes(person.id))return announce(person.person+" has water for this round. Visit the other neighbours before starting another round.");
-    if(data.jug<request)return announce("This delivery needs 4 litres. Refill at the village fountain first.");
+    const litres=request();
+    if(data.jug<litres)return announce("This delivery needs "+litres+" litres. Refill at the village fountain or drinking-water station first.");
     const first=data.delivered[person.id]===0;
-    data.jug-=request;data.served.push(person.id);data.delivered[person.id]++;
+    data.jug-=litres;data.served.push(person.id);data.delivered[person.id]++;
     if(first)data.materials+=2;
     message=person.person+": “"+person.after+"”"+(first?" +2 building materials.":" Thank you for another delivery.");
     window.ThirstAudio?.tone?.(790,.1);save();
@@ -130,14 +135,15 @@
     }panel.append(tabs);
     const body=element("div","village-life-body");
     if(tab==="deliveries"){
-      const source=card(fountain);source.append(element("p","","Fill the 8-litre jug here. Each neighbour needs 4 litres."),action(near(fountain)?"💧 Fill jug":"Walk here to fill","fill",()=>fill(),!near(fountain)||data.jug===8));body.append(source);
+      const litres=request();
+      const source=card(fountain);source.append(element("p","","Fill the 8-litre jug here. Each neighbour needs "+litres+" litres."),action(near(fountain)?"💧 Fill jug":"Walk here to fill","fill",()=>fill(),!near(fountain)||data.jug===capacity));body.append(source);
       if(data.upgrades.includes("station")){
         const station={...projects[0],name:"New drinking-water station"};const row=card(station);
-        row.append(action("Refill at the new station","fill-station",()=>fill(station),!near(station)||data.jug===8));body.append(row);
+        row.append(element("p","","Refill the 8-litre jug here. Each delivery uses "+litres+" litres."),action("Refill at the new station","fill-station",()=>fill(station),!near(station)||data.jug===capacity));body.append(row);
       }
       for(const person of residents){
         const row=card(person),served=data.served.includes(person.id);
-        row.append(element("p","",person.person+" · "+(served?person.after:person.before)),action(served?"✓ Water delivered":"Deliver 4 L"+(data.delivered[person.id]===0?" · +2 materials":""),"deliver-"+person.id,()=>deliver(person),served||!near(person)||data.jug<4));body.append(row);
+        row.append(element("p","",person.person+" · "+(served?person.after:person.before)),action(served?"✓ Water delivered":"Deliver "+litres+" L"+(data.delivered[person.id]===0?" · +2 materials":""),"deliver-"+person.id,()=>deliver(person),served||!near(person)||data.jug<litres));body.append(row);
       }
       if(data.served.length===3)body.append(action("Start another delivery round","next-round",nextRound));
       body.append(element("p","village-life-note","Materials are awarded once for each first delivery. Further rounds keep the community supplied without repeating those rewards."));
@@ -158,7 +164,7 @@
           }
         }body.append(row);
       }
-      if(mode()==="challenge")body.append(element("p","village-life-note",data.bonus?"✦ Caretaker badge earned.":"Challenge bonus: serve all three neighbours and repair all three leaks to earn the Caretaker badge."));
+      if(mode()==="challenge")body.append(element("p","village-life-note",data.bonus?"✦ Caretaker badge earned.":"Hard bonus: serve all three neighbours and repair all three leaks to earn the Caretaker badge."));
     }else if(tab==="projects"){
       body.append(element("p","village-life-note","Choose which improvement to build first. First deliveries and leak repairs provide enough materials for all three projects."));
       for(const project of projects){
@@ -206,9 +212,9 @@
     if(!visible)return;const reduced=!!window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
     ctx.save();
     for(const person of residents){
-      const delivered=data.delivered[person.id]>0;
+      const delivered=data.served.includes(person.id);
       ctx.fillStyle=delivered?"#78d49b":"#f6d683";ctx.beginPath();ctx.arc(person.x,person.y-29,11,0,Math.PI*2);ctx.fill();
-      ctx.fillStyle="#173e40";ctx.font="bold 12px system-ui";ctx.textAlign="center";ctx.fillText(delivered?"✓":"4L",person.x,person.y-25);
+      ctx.fillStyle="#173e40";ctx.font="bold 12px system-ui";ctx.textAlign="center";ctx.fillText(delivered?"✓":request()+"L",person.x,person.y-25);
     }
     for(const leak of leaks){
       const fixed=data.fixed.includes(leak.id);ctx.fillStyle=fixed?"#86b579":"#55c9d8aa";
@@ -289,5 +295,9 @@
       if(jug.visible){jug.position.set(wx(player.x)+.42,.1,wz(player.y));jugWater.scale.y=Math.max(.02,data.jug/8);jugWater.position.y=.06+.17*(data.jug/8);}
     },dispose(){for(const geometry of new Set(geometries))geometry.dispose();for(const material of materials)material.dispose();scene.remove(root);}};
   }
+  window.addEventListener("trail:mode",()=>{
+    message="Difficulty set to "+(window.TrailMode?.profile?.().label||difficulty())+". Deliver "+request()+" litres per neighbour; your jug, completed work and repair steps are kept.";
+    callbacks.onChange?.(snapshot());render();
+  });
   window.TrailVillageLife=Object.freeze({init,open,close,interactNear,update,snapshot,draw2D,build3D,getDestinations});
 })();

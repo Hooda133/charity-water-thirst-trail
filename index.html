@@ -40,7 +40,7 @@
       <span class="topbar-center">A WATER-ACCESS ADVENTURE <span aria-hidden="true">✦</span> EXPLORE · DISCOVER · RESTORE</span>
       <div class="top-actions">
         <button id="helpButton" class="icon-button" type="button" title="How to play" aria-label="How to play">?</button>
-        <button id="graphicsButton" class="icon-button" type="button" title="Graphics settings" aria-label="Graphics settings">⚙</button>
+        <button id="graphicsButton" class="icon-button" type="button" title="Game settings" aria-label="Game settings" aria-controls="graphicsPanel" aria-expanded="false">⚙</button>
         <button id="soundButton" class="icon-button" type="button" title="Toggle sounds" aria-label="Toggle sounds" aria-pressed="true">♫</button>
       </div>
     </header>
@@ -52,12 +52,13 @@
           <h1 id="startTitle">Every drop<br><em>changes</em><br>everything<span class="yellow">.</span></h1>
           <p>Three communities. One journey worth taking. Restore a village, cross the forgotten canyon, and rebuild Stormbreak Coast. Every repair changes the world around you.</p>
           <section class="play-style" aria-labelledby="playStyleTitle">
-            <span id="playStyleTitle" class="eyebrow">CHOOSE YOUR PLAY STYLE</span>
+            <span id="playStyleTitle" class="eyebrow">CHOOSE YOUR DIFFICULTY · ALSO IN ⚙ SETTINGS</span>
             <div class="play-style-options" role="radiogroup" aria-label="Expedition difficulty">
-              <button id="explorerMode" type="button" role="radio" aria-checked="true"><strong>🌿 Explorer</strong><small>Relaxed energy use · extra guidance</small></button>
-              <button id="challengeMode" type="button" role="radio" aria-checked="false"><strong>✦ Challenge</strong><small>Tighter resources · bonus objectives</small></button>
+              <button id="explorerMode" type="button" role="radio" aria-checked="true" tabindex="0"><strong>🌿 Easy</strong><small>Extra guidance · relaxed energy</small></button>
+              <button id="normalMode" type="button" role="radio" aria-checked="false" tabindex="-1"><strong>◈ Normal</strong><small>Standard energy · optional hints</small></button>
+              <button id="challengeMode" type="button" role="radio" aria-checked="false" tabindex="-1"><strong>✦ Hard</strong><small>Strict pressure · 6 L deliveries</small></button>
             </div>
-            <small id="playModeLabel">Explorer mode · Take your time and discover every story.</small>
+            <small id="playModeLabel">Easy · Take your time with extra guidance and 4 L village deliveries.</small>
           </section>
           <div class="start-buttons">
             <button id="startButton" type="button" class="button button-primary">Start adventure <span aria-hidden="true">↗</span></button>
@@ -212,7 +213,7 @@
         <div id="canyonModalOptions" class="canyon-modal-options"></div>
       </section>
     </div>
-    <footer class="footer"><span>THIRST:TRAIL © AN INDEPENDENT WATER-ACCESS ADVENTURE</span><span>Inspired by <a href="https://www.charitywater.org/" target="_blank" rel="noopener noreferrer">charity: water</a> · Not an official game or affiliation</span></footer>
+    <footer class="footer"><span>THIRST:TRAIL 3.2 · AN INDEPENDENT WATER-ACCESS ADVENTURE</span><span>Inspired by <a href="https://www.charitywater.org/" target="_blank" rel="noopener noreferrer">charity: water</a> · Not an official game or affiliation</span></footer>
   </div>
 
   <div id="modalBackdrop" class="modal-backdrop" hidden>
@@ -251,7 +252,11 @@
     </section>
   </div>
   <aside id="graphicsPanel" class="graphics-panel" hidden aria-labelledby="graphicsTitle">
-    <div class="graphics-panel-header"><div><span class="overline">RENDERING</span><h2 id="graphicsTitle">Graphics settings<span class="yellow">.</span></h2></div><button id="graphicsClose" class="modal-x" type="button" aria-label="Close graphics settings">×</button></div>
+    <div class="graphics-panel-header"><div><span class="overline">MAKE IT YOUR ADVENTURE</span><h2 id="graphicsTitle">Game settings<span class="yellow">.</span></h2></div><button id="graphicsClose" class="modal-x" type="button" aria-label="Close game settings">×</button></div>
+    <label class="graphics-field"><span>Difficulty</span><select id="difficultySelect" aria-describedby="difficultyDescription"><option value="easy">Easy</option><option value="normal">Normal</option><option value="hard">Hard</option></select></label>
+    <p id="difficultyDescription" class="graphics-note difficulty-description" role="status" aria-live="polite">Relaxed energy use, gentler mistake penalties, early hints and 4 L village deliveries.</p>
+    <p class="graphics-note">Applies to every chapter and Village Life. Changing difficulty keeps your progress.</p>
+    <div class="settings-divider"><span class="overline">GRAPHICS &amp; CAMERA</span></div>
     <label class="graphics-field"><span>Quality preset</span><select id="qualityPreset"><option value="low">Low</option><option value="medium">Medium</option><option value="high">High</option><option value="ultra">Ultra</option></select></label>
     <label class="graphics-field"><span>Resolution scale <output id="resolutionValue">100%</output></span><input id="resolutionScale" type="range" min="0.65" max="1.5" step="0.05" value="1"></label>
     <label class="graphics-field"><span>Camera sensitivity <output id="sensitivityValue">100%</output></span><input id="cameraSensitivity" type="range" min="0.5" max="1.8" step="0.1" value="1"></label>

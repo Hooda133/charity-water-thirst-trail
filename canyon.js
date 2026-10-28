@@ -23,7 +23,7 @@
     releaseBasins:[0,0],releaseHint:false,
     lastSave:0,toastUntil:0,toast:""
   });
-  let state=defaultState(),world=null,creating=false,lastFrame=0,raf=0;
+  let state=defaultState(),world=null,creating=false,lastFrame=0,raf=0,refreshDifficulty=null;
   const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
   const reducedMotion=()=>!!window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
   const celebrationTime=()=>state.finished?Math.max(0,(performance.now()-state.celebrationStart)/1000):0;
@@ -31,9 +31,11 @@
   // only short action cues and a finite victory chime, with no ambient loop.
   const sound=(frequency=620,duration=.09)=>window.ThirstAudio?.tone(frequency,duration);
   const pointDistance=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y);
+  const mode=()=>window.TrailMode?.profile?.()||{id:"normal",label:"Normal",difficulty:"normal",energyMultiplier:1,mistakeMultiplier:1,hints:false,pressureMin:65,pressureMax:73};
   // Keep the Canyon's nonlethal recovery floor without ever granting energy
   // when a damaged or externally restored state starts below that floor.
-  const spendEnergy=amount=>{const scale=window.TrailMode?.profile?.().energyMultiplier||1;state.energy=Math.max(0,Math.min(state.energy,Math.max(7,state.energy-amount*scale)));};
+  const spendEnergy=amount=>{const scale=mode().energyMultiplier||1;state.energy=Math.max(0,Math.min(state.energy,Math.max(7,state.energy-amount*scale)));};
+  const mistakeCost=amount=>spendEnergy(amount*(mode().mistakeMultiplier||1));
   const wX=x=>(x-500)/24,wZ=y=>(y-305)/24;
   const isWaterGarden=(x,z)=>{
     const dx=x-wX(goals.cistern.x),dz=z-wZ(goals.cistern.y);
@@ -109,10 +111,11 @@
     const el=$("canyonToast");el.textContent=message;el.hidden=false;
   }
   function currentPressure(){return 16*state.valves[0]+13*state.valves[1]+11*state.valves[2];}
-  function pressureSafe(){
+  function valvesSafe(minimum,maximum){
     const [a,b,c]=state.valves,p=currentPressure();
-    return p>=65&&p<=73&&b>=1&&Math.abs(a-c)<=1;
+    return p>=minimum&&p<=maximum&&b>=1&&Math.abs(a-c)<=1;
   }
+  function pressureSafe(){return valvesSafe(mode().pressureMin??65,mode().pressureMax??73);}
   function save(){
     if(!state.active||state.finished||!progress)return;
     const saved=progress.save("canyon",{
@@ -157,7 +160,8 @@
     // earned work when repairing an older or interrupted checkpoint.
     const lastDone=Math.max(-1,...[...state.done].map(key=>questOrder.indexOf(key)));
     for(let i=0;i<=lastDone;i++)state.done.add(questOrder[i]);
-    if(state.done.has("valves")&&!pressureSafe())state.valves=[2,2,1];
+    // A stricter difficulty cannot undo calibration already earned on an older run.
+    if(state.done.has("valves")&&!valvesSafe(65,73))state.valves=[2,2,1];
     if(state.done.has("span"))state.repairStep=4;
     // Step four used to be saved before the span flag, leaving no clickable
     // repair step after a reload. Reconcile it without giving a second reward.
@@ -185,7 +189,7 @@
     toast("✓ "+goals[key].title+" complete! +"+points+" impact");
   }
   function modal(tag,title,text,choices,extra){
-    state.modal=true;state.keys.clear();state.path=[];
+    state.modal=true;state.keys.clear();state.path=[];refreshDifficulty=null;
     const owner=state,version=++state.modalVersion;
     refreshUI();
     save();
@@ -210,7 +214,7 @@
     sound(550,.07);
   }
   function closeModal(){
-    state.modal=false;$("canyonModalBackdrop").hidden=true;
+    state.modal=false;refreshDifficulty=null;$("canyonModalBackdrop").hidden=true;
     refreshUI();
     (world?.dom||canvas).focus({preventScroll:true});
   }
@@ -254,8 +258,9 @@
   function valveChallenge(){
     function redraw(root){
       root.replaceChildren();
+      const minimum=mode().pressureMin??65,maximum=mode().pressureMax??73;
       const heading=document.createElement("div");heading.className="canyon-pressure-hint";
-      heading.textContent="Adjust each valve from 0 to 3. Target: 65–73 kPa. Keep the regulator at 1 or higher; intake and return must differ by no more than one setting.";
+      heading.textContent="Adjust each valve from 0 to 3. Target: "+minimum+"–"+maximum+" kPa. Keep the regulator at 1 or higher; intake and return must differ by no more than one setting.";
       root.append(heading);
       for(let i=0;i<3;i++){
         const row=document.createElement("div");row.className="canyon-valve";
@@ -284,13 +289,13 @@
       const feedback=document.createElement("p");feedback.className="canyon-pressure-hint";
       feedback.setAttribute("role","status");
       const issues=[];
-      if(currentPressure()<65)issues.push("Increase pressure to at least 65 kPa.");
-      if(currentPressure()>73)issues.push("Reduce pressure to 73 kPa or less.");
+      if(currentPressure()<minimum)issues.push("Increase pressure to at least "+minimum+" kPa.");
+      if(currentPressure()>maximum)issues.push("Reduce pressure to "+maximum+" kPa or less.");
       if(state.valves[1]<1)issues.push("Open the regulator.");
       if(Math.abs(state.valves[0]-state.valves[2])>1)issues.push("Bring intake and return within one setting.");
       feedback.textContent=issues.join(" ")||"✓ All operating conditions are safe. Test pressure to complete calibration.";
       root.append(feedback);
-      if(state.failedValveTests.size>=2||window.TrailMode?.profile?.().hints){
+      if(state.failedValveTests.size>=2||mode().hints){
         const hint=document.createElement("p");hint.className="canyon-pressure-hint";
         hint.textContent="Nia’s field note: Intake 2 + Regulator 2 + Return 1 gives 69 kPa and balanced flow.";
         root.append(hint);
@@ -302,13 +307,13 @@
         if(pressureSafe()){closeModal();completeQuest("valves",250);return;}
         const setting=state.valves.join(",");
         if(!state.failedValveTests.has(setting)){
-          state.failedValveTests.add(setting);spendEnergy(4);
+          state.failedValveTests.add(setting);mistakeCost(4);
         }
         sound(180,.10);
         toast("Unsafe configuration. Check the conditions shown below the pressure meter.");
         valveChallenge();save();
       }},{text:"↩ Continue exploring",action:()=>{save();closeModal();}}],
-      el=>{const root=document.createElement("div");root.className="canyon-pressure";el.append(root);redraw(root);});
+      el=>{const root=document.createElement("div");root.className="canyon-pressure";el.append(root);refreshDifficulty=()=>redraw(root);redraw(root);});
   }
   const repairOrder=["Anchor supports","Brace the span","Seat the pipe","Apply the seal"];
   function bridgeChallenge(){
@@ -349,7 +354,7 @@
       [{text:"Test water quality and follow local treatment and monitoring procedures",primary:true,action:()=>{
         state.cisternSafetyPassed=true;save();refreshUI();releaseChallenge();
       }},{text:"If the water looks clear, it must be safe",action:()=>{
-        if(!state.cisternMistake)spendEnergy(5);
+        if(!state.cisternMistake)mistakeCost(5);
         state.cisternMistake=true;
         sound(180,.10);
         toast("Appearance does not prove drinking-water safety. Test and treat the water before use.");
@@ -441,12 +446,12 @@
           }
           const disabled=[a===5,b===3,a===0||b===3,b===0||a===5,a===0,b===0,a===0&&b===0];
           buttons.forEach((button,i)=>{button.disabled=disabled[i];});
-          hint.hidden=!state.releaseHint;
+          hint.hidden=!state.releaseHint&&!mode().hints;
           board.classList.toggle("is-ready",a===4);
           status.textContent=message||(a===4?"✓ Exactly 4 L! Open the release gate to restore the canyon.":
             "5-litre chamber: "+a+" L · 3-litre chamber: "+b+" L. Target: 4 L in the larger chamber.");
         };
-        render();
+        refreshDifficulty=()=>render();render();
       });
   }
   function finish(){
@@ -493,7 +498,7 @@
   }
   function formatTime(t){const sec=Math.floor(t);return String(Math.floor(sec/60)).padStart(2,"0")+":"+String(sec%60).padStart(2,"0");}
   function refreshUI(){
-    $("canyonModeLabel").textContent=(window.TrailMode?.profile?.().label||"Explorer")+" mode";
+    $("canyonModeLabel").textContent=mode().label+" difficulty";
     const n=state.done.size,next=questOrder.find(key=>!state.done.has(key));
     $("canyonProgressLabel").textContent=n+" / 5 completed";
     $("canyonProgressFill").style.width=n/5*100+"%";
@@ -1223,7 +1228,7 @@
   function suspend(){
     if(state.active&&!state.finished)save();
     state.active=false;state.paused=false;state.keys.clear();state.path=[];
-    $("canyonModalBackdrop").hidden=true;state.modal=false;
+    $("canyonModalBackdrop").hidden=true;state.modal=false;refreshDifficulty=null;
     $("canyonCelebration").hidden=true;
   }
   function recenterCanyonCamera(){
@@ -1287,13 +1292,14 @@
     if(document.hidden&&state.active&&!state.modal)pause();
   });
   window.addEventListener("trail:graphics",event=>world?.setGraphicsSettings?.(event.detail));
+  window.addEventListener("trail:mode",()=>{if(state.active||state.finished){refreshUI();refreshDifficulty?.();}});
   window.TrailCanyon=Object.freeze({
     launch,suspend,goHome,pause,snapshot:()=>({
-      active:state.active,paused:state.paused,finished:state.finished,waterRestored:state.finished,
+      active:state.active,paused:state.paused,modal:state.modal,finished:state.finished,waterRestored:state.finished,
       x:state.x,y:state.y,energy:state.energy,score:state.score,
       done:[...state.done],pressure:currentPressure(),valves:[...state.valves],
       cisternSafetyPassed:state.cisternSafetyPassed,releaseBasins:[...state.releaseBasins],
-      repairStep:state.repairStep,renderer:world?"3d":"2d",graphics:world?.getGraphicsStatus?.()||null
+      repairStep:state.repairStep,mode:mode().id,difficulty:mode().difficulty,renderer:world?"3d":"2d",graphics:world?.getGraphicsStatus?.()||null
     })
   });
 })();

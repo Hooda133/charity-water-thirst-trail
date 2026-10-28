@@ -4,6 +4,19 @@ Current repair evidence: [October 26 gameplay audit](GAMEPLAY_AUDIT.md). It reco
 
 This project is a static HTML/CSS/JavaScript game. Run it from a local HTTP server (for example `python3 -m http.server 8000`) and open the site in Chrome or Edge. Open DevTools → Console to spot JavaScript and WebGL errors.
 
+## Difficulty in Settings — version 3.2
+
+```bash
+node tools/test-expedition-mode.mjs
+node tools/test-village-life.mjs
+node tools/test-canyon-regressions.mjs
+node tools/test-coast.mjs
+python tools/test-difficulty-browser.py
+python tools/test-difficulty-browser.py --mobile
+```
+
+The three difficulties share the existing play-style preference, so Explorer/Challenge saves remain usable as Easy/Hard. The Node regressions exercise actual costs, pressure validation, delivery conservation and save recovery. The browser regression selects difficulties through **⚙ Game settings**, uses keyboard movement and real puzzle/delivery controls, and checks persistence and the mobile layout. Difficulty changes must preserve partial valves/circuits, carried jug water and village projects. Graphics presets remain independent. Existing complete gameplay suites continue to cover all chapter celebrations and Village Life.
+
 ## Graphics overhaul — October 27
 
 The 3.1 graphics pass was checked in actual Chromium WebGL against screenshots of the previous committed game. Low and High rendered Valley/Village Life, restored Canyon and restored Coast without uncaught page errors, shader errors, failed local assets or WebGL context loss. The real settings menu changed rendering resolution and effects live in each chapter. A 390×844 check covered the title and Coast puzzle layout; the full fallback browser suites also covered gameplay, saves, mobile controls and celebrations.

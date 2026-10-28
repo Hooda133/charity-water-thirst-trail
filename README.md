@@ -1,6 +1,20 @@
-# Thirst Trail 3.1: The Last Well
+# Thirst Trail 3.2: The Last Well
 
 **Thirst Trail** is a browser-based 3D adventure game inspired by charity: water. Restore Greenwater Valley, repair the Forgotten Canyon aqueduct, then rebuild Stormbreak Coast. Return to the restored village to deliver water, repair leaks and choose community improvements. All three chapters and Village Life have 3D environments with a playable 2D fallback.
+
+## Thirst Trail 3.2 — Difficulty in Settings
+
+Open **⚙ Game settings → Difficulty** to choose Easy, Normal or Hard at any time. The chapter hub offers the same three choices. Changes apply across all three chapters and Village Life, save in this browser, and keep chapter progress, partial puzzles, carried water and village projects intact. Difficulty and graphics quality are independent.
+
+| Difficulty | Energy and mistake penalties | Guidance | Canyon pressure | Village delivery |
+| --- | --- | --- | --- | --- |
+| Easy | Relaxed energy use, gentler penalties | Early hints | 65–73 kPa | 4 L |
+| Normal | Standard energy use and penalties | Hints on request | 65–73 kPa | 4 L |
+| Hard | Higher energy use, stronger penalties | Hints on request | 67–71 kPa | 6 L |
+
+The jug holds 8 L on every difficulty. Hard therefore requires more refill trips. Rewards still fund every village project, and earned repairs and calibrations remain complete after switching levels. Existing Explorer preferences become Easy; Challenge preferences become Hard. New players retain the relaxed Easy default. Settings opens over a paused expedition or an already open puzzle; closing Settings leaves its progress in place.
+
+Development continues on `codex/canyon-reservoir-celebration`, the user-approved version containing the graphics overhaul, all three chapters, Village Life and water celebrations.
 
 ## Thirst Trail 3.1 — A visual overhaul across all three chapters
 
@@ -12,10 +26,10 @@
 
 ## A living village and a new coast
 
-- **Village Life:** unlocked after Chapter 1. Fill an 8-litre yellow jug at the fountain and carry 4-litre deliveries to Amina’s home, Leila’s school and Idris’s garden. The jug level changes in the activity panel and beside the explorer in 3D. Named neighbours respond to deliveries; flowers and greenery appear as the community recovers.
+- **Village Life:** unlocked after Chapter 1. Fill an 8-litre yellow jug at the fountain and carry 4-litre deliveries (6 litres on Hard) to Amina’s home, Leila’s school and Idris’s garden. The jug level changes in the activity panel and beside the explorer in 3D. Named neighbours respond to deliveries; flowers and greenery appear as the community recovers.
 - **Hidden leaks:** follow wet trail patches and a proximity dripping cue. Inspect the fault, choose a clamp, gasket or torque key, then complete three repair actions. Repaired patches dry up and each first repair earns building materials.
 - **Choose village upgrades:** spend earned materials on a second drinking-water station, garden irrigation or a shaded gathering place. All three appear in the world. First deliveries and repairs provide enough materials for every project; later delivery rounds do not repeat material rewards. Village progress saves independently of chapter replay.
-- **Explorer and Challenge modes:** choose on the chapter hub. Explorer uses less energy and offers early puzzle guidance. Challenge requires more energy management and offers the optional Caretaker and Storm Scout badges. Both modes keep hints available and allow resting or recovery.
+- **Easy, Normal and Hard:** choose in Settings or on the chapter hub. Easy offers early puzzle guidance; Normal uses standard resources; Hard tightens pressure calibration and requires 6-litre deliveries. Hard also offers the optional Caretaker and Storm Scout badges. All levels keep hints and recovery available.
 - **Chapter 3: Stormbreak Coast:** complete Chapter 2 to unlock a storm-damaged harbor with a lighthouse, cargo crossing, tank and coastal homes. Meet engineer Mara, solve a toggle-switch circuit, balance bridge counterweights, fit three tank repair layers and allocate flow with sluice sliders. Opening the release restores water and starts the harbor celebration.
 - **Visible repair stages:** tested feed lines appear in the village, the pump gauge responds to pipeline repair, the Coast bridge lowers, storm debris clears, tank patches and water levels update, and final channels fill before greenery returns. Progress and partial puzzle work persist across reloads.
 - **Existing saves:** completed older Canyon saves automatically unlock the Coast. Existing best scores, chapter checkpoints and completion badges are preserved; community projects have their own save field.
@@ -29,7 +43,7 @@
 - **Five playable canyon objectives:** Meet Surveyor Nia, recover the seal kit, calibrate three pressure valves, rebuild the aqueduct in four stages, and inspect and unlock the village cistern.
 - **Final reservoir puzzle:** after the cistern safety inspection, use 5-litre and 3-litre measuring chambers to leave exactly **4 litres** in the larger chamber. Fill, pour between chambers, or return water to the supply; levels update visually, progress saves, and Nia offers an optional hint. Experimenting costs no energy. This measuring puzzle uses a different mechanic from Chapter 1’s pipe rotations. Open the release gate once the target is reached to trigger the ending.
 - **A restored-water finale:** solving the reservoir lock and opening its gate releases clean water from the cistern into a stone channel and pool, with returning greenery, a celebratory explorer pose and a short chime that respects mute. The illustrated completion screen offers chapter selection, replay, or **Watch the water flow**; results remain available below the scene. Both 3D and 2D modes show the restoration, with a still presentation for reduced motion.
-- **Interactive valve puzzle:** set three regulators to achieve **65–73 kPa**, keep the regulator open, and balance intake/return settings. Incorrect tests cost energy.
+- **Interactive valve puzzle:** set three regulators to achieve **65–73 kPa** (**67–71 kPa on Hard**), keep the regulator open, and balance intake/return settings. Incorrect tests cost energy.
 - **Aqueduct assembly puzzle:** place anchors, braces, pipes and sealing material in the right order; repair stages save automatically.
 - **Chapter selection & unlocking:** finishing the Chapter 1 pump mission unlocks Chapter 2. The previous Valley victory screen offers direct access to Canyon.
 - **Autosave and resume:** Valley, Canyon, Coast and Village Life progress persist using versioned browser `localStorage`; saves are on this browser/device, not synced online. Original best-score storage is preserved.
@@ -87,7 +101,7 @@ Both 3D chapters support **hold left mouse button and drag** to pan the camera a
 
 Run a local static web server (recommended because glTF models load over HTTP) and open `index.html`. Use **WASD** or **arrow keys** to move, **E** or **Space** to interact, **Shift** to sprint, **P** to pause, and the **mouse wheel** to zoom the 3D camera, and **M** to hide or show the mini-map, and **V** to toggle the scenic camera. The mini-map also lets you click destination markers to plan a route. On mobile, use the directional controls. In Chapter 1, meet the elder, gather the toolkit and gasket, rotate all nine pipeline sections to form a leak-free network, then complete the water-safety questions. Chapter 2 unlocks automatically; choose it from the new chapter selection panel. In Forgotten Canyon use WASD/arrows, E to interact, the fast-travel list, and P to pause. Optionally travel to Raincatch Ridge for a rainwater collection challenge or visit Wetland Sanctuary to remove litter while protecting nests and plants. Look for four sealed drinking-water caches to restore energy. Water collected from roofs still requires testing and appropriate treatment before drinking.
 
-**Camera and graphics:** In 3D Valley, left-click to walk, left-drag to pan, right-drag to orbit, and press **C** to recenter. Use ⚙ for Low, Medium, High, and Ultra graphics settings.
+**Camera and graphics:** In 3D Valley, left-click to walk, left-drag to pan, right-drag to orbit, and press **C** to recenter. Use ⚙ for Easy/Normal/Hard difficulty and Low/Medium/High/Ultra graphics quality.
 
 ## Run locally
 
@@ -140,3 +154,5 @@ The expansion has its own real-interface check: `python tools/test-expansion-bro
 To inspect all three 3D environments and live graphics controls, run `python tools/test-graphics-browser.py --presets low,high --live-check --mobile`. It uses earned-completion fixtures to inspect restored chapter scenes, records screenshots and reports shader/asset errors; it does not establish hardware frame rate. Use `--smoke` for the small rendering check run by CI.
 
 To load updates in an existing Codespace on the preview branch, run `git pull --ff-only origin codex/canyon-reservoir-celebration`, refresh the preview, and choose **High** or **Ultra** in the gear menu for the full visual treatment. Your saved graphics preferences and gameplay progress are preserved.
+
+Difficulty has a dedicated real-interface regression: `python tools/test-difficulty-browser.py` checks the Settings selector, keyboard controls, reloads, actual movement costs, Hard jug deliveries and live chapter puzzle changes. Add `--mobile` for the 390×844 layout and touch viewport.

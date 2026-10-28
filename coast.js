@@ -22,9 +22,9 @@
   const shelter={x:210,y:490,title:"Harbor rest shelter"};
   const caches=[{id:"beach",x:265,y:515},{id:"pier",x:650,y:490},{id:"lighthouse",x:885,y:125}];
   const blank=()=>({active:false,paused:false,finished:false,modal:false,modalVersion:0,x:150,y:430,energy:100,score:0,elapsed:0,done:new Set(),keys:new Set(),path:[],power:[false,false,false,false],weights:[0,0,0],gates:[0,0,0],tankStep:0,powerFailures:new Set(),bridgeFailures:new Set(),gateFailures:new Set(),bonus:new Set(),waterAt:0,cheerAt:-100,lastSave:0,lastUI:0,toastUntil:0});
-  let state=blank(),world=null,creating=false,raf=0,lastFrame=0;
+  let state=blank(),world=null,creating=false,raf=0,lastFrame=0,refreshDifficulty=null;
   const clamp=(value,min,max)=>Math.max(min,Math.min(max,value));
-  const mode=()=>window.TrailMode?.profile?.()||{id:"explorer",label:"Explorer",energyMultiplier:.35,hints:true,bonusObjectives:false};
+  const mode=()=>window.TrailMode?.profile?.()||{id:"normal",label:"Normal",difficulty:"normal",energyMultiplier:1,mistakeMultiplier:1,hints:false,bonusObjectives:false};
   const reduced=()=>!!window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
   const tone=(note=620,duration=.08)=>window.ThirstAudio?.tone(note,duration);
   const dist=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y);
@@ -82,7 +82,7 @@
     state.done.add(key);state.score+=points[key];tone(780,.12);save();refresh();toast("✓ "+goals[key].title+" · +"+points[key]+" impact");return true;
   }
   function modal(tag,title,description,choices,extra){
-    state.modal=true;state.keys.clear();state.path=[];
+    state.modal=true;state.keys.clear();state.path=[];refreshDifficulty=null;
     const owner=state,version=++state.modalVersion;
     $("coastModalTag").textContent=tag;$("coastModalTitle").textContent=title;$("coastModalText").textContent=description;
     $("coastModalExtra").replaceChildren();if(extra)extra($("coastModalExtra"));
@@ -93,7 +93,11 @@
     $("coastModal").classList.toggle("is-victory",state.finished);$("coastModalBackdrop").hidden=false;
     $("coastModal").scrollTop=0;$("coastModal").focus({preventScroll:true});save();refresh();tone(550,.06);
   }
-  function close(){state.modal=false;state.modalVersion++;$("coastModalBackdrop").hidden=true;refresh();(world?.dom||canvas).focus({preventScroll:true});}
+  function close(){state.modal=false;state.modalVersion++;refreshDifficulty=null;$("coastModalBackdrop").hidden=true;refresh();(world?.dom||canvas).focus({preventScroll:true});}
+  function easyHint(root,text){
+    const note=document.createElement("p");note.className="coast-puzzle-status";note.dataset.coastHint="true";note.textContent="Mara’s field note: "+text;
+    root.append(note);refreshDifficulty=()=>{note.hidden=!mode().hints;};refreshDifficulty();
+  }
   function pathTo(point,key=null){
     if(!state.active||state.paused||state.modal)return;
     const target=approaches[key]||point;
@@ -139,7 +143,7 @@
   function bridgeSafe(){return bridgeTorque()===12&&state.weights.filter(Boolean).length>=2;}
   function gatesSafe(){return state.gates.every((value,i)=>value===[3,2,1][i]);}
   function fail(key,stamp,message){
-    if(!state[key].has(stamp)){state[key].add(stamp);spend(3);}
+    if(!state[key].has(stamp)){state[key].add(stamp);spend(3*(mode().mistakeMultiplier||1));}
     $("coastModalText").textContent=message;tone(190,.08);save();refresh();
   }
   function powerPuzzle(){
@@ -162,7 +166,7 @@
         paint=()=>{
           lights.replaceChildren();for(const [i,on] of powerOutputs().entries()){const light=document.createElement("span");light.className=on?"on":"";light.textContent=(on?"● ":"○ ")+["Lighthouse","Pump","Clinic"][i];lights.append(light);}
           buttons.forEach((button,i)=>{button.textContent=String.fromCharCode(65+i)+" · "+(state.power[i]?"ON":"OFF");button.setAttribute("aria-pressed",String(state.power[i]));button.classList.toggle("on",state.power[i]);});
-        };root.append(board);paint();
+        };root.append(board);easyHint(root,"Try A on, B off, C on and D on. A/B and B/C differ, while C/D supply the clinic together.");paint();
       });
   }
   function bridgePuzzle(){
@@ -191,7 +195,7 @@
         paint=()=>{const torque=bridgeTorque();beam.textContent="YOUR SIDE "+torque+"  ⚖  CARGO 12";beam.style.transform=reduced()?"none":"rotate("+clamp((torque-12)*.55,-7,7)+"deg)";
           rows.forEach((row,i)=>{row.value.textContent=state.weights[i]+" weights · "+state.weights[i]*(i+1)+" torque";row.decrease.disabled=state.weights[i]===0;row.increase.disabled=state.weights[i]===3;});
           status.textContent=bridgeSafe()?"✓ Balanced! Test the balance to lower the bridge.":"Current torque: "+torque+" / 12 · "+state.weights.filter(Boolean).length+" occupied positions";};
-        root.append(board);paint();
+        root.append(board);easyHint(root,"Place 0 weights at distance 1, 3 at distance 2, and 2 at distance 3: 0 + 6 + 6 = 12 torque.");paint();
       });
   }
   const repairOrder=["Fit the inner liner","Seat the weather gasket","Tighten the outer clamp"];
@@ -213,7 +217,7 @@
         }
         const label=document.createElement("p");label.className="coast-puzzle-status";board.append(label);
         const paint=()=>{buttons.forEach((button,i)=>{button.disabled=i<state.tankStep;button.classList.toggle("done",i<state.tankStep);});label.textContent=state.tankStep+" / 3 layers fitted · Next: "+(repairOrder[state.tankStep]||"Complete");};
-        root.append(board);paint();
+        root.append(board);easyHint(root,"Fit the inner liner first, then seat the weather gasket, then tighten the outer clamp.");paint();
       });
   }
   function gatePuzzle(){
@@ -236,7 +240,7 @@
         }
         const status=document.createElement("p");status.className="coast-puzzle-status";status.setAttribute("role","status");board.append(status);
         paint=()=>{values.forEach((value,i)=>{value.textContent=state.gates[i]+" units";sliders[i].value=String(state.gates[i]);});status.textContent=gatesSafe()?"✓ All destinations are ready. Open the main release!":"Allocated "+state.gates.reduce((a,b)=>a+b,0)+" / 6 flow units";};
-        root.append(board);paint();
+        root.append(board);easyHint(root,"Set Homes to 3, Clinic to 2 and Reserve to 1. These use all 6 flow units.");paint();
       });
   }
   function finish(){
@@ -415,7 +419,7 @@
     if(order.every(key=>state.done.has(key)))finish();else toast(saved?"Stormbreak checkpoint restored. Welcome back!":"Chapter 3 · Meet Mara at the harbor to begin.");
     screen.scrollIntoView?.({block:"start",behavior:"instant"});return true;
   }
-  function suspend(){if(state.active)save();state.active=false;state.paused=false;state.keys.clear();state.path=[];state.modal=false;state.modalVersion++;$("coastModalBackdrop").hidden=true;$("coastCelebration").hidden=true;}
+  function suspend(){if(state.active)save();state.active=false;state.paused=false;state.keys.clear();state.path=[];state.modal=false;state.modalVersion++;refreshDifficulty=null;$("coastModalBackdrop").hidden=true;$("coastCelebration").hidden=true;}
   function goHome(){suspend();screen.hidden=true;window.dispatchEvent(new Event("trail:home"));}
   function pause(){
     if(!state.active||state.finished)return;state.paused=true;
@@ -436,7 +440,7 @@
   });
   window.addEventListener("keyup",event=>state.keys.delete(event.key.toLowerCase()));window.addEventListener("blur",()=>state.keys.clear());window.addEventListener("pagehide",save);
   document.addEventListener("visibilitychange",()=>{state.keys.clear();if(document.hidden&&state.active&&!state.modal)pause();});
-  window.addEventListener("trail:mode",()=>{if(state.active||state.finished)refresh();});
+  window.addEventListener("trail:mode",()=>{if(state.active||state.finished){refresh();refreshDifficulty?.();}});
   window.addEventListener("trail:graphics",event=>world?.setGraphicsSettings?.(event.detail));
-  window.TrailCoast=Object.freeze({launch,suspend,goHome,pause,snapshot:()=>({active:state.active,paused:state.paused,finished:state.finished,x:state.x,y:state.y,energy:state.energy,score:state.score,elapsed:state.elapsed,done:[...state.done],power:[...state.power],powerOutputs:powerOutputs(),weights:[...state.weights],torque:bridgeTorque(),tankStep:state.tankStep,gates:[...state.gates],bonus:[...state.bonus],waterRestored:state.finished,renderer:world?"3d":"2d",graphics:world?.getGraphicsStatus?.()||null})});
+  window.TrailCoast=Object.freeze({launch,suspend,goHome,pause,snapshot:()=>({active:state.active,paused:state.paused,modal:state.modal,finished:state.finished,x:state.x,y:state.y,energy:state.energy,score:state.score,elapsed:state.elapsed,done:[...state.done],power:[...state.power],powerOutputs:powerOutputs(),weights:[...state.weights],torque:bridgeTorque(),tankStep:state.tankStep,gates:[...state.gates],bonus:[...state.bonus],waterRestored:state.finished,mode:mode().id,difficulty:mode().difficulty,renderer:world?"3d":"2d",graphics:world?.getGraphicsStatus?.()||null})});
 })();

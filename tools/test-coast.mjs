@@ -81,3 +81,33 @@ assert.ok(s().done.has('tank'),'An interrupted final tank layer remains completa
 game.suspend();game.launch();assert.equal(s().score,870,'Recovered tank reward is awarded once');
 console.log('✓ Coast prerequisites, distinct puzzle controls, retry costs, partial repair saves and stale callbacks');
 console.log('✓ Reachable landmark routes across the bridge, guarded release, celebration/replay and legacy recovery');
+
+// Exercise real difficulty preferences through chapter callbacks, not a copied cost formula.
+runInNewContext(readFileSync(new URL('expedition-mode.js',root),'utf8'),sandbox);
+const difficulty=window.TrailMode;
+for(const [id,cost] of [['explorer',.525],['normal',3],['challenge',5.4]]){
+  difficulty.set(id);game.launch(true);go('mara');options()[0].click();go('power');
+  const hint=all(panel()).find(n=>n.dataset.coastHint==='true');
+  assert.equal(hint.hidden,id!=='explorer','Easy shows circuit guidance up front');
+  const before=s().energy;options()[0].click();
+  assert.ok(Math.abs(before-s().energy-cost)<1e-9,'Circuit mistake cost follows '+id);
+  options()[0].click();assert.ok(Math.abs(before-s().energy-cost)<1e-9,'Repeated wrong circuit settings remain free');
+  button('coastSwitch','0').click();const partial=[...s().power],version=s().modalVersion;
+  difficulty.set(id==='explorer'?'challenge':'explorer');
+  assert.deepEqual([...s().power],partial,'Changing difficulty preserves partial switch positions');
+  assert.equal(s().modalVersion,version,'The existing puzzle session stays active');
+  assert.equal(hint.hidden,difficulty.get()!=='explorer','Guidance updates immediately in the open puzzle');
+  button('coastSwitch','2').click();button('coastSwitch','3').click();
+  assert.equal(t.powerSafe(),true);options()[0].click();assert.ok(s().done.has('power'));
+}
+difficulty.set('challenge');game.suspend();progress.save('coast',{
+  done:['bridge'],power:[true,false,true,true],weights:[0,3,2],tankStep:1,energy:70,score:590
+});game.launch();go('tank');
+const tankHint=all(panel()).find(n=>n.dataset.coastHint==='true');
+assert.equal(tankHint.hidden,true);difficulty.set('explorer');assert.equal(tankHint.hidden,false);
+assert.equal(s().tankStep,1,'Difficulty preserves the fitted tank layer');
+assert.deepEqual([...s().weights],[0,3,2]);
+options()[0].click();game.suspend();difficulty.set('normal');game.launch();
+assert.equal(s().tankStep,1,'A partial repair survives a difficulty change and reload');
+assert.ok(s().done.has('bridge'));assert.equal(game.snapshot().difficulty,'normal');
+console.log('✓ Shared difficulty scales mistakes and updates hints live without resetting switches, bridge or saved tank layers');

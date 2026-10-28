@@ -60,7 +60,11 @@
   };
 
   const exploring=()=>state.screen==="playing"||state.screen==="village";
-  const playStyle=()=>window.TrailMode?.profile?.()||{id:"explorer",label:"Explorer",energyMultiplier:1,hints:false};
+  const playStyle=()=>window.TrailMode?.profile?.()||{id:"normal",label:"Normal",difficulty:"normal",energyMultiplier:1,mistakeMultiplier:1,hints:false};
+  const mistakeAmount=amount=>amount*(playStyle().mistakeMultiplier??1);
+  const mistakeLabel=amount=>String(Number((mistakeAmount(amount)*playStyle().energyMultiplier).toFixed(2)));
+  const quizTip=()=>"Think carefully: wrong answers cost "+mistakeLabel(6)+" energy.";
+  const pipeTip=()=>"IN connects to tile 4 on the left; OUT leaves tile 6 on the right. Teal shows supplied pipes, red shows open joints. Hints are free; unsuccessful flow tests cost "+mistakeLabel(2)+" energy.";
   const chapters=window.TrailProgress;
   let lastValleySaveTime=0;
   function saveValley(){
@@ -644,8 +648,8 @@
   ];
   function quiz({tag,icon,title,questions,onWin,step=0,onProgress=null}){
     const q=questions[step];
-    openModal({tag,icon,title:`${title} · ${step+1}/${questions.length}`,description:q.q,progress:step,total:questions.length,kind:"quiz",tip:"Think carefully: wrong answers cost 6 energy.",choices:q.answers.map((answer,i)=>({text:answer,action:()=>{
-      if(i!==q.right){drain(6);if(state.ended)return;quiz({tag,icon,title,questions,onWin,step,onProgress});$("modalTip").textContent="Not quite. That choice may put people at risk. Try again (−6 energy).";tone(190,.16);updateUI();return;}
+    openModal({tag,icon,title:`${title} · ${step+1}/${questions.length}`,description:q.q,progress:step,total:questions.length,kind:"quiz",tip:quizTip(),choices:q.answers.map((answer,i)=>({text:answer,action:()=>{
+      if(i!==q.right){drain(mistakeAmount(6));if(state.ended)return;quiz({tag,icon,title,questions,onWin,step,onProgress});$("modalTip").textContent="Not quite. That choice may put people at risk. Try again (−"+mistakeLabel(6)+" energy).";tone(190,.16);updateUI();return;}
       tone(850,.13);
       onProgress?.(step+1);
       if(step+1<questions.length){quiz({tag,icon,title,questions,onWin,step:step+1,onProgress});$("modalTip").textContent=q.feedback;}
@@ -701,9 +705,9 @@
     if(state.modalKind!=="marsh"||marshPicked.has(index))return;
     const item=marshItems[index];
     if(!item.litter){
-      drain(3);if(state.ended)return;
+      drain(mistakeAmount(3));if(state.ended)return;
       const status=$("marshStatus");status.className="marsh-status is-error";
-      status.textContent=item.name+" belongs in the habitat. Leave it undisturbed (−3 energy).";
+      status.textContent=item.name+" belongs in the habitat. Leave it undisturbed (−"+mistakeLabel(3)+" energy).";
       tone(190,.12);updateUI();return;
     }
     marshPicked.add(index);tone(650+index*40,.085);renderMarsh();
@@ -729,7 +733,7 @@
     openModal({tag:"OPTIONAL HABITAT MISSION",icon:"🪷",title:"Protect the Wetland Sanctuary",
       description:"A boardwalk overlooks a fragile wetland. Collect four pieces of litter, but don't disturb nests or living plants.",
       kind:"marsh",
-      tip:"Select the items you would safely remove. Disturbing wildlife and plants costs 3 energy.",
+      tip:"Select the items you would safely remove. Disturbing wildlife and plants costs "+mistakeLabel(3)+" energy.",
       choices:[{text:"✓ Finish cleanup",primary:true,action:verifyMarsh},
         {text:"Back to the trail",action:()=>closeModal()}]});
     $("marshPanel").hidden=false;renderMarsh();
@@ -780,10 +784,10 @@
       notify("🌦️ Raincatch plan completed! Testing and treatment are still needed before drinking.");
       return;
     }
-    drain(2);
+    drain(mistakeAmount(2));
     if(state.ended)return;
     const status=$("rainStatus");status.className="rain-status is-error";
-    status.textContent="This plan needs improvement. Consider roof runoff, filtration and protected storage (−2 energy).";
+    status.textContent="This plan needs improvement. Consider roof runoff, filtration and protected storage (−"+mistakeLabel(2)+" energy).";
     updateUI();tone(220,.12);
   }
   function rainChallenge(){
@@ -955,14 +959,14 @@
       finalPumpSafetyQuiz();
       return;
     }
-    drain(2);
+    drain(mistakeAmount(2));
     if(state.ended)return;
     const status=$("pipeStatus");
     status.className="pipe-status is-error";
     const flow=pipeFlow();
     status.textContent=(flow.delivered?"The outlet has water but the branches are incomplete. ":"No safe water reached the outlet. ")+
       flow.connected.size+"/9 pieces connected, "+flow.leaks.length+
-      " open joints. Repair the pipeline and try again (−2 energy).";
+      " open joints. Repair the pipeline and try again (−"+mistakeLabel(2)+" energy).";
     updateUI();
     tone(210,.15);
   }
@@ -971,7 +975,7 @@
     openModal({tag:"PUMP REPAIR • STEP 1 OF 2",icon:"🔧",
       title:"Reconnect the water pipeline",
       description:"Connect all nine pipe sections. Water enters from middle LEFT and exits middle RIGHT. Turn the T-junctions to feed the branches and use the end caps to prevent leaks.",
-      kind:"pipe",tip:"IN connects to tile 4 on the left; OUT leaves tile 6 on the right. Teal shows supplied pipes, red shows open joints. Hints are free; unsuccessful flow tests cost 2 energy.",
+      kind:"pipe",tip:pipeTip(),
       choices:[
         {text:"💧 Test the flow",primary:true,action:verifyPipe},
         {text:"↩ Back to the valley",action:()=>closeModal()}
@@ -1218,6 +1222,7 @@
     if(key){if(dist(state,spots[key])<85)interact();else navigateTo(key);}else navToPosition({x:Math.min(W-50,Math.max(50,x)),y:Math.min(H-50,Math.max(50,y))});
   }
   window.addEventListener("keydown",e=>{
+    if(e.key==="Escape"&&!$("graphicsPanel").hidden){closeSettings();e.stopImmediatePropagation?.();return;}
     if(e.key==="Escape"&&state.modalOpen&&state.modalKind!=="end"){closeModal();return;}
     if(!exploring()||state.modalOpen||!$("graphicsPanel").hidden)return;
     if(e.target?.closest?.('input,select,textarea,[contenteditable="true"]'))return;
@@ -1319,15 +1324,21 @@
     syncGraphicsPanel();
     window.dispatchEvent(new CustomEvent("trail:graphics",{detail:graphicsProfile()}));
   }
+  function closeSettings(){
+    graphicsPanel.hidden=true;$("graphicsButton").setAttribute("aria-expanded","false");
+    $("graphicsButton").focus({preventScroll:true});
+  }
   $("graphicsButton").addEventListener("click",()=>{
-    graphicsPanel.hidden=!graphicsPanel.hidden;
-    if(!graphicsPanel.hidden){
-      if(window.TrailCanyon?.snapshot().active)window.TrailCanyon.pause?.();
-      else if(state.screen==="playing"&&!state.modalOpen)pause();
-      syncGraphicsPanel();
-    }
+    if(!graphicsPanel.hidden){closeSettings();return;}
+    graphicsPanel.hidden=false;$("graphicsButton").setAttribute("aria-expanded","true");
+    state.keys.clear();state.touch.clear();
+    const coastState=window.TrailCoast?.snapshot?.(),canyonState=window.TrailCanyon?.snapshot?.();
+    if(coastState?.active){if(!coastState.modal)window.TrailCoast.pause?.();}
+    else if(canyonState?.active){if(!canyonState.modal)window.TrailCanyon.pause?.();}
+    else if(exploring()&&!state.modalOpen)pause();
+    syncGraphicsPanel();syncPlayStyle();$("difficultySelect").focus({preventScroll:true});
   });
-  $("graphicsClose").addEventListener("click",()=>{graphicsPanel.hidden=true;});
+  $("graphicsClose").addEventListener("click",closeSettings);
   qualityPreset.addEventListener("change",()=>{
     graphicsPreset=qualityPreset.value;
     Object.assign(graphics,graphicsPresets[graphicsPreset]);
@@ -1346,19 +1357,40 @@
     graphicsPreset="medium";graphics.effects=event.target.checked;saveGraphics();
   });
   syncGraphicsPanel();
+  const difficultyDescriptions={
+    easy:"Relaxed energy use, gentler mistake penalties, early hints and 4 L village deliveries.",
+    normal:"Standard energy use and mistake penalties, optional hints and 4 L village deliveries.",
+    hard:"Faster energy use, stronger mistake penalties, a tighter Canyon pressure target and 6 L village deliveries."
+  };
+  const modeIds=["explorer","normal","challenge"];
   function syncPlayStyle(){
     const profile=playStyle();
-    for(const id of ["explorer","challenge"]){
+    const difficulty=profile.difficulty||({explorer:"easy",normal:"normal",challenge:"hard"})[profile.id]||"normal";
+    for(const id of modeIds){
       $(id+"Mode").setAttribute("aria-checked",String(profile.id===id));
+      $(id+"Mode").setAttribute("tabindex",profile.id===id?"0":"-1");
       $(id+"Mode").classList.toggle("is-selected",profile.id===id);
     }
-    $("playModeLabel").textContent=profile.id==="challenge"?"Challenge · Conserve energy and seek the optional bonuses.":"Explorer · Relaxed energy use and extra puzzle guidance.";
+    $("difficultySelect").value=difficulty;
+    $("difficultyDescription").textContent=difficultyDescriptions[difficulty];
+    $("playModeLabel").textContent=profile.label+" · "+difficultyDescriptions[difficulty];
+    updateUI();
+    if(state.modalOpen){
+      if(state.modalKind==="quiz")$("modalTip").textContent=quizTip();
+      if(state.modalKind==="pipe"){$("modalTip").textContent=pipeTip();if(profile.hints)showPipeHint();}
+      if(state.modalKind==="marsh")$("modalTip").textContent="Select the items you would safely remove. Disturbing wildlife and plants costs "+mistakeLabel(3)+" energy.";
+    }
   }
-  for(const id of ["explorer","challenge"]){
+  $("difficultySelect").addEventListener("change",event=>{
+    window.TrailMode?.setDifficulty?.(event.target.value);syncPlayStyle();
+  });
+  for(const id of modeIds){
     $(id+"Mode").addEventListener("click",()=>{window.TrailMode?.set(id);syncPlayStyle();});
     $(id+"Mode").addEventListener("keydown",event=>{
-      if(!["ArrowLeft","ArrowRight","ArrowUp","ArrowDown"].includes(event.key))return;
-      event.preventDefault();const next=id==="explorer"?"challenge":"explorer";
+      if(!["ArrowLeft","ArrowRight","ArrowUp","ArrowDown","Home","End"].includes(event.key))return;
+      event.preventDefault();
+      const direction=["ArrowRight","ArrowDown"].includes(event.key)?1:-1;
+      const next=event.key==="Home"?modeIds[0]:event.key==="End"?modeIds.at(-1):modeIds[(modeIds.indexOf(id)+direction+modeIds.length)%modeIds.length];
       window.TrailMode?.set(next);syncPlayStyle();$(next+"Mode").focus();
     });
   }
@@ -1373,8 +1405,8 @@
   window.ThirstTrail={snapshot:()=>({screen:state.screen,energy:state.energy,score:state.score,quests:[...state.done],items:[...state.inventory],x:Math.round(state.x),y:Math.round(state.y),nearby:state.nearby,elapsed:state.elapsed,
     pumpSafetyPassed:state.pumpSafetyPassed,waterRestored:state.done.has("pump")&&state.ended,
     watchingVillage:state.screen==="ended"&&state.done.has("pump")&&!state.modalOpen,renderer:world3d?"3d":"2d",
-    mode:playStyle().id,community:window.TrailVillageLife?.snapshot?.()||null,
-    graphics:world3d?.getGraphicsStatus?.()||null}),version:"3.1"};
+    mode:playStyle().id,difficulty:playStyle().difficulty,community:window.TrailVillageLife?.snapshot?.()||null,
+    graphics:world3d?.getGraphicsStatus?.()||null}),version:"3.2"};
 
   // Self-contained renderer avoids authenticated preview requests for world3d.js.
   /* Thirst Trail - real-time, stylized Three.js world.

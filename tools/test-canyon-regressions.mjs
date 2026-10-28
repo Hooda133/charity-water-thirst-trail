@@ -262,3 +262,51 @@ new Function("THREE","rock","put",code)({CylinderGeometry},[0,1,2,3],(geometry,m
 assert.equal(mesas.length,44);
 assert.ok(mesas.every(m=>Math.abs(m.x)-m.radius>=22.8-1e-9),"Every skyline mesa stays outside the accessible map");
 console.log("✓ Seeded skyline geometry keeps all 44 solid mesa bases clear of missions and playable floor");
+
+// The real shared settings module changes costs and guidance without resetting a puzzle.
+runInNewContext(readFileSync(resolve(root,"expedition-mode.js"),"utf8"),sandbox);
+const difficulty=window.TrailMode;
+for(const [id,cost] of [["explorer",.7],["normal",4],["challenge",7.2]]){
+  difficulty.set(id);begin();go("valves");
+  const energy=state().energy;options()[0].click();
+  assert.ok(Math.abs(energy-state().energy-cost)<1e-9,"Valve penalty follows "+id+" difficulty");
+  options()[0].click();assert.ok(Math.abs(energy-state().energy-cost)<1e-9,"Difficulty keeps repeated wrong inputs free");
+  for(let a=0;a<=3;a++)for(let b=0;b<=3;b++)for(let c=0;c<=3;c++){
+    state().valves=[a,b,c];const pressure=16*a+13*b+11*c;
+    const [minimum,maximum]=id==="challenge"?[67,71]:[65,73];
+    assert.equal(test.pressureSafe(),pressure>=minimum&&pressure<=maximum&&b>=1&&Math.abs(a-c)<=1,
+      "Difficulty pressure condition mismatch "+id+":"+[a,b,c]);
+  }
+  options()[1].click();state().done.add("valves");state().done.add("span");go("cistern");
+  const beforeQuiz=state().energy;options()[1].click();
+  const quizCost=5*difficulty.profile().energyMultiplier*difficulty.profile().mistakeMultiplier;
+  assert.ok(Math.abs(beforeQuiz-state().energy-quizCost)<1e-9,"Safety mistake follows "+id+" difficulty");
+}
+difficulty.set("normal");begin();state().valves=[1,3,1];go("valves");
+const pressureCopy=[...state().valves],modalVersion=state().modalVersion;
+assert.equal(test.pressureSafe(),true,"66 kPa is inside the Normal range");
+difficulty.set("challenge");
+assert.equal(test.pressureSafe(),false,"Hard requires the tighter operating range");
+assert.deepEqual([...state().valves],pressureCopy,"Changing difficulty preserves partial valve settings");
+assert.equal(state().modalVersion,modalVersion,"Difficulty does not replace the active puzzle session");
+assert.match(descendants(panel()).map(n=>n.textContent).join(" "),/67–71 kPa/);
+difficulty.set("explorer");
+assert.match(descendants(panel()).map(n=>n.textContent).join(" "),/65–73 kPa/);
+assert.match(descendants(panel()).map(n=>n.textContent).join(" "),/Nia’s field note/);
+options()[0].click();assert.ok(state().done.has("valves"));
+difficulty.set("challenge");game.suspend();game.launch();
+assert.ok(state().done.has("valves"),"Hard cannot revoke an earned calibration");
+assert.deepEqual([...state().valves],[1,3,1],"A completed legacy calibration retains its actual settings");
+
+game.suspend();progress.save("canyon",{done:["span"],cisternSafetyPassed:true,releaseBasins:[2,1],energy:80});
+difficulty.set("normal");game.launch();go("cistern");
+const measuringHint=descendants(panel()).find(n=>n.className==="canyon-release-hint");
+assert.equal(measuringHint.hidden,true);
+difficulty.set("explorer");assert.equal(measuringHint.hidden,false,"Easy shows the measuring guide immediately");
+assert.deepEqual([...state().releaseBasins],[2,1],"Live guidance changes preserve measured water");
+assert.equal(state().releaseHint,false,"Automatic Easy guidance does not overwrite a manual hint preference");
+difficulty.set("challenge");assert.equal(measuringHint.hidden,true);
+options()[1].click();assert.equal(measuringHint.hidden,false,"The explicit measuring hint remains available on Hard");
+releaseAction("fill-large");assert.deepEqual([...state().releaseBasins],[5,1],"Existing controls keep working after a settings change");
+assert.equal(game.snapshot().difficulty,"hard");
+console.log("✓ Shared difficulty changes penalties, pressure targets and live guidance while retaining earned and partial work");

@@ -121,6 +121,10 @@ jobs:
         run: python tools/test-expansion-browser.py --browser "$(command -v google-chrome)"
       - name: Verify expansion mobile layout and touch controls
         run: python tools/test-expansion-browser.py --mobile --browser "$(command -v google-chrome)"
+      - name: Verify difficulty Settings, saved work and chapter puzzle changes
+        run: python tools/test-difficulty-browser.py --browser "$(command -v google-chrome)"
+      - name: Verify mobile difficulty Settings and keyboard controls
+        run: python tools/test-difficulty-browser.py --mobile --browser "$(command -v google-chrome)"
       - name: Compile cinematic shaders and verify actual WebGL output
         run: python tools/test-graphics-browser.py --smoke --label ci-smoke --browser "$(command -v google-chrome)"
       - name: Preserve browser screenshots
@@ -132,4 +136,5 @@ jobs:
             work/browser-qa/
             work/expansion-qa/
             work/graphics-qa/ci-smoke/
+            work/difficulty-qa/
           if-no-files-found: ignore
