@@ -81,7 +81,7 @@ def local_three(context):
 def isolate_valley(context, site):
     source = (site / "script.js").read_text()
     begin = source.index("  createWorld(canvas, {")
-    end = source.index("  let audioContext = null;", begin)
+    end = source.index("  // Action cues are shared with Canyon", begin)
     isolated = source[:begin] + "  worldLoading=false;setRenderLoading(false);\n" + source[end:]
     context.route("**/script.js", lambda route: route.fulfill(body=isolated,
                                                             content_type="application/javascript"))

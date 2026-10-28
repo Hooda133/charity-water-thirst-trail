@@ -9,7 +9,7 @@ const read=name=>readFileSync(resolve(root,name),'utf8');
 const difficultySource=read('difficulty.js');
 let valleySource=read('script.js');
 const graphicsStart=valleySource.indexOf('  createWorld(canvas, {');
-const graphicsEnd=valleySource.indexOf('  let audioContext = null;',graphicsStart);
+const graphicsEnd=valleySource.indexOf('  // Action cues are shared with Canyon',graphicsStart);
 assert.ok(graphicsStart>=0&&graphicsEnd>graphicsStart);
 valleySource=valleySource.slice(0,graphicsStart)+valleySource.slice(graphicsEnd);
 valleySource=valleySource.replace('window.ThirstTrail={',

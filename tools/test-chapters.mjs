@@ -65,7 +65,8 @@ const document={
  createElement:node,querySelectorAll(){return [];},addEventListener(){}
 };
 const window={
- ThirstAudio:{tone(frequency,duration){audioEvents.push({frequency,duration});}},
+ ThirstAudio:{tone(frequency,duration){audioEvents.push({frequency,duration});},
+   play(name){audioEvents.push({name});}},
  addEventListener(name,fn){(events[name]??=[]).push(fn);},
  dispatchEvent(event){for(const fn of events[event.type]||[])fn(event);},
  scrollTo(){}
@@ -130,9 +131,11 @@ assert.equal(test.surface(170,425),0,"Trail foot placement stays at ground level
 assert.ok(test.surface(415,350)>0&&test.surface(415,350)<.29,"Bridge entry rises along its access ramp");
 go("surveyor");select()[0].listeners.click();
 assert.ok(canyon.snapshot().done.includes("surveyor"));
-assert.ok(audioEvents.some(e=>e.frequency===550)&&audioEvents.some(e=>e.frequency===750),"Interactions reuse Chapter 1 feedback tones");
+assert.ok(audioEvents.some(e=>e.name==="interact")&&audioEvents.some(e=>e.name==="reward"),
+  "Canyon interactions use shared named audio cues");
 go("kit");select()[0].listeners.click();
 assert.ok(canyon.snapshot().done.includes("kit"));
+assert.ok(audioEvents.some(e=>e.name==="collect"),"Collecting the kit plays the collection cue");
 go("valves");assert.equal(test.safe(),false);
 const energyBefore=test.get().energy;
 select()[0].listeners.click();
