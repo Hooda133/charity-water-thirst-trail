@@ -59,4 +59,21 @@ for(const item of chapters.flatMap(api.placements)){
 assert.ok(!scenic.includes("localStorage.setItem"),"art system must not alter saves");
 assert.ok(!scenic.includes("blocked("),"art must not alter collision rules");
 assert.equal(api.status().length,0,"no scene mount should leak during module initialization");
+const assetManifest=resolve(root,"assets/upgraded_graphics/manifest.json");
+// The vendoring GitHub job places real GLB files on this branch. Require every
+// referenced scene model to be present and covered by a CC0 source record.
+const {existsSync,statSync}=await import("node:fs");
+if(existsSync(assetManifest)){
+  const rows=JSON.parse(read("assets/upgraded_graphics/manifest.json")).assets;
+  assert.ok(Object.keys(rows).length>=40,"real CC0 vendor job should import 40+ files");
+  for(const placement of chapters.flatMap(api.placements)){
+    const meta=rows[placement.asset];
+    assert.ok(meta,"missing license manifest record for "+placement.asset);
+    assert.equal(meta.license,"CC0-1.0","model must have CC0 rights");
+    const file=resolve(root,"assets/upgraded_graphics",placement.asset);
+    assert.ok(existsSync(file),"referenced GLB missing: "+placement.asset);
+    assert.equal(statSync(file).size,meta.bytes,"asset metadata size mismatch");
+    assert.equal(readFileSync(file).subarray(0,4).toString("ascii"),"glTF");
+  }
+}
 console.log("PASS: "+total+" licensed model placements across all 4 worlds; lazy GLB loading, quality and cleanup wired");
