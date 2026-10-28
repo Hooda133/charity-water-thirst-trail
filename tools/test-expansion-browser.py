@@ -104,6 +104,8 @@ def check_village(page):
     life_action(page, "go-fountain")
     life_action(page, "fill")
     check(life_snapshot(page)["jug"] == 8, "Fountain did not fill the 8L jug")
+    check(page.evaluate("document.activeElement?.dataset?.villageAction") == "tab-deliveries",
+          "Filling the jug should return keyboard focus to its active tab")
     for recipient in ["home", "school"]:
         print("Village delivery", recipient, life_snapshot(page), flush=True)
         life_action(page, "go-" + recipient)
@@ -118,6 +120,8 @@ def check_village(page):
     check(life_snapshot(page)["roundComplete"], "All three recipients should finish a delivery round")
     page.screenshot(path=str(ARTIFACTS / "fallback-community-deliveries.png"))
     life_action(page, "tab-leaks")
+    check(page.evaluate("document.activeElement?.dataset?.villageAction") == "tab-leaks",
+          "Village repair tab must keep keyboard focus after UI rebuild")
     for leak, tool in [("school-joint", "gasket"), ("home-pipe", "clamp"), ("garden-coupling", "torque")]:
         print("Village repair", leak, life_snapshot(page), flush=True)
         life_action(page, "go-" + leak)
@@ -129,6 +133,8 @@ def check_village(page):
         check(leak in life_snapshot(page)["fixed"], "The three hands-on repair actions did not fix the leak")
     check(life_snapshot(page)["materials"] >= 11, "Delivery/repair rewards should fund all three projects")
     life_action(page, "tab-projects")
+    check(page.evaluate("document.activeElement?.dataset?.villageAction") == "tab-projects",
+          "Village building tab must keep keyboard focus after UI rebuild")
     for upgrade in ["station", "irrigation", "shade"]:
         before = life_snapshot(page)["materials"]
         life_action(page, "build-" + upgrade)
