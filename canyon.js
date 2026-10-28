@@ -31,6 +31,7 @@
   // Reuse Chapter 1's optional, muted-by-default-setting audio path. Canyon has
   // only short action cues and a finite victory chime, with no ambient loop.
   const sound=(frequency=620,duration=.09)=>window.ThirstAudio?.tone(frequency,duration);
+  const cue=name=>window.ThirstAudio?.play?.(name);
   const pointDistance=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y);
   const mode=()=>window.TrailMode?.profile?.()||{id:"normal",label:"Normal",difficulty:"normal",energyMultiplier:1,mistakeMultiplier:1,hints:false,pressureMin:65,pressureMax:73};
   // Keep the Canyon's nonlethal recovery floor without ever granting energy
@@ -185,7 +186,7 @@
     if(index<0||questOrder.slice(0,index).some(previous=>!state.done.has(previous)))return;
     if(key==="cistern"&&(!state.cisternSafetyPassed||state.releaseBasins[0]!==4))return;
     state.done.add(key);state.score+=points;
-    if(key!=="cistern")sound(750,.13);
+    if(key!=="cistern")cue(key==="kit"?"collect":"reward");
     save();refreshUI();
     toast("✓ "+goals[key].title+" complete! +"+points+" impact");
   }
@@ -212,7 +213,7 @@
     $("canyonModal").classList.toggle("is-victory",state.finished);
     $("canyonModal").scrollTop=0;
     $("canyonModal").focus({preventScroll:true});
-    sound(550,.07);
+    if(!state.finished)cue("interact");
   }
   function closeModal(){
     state.modal=false;refreshDifficulty=null;$("canyonModalBackdrop").hidden=true;
@@ -310,7 +311,7 @@
         if(!state.failedValveTests.has(setting)){
           state.failedValveTests.add(setting);mistakeCost(4);
         }
-        sound(180,.10);
+        cue("mistake");
         toast("Unsafe configuration. Check the conditions shown below the pressure meter.");
         valveChallenge();save();
       }},{text:"↩ Continue exploring",action:()=>{save();closeModal();}}],
@@ -328,11 +329,11 @@
         const label=document.createElement("small");label.textContent=repairOrder[i];btn.append(label);
         btn.addEventListener("click",()=>{
           if(i===state.repairStep){
-            state.repairStep++;sound(620,.06);
+            state.repairStep++;cue("repair");
             if(state.repairStep===4){closeModal();completeQuest("span",310);return;}
             save();draw(root);
           }else{
-            sound(180,.08);
+            cue("mistake");
             const warning="Next: "+repairOrder[state.repairStep]+". Supports first, then braces, pipe, and seal. Completed work stays in place.";
             $("canyonModalText").textContent=warning;
             toast(warning);
@@ -357,7 +358,7 @@
       }},{text:"If the water looks clear, it must be safe",action:()=>{
         if(!state.cisternMistake)mistakeCost(5);
         state.cisternMistake=true;
-        sound(180,.10);
+        cue("mistake");
         toast("Appearance does not prove drinking-water safety. Test and treat the water before use.");
         cisternChallenge();save();
       }},{text:"Return to the canyon",action:closeModal}]);
@@ -372,7 +373,7 @@
       [{text:"💧 Open the release gate",primary:true,action:()=>{
         if(state.releaseBasins[0]!==4){
           render("The gate is still locked. You need exactly 4 L in the larger chamber. Try filling and pouring, or ask Nia for a hint.");
-          sound(230,.07);return;
+          cue("warning");return;
         }
         closeModal();completeQuest("cistern",430);finish();
       }},{text:"Nia’s hint",action:()=>{
@@ -461,11 +462,7 @@
     state.celebrationStart=performance.now();
     world?.recenterCamera?.();
     $("canyonToast").hidden=true;
-    sound(990,.18);
-    const owner=state;
-    for(const [delay,note] of [[150,1245],[320,1480]])window.setTimeout?.(()=>{
-      if(state===owner&&state.finished&&!$("canyonScreen").hidden)sound(note,.2);
-    },delay);
+    cue("victory");
     progress?.complete("canyon");refreshUI();
     showCelebration();
   }
