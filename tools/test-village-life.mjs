@@ -14,9 +14,17 @@ function boot(values=new Map(),{denyRead=false,denyWrite=false}={}){
     const attributes=new Map();return {tag,hidden:false,children:[],dataset:{},style:{},listeners:{},textContent:'',
       classList:{toggle(){}},setAttribute(k,v){attributes.set(k,String(v));},getAttribute:k=>attributes.get(k),
       addEventListener(type,fn){this.listeners[type]=fn;},append(...children){this.children.push(...children);},
-      replaceChildren(...children){this.children=[...children];},click(){if(!this.disabled)this.listeners.click?.();}};
+      replaceChildren(...children){this.children=[...children];},
+      focus(){document.activeElement=this;},
+      contains(target){return target===this||this.children.some(child=>child.contains?.(target));},
+      querySelectorAll(selector){
+        if(selector!=="[data-village-action]")return [];
+        const visit=current=>[...(current.dataset.villageAction?[current]:[]),...current.children.flatMap(visit)];
+        return visit(this);
+      },
+      click(){if(!this.disabled)this.listeners.click?.();}};
   }
-  const document={getElementById(id){if(!registry.has(id))registry.set(id,node());return registry.get(id);},createElement:node};
+  const document={activeElement:null,getElementById(id){if(!registry.has(id))registry.set(id,node());return registry.get(id);},createElement:node};
   const window={addEventListener(type,fn){(events.get(type)||events.set(type,[]).get(type)).push(fn);},
     dispatchEvent(event){for(const fn of events.get(event.type)||[])fn(event);},
     ThirstAudio:{tone:(...args)=>sounds.push(args)},matchMedia:()=>({matches:false})};
@@ -33,7 +41,7 @@ function boot(values=new Map(),{denyRead=false,denyWrite=false}={}){
   const click=id=>button(id).click();
   const go=id=>{const point=api.getDestinations().find(p=>p.id===id);assert.ok(point);Object.assign(player,point);api.update(.05);return point;};
   const text=()=>descendants(panel).map(el=>el.textContent).join(' ');
-  return {api,progress,mode:window.TrailMode,values,player,notices,walks,sounds,panel,button,click,go,text};
+  return {api,progress,mode:window.TrailMode,values,player,notices,walks,sounds,panel,button,click,go,text,document};
 }
 let game=boot();
 assert.equal(game.api.open(),false,'Village activities require a completed pump chapter');
@@ -43,7 +51,15 @@ game.click('go-home');assert.equal(game.walks.length,1);assert.equal(game.api.sn
 const obsoleteFill=game.button('fill');
 game.go('school');obsoleteFill.click();assert.equal(game.api.snapshot().jug,0,'Detached controls and wrong locations cannot fill a jug');
 assert.equal(game.button('fill').disabled,true);
-game.go('fountain');game.click('fill');assert.equal(game.api.snapshot().jug,8);
+game.go('fountain');game.button('fill').focus();game.click('fill');assert.equal(game.api.snapshot().jug,8);
+assert.equal(game.document.activeElement.dataset.villageAction,'tab-deliveries',
+  'Finishing a focused fill action returns keyboard focus to the current tab instead of body');
+game.button('tab-leaks').focus();game.click('tab-leaks');
+assert.equal(game.document.activeElement.dataset.villageAction,'tab-leaks',
+  'Switching tabs preserves focus on the newly rendered tab control');
+game.click('tab-deliveries');
+assert.equal(game.document.activeElement.dataset.villageAction,'tab-deliveries',
+  'Changing back to deliveries keeps focus on its tab');
 const all=game.api.getDestinations();assert.equal(all.length,7,'Fountain, three neighbours and three wet trails are available');
 for(const id of ['home','school']){
   game.go(id);game.click('deliver-'+id);
@@ -60,7 +76,9 @@ assert.equal(game.api.snapshot().jug,4);assert.equal(game.api.snapshot().served.
 const old=game.api.snapshot();old.served.length=0;old.delivered.home=999;
 assert.equal(game.api.snapshot().served.length,3);assert.equal(game.api.snapshot().delivered.home,1,'Read-only snapshots do not expose mutable activity state');
 game.click('next-round');assert.equal(game.api.snapshot().round,2);assert.equal(game.api.snapshot().served.length,0);
-game.go('home');game.click('deliver-home');assert.equal(game.api.snapshot().materials,6,'Further rounds do not farm first-delivery materials');
+game.go('home');game.button('deliver-home').focus();game.click('deliver-home');assert.equal(game.api.snapshot().materials,6,'Further rounds do not farm first-delivery materials');
+assert.equal(game.document.activeElement.dataset.villageAction,'tab-deliveries',
+  'Completed delivery must not lose keyboard focus');
 assert.equal(game.api.snapshot().jug,0);
 // Three distinct faults use the correct tool and real, ordered repair controls.
 game.click('tab-leaks');
