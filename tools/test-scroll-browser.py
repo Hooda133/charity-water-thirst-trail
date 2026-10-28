@@ -15,6 +15,20 @@ spec = importlib.util.spec_from_file_location(
 qa = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(qa)
 
+# Seed unfinished checkpoints so the chapter remains in active exploration.
+# The existing screenshot fixture deliberately seeds a completed Canyon; a
+# completed world does not accept camera input, which is correct behavior.
+TEST_SEED = qa.seed("low") + """
+;(() => {
+  const key="thirstTrailProgressV2";
+  const saved=JSON.parse(localStorage.getItem(key));
+  saved.saves.canyon={x:170,y:425,energy:100,score:0,done:[],
+    valves:[0,0,0],repairStep:0,cisternSafetyPassed:false,releaseBasins:[0,0]};
+  saved.saves.coast={x:300,y:440,energy:100,score:0,done:[]};
+  localStorage.setItem(key,JSON.stringify(saved));
+})();
+"""
+
 CONFIGS = [
     ("valley", "#villageChapter", ".world-frame #world3dCanvas",
      "#gameScreen", ".canvas-column", ".sidebar"),
@@ -58,7 +72,7 @@ def verify_desktop(browser, url):
     for chapter, button, canvas, screen, world, sidebar in CONFIGS:
         context = browser.new_context(viewport={"width":1280,"height":920},
                                       reduced_motion="reduce")
-        context.add_init_script(qa.seed("low"))
+        context.add_init_script(TEST_SEED)
         page=context.new_page()
         errors=[]
         page.on("pageerror",lambda exc:errors.append(str(exc)))
@@ -108,7 +122,7 @@ def verify_desktop(browser, url):
 def verify_mobile(browser,url):
     context=browser.new_context(viewport={"width":390,"height":844},
                                 is_mobile=True,has_touch=True,reduced_motion="reduce")
-    context.add_init_script(qa.seed("low"))
+    context.add_init_script(TEST_SEED)
     page=context.new_page()
     try:
         page.goto(url,wait_until="domcontentloaded",timeout=60000)
