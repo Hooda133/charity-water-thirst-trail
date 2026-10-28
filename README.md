@@ -2,6 +2,12 @@
 
 **Thirst Trail** is a browser-based 3D adventure game inspired by charity: water. Restore Greenwater Valley, repair the Forgotten Canyon aqueduct, then rebuild Stormbreak Coast. Return to the restored village to deliver water, repair leaks and choose community improvements. All three chapters and Village Life have 3D environments with a playable 2D fallback.
 
+## Visual refinement in progress — pull request #20
+
+This branch continues the unfinished 3D graphics pass without changing mission routes, puzzles, checkpoints, progression, or stored saves. The Valley, Canyon, and Coast now connect to shared screen-space mission nameplates that display above scenery; earlier sprite labels remain available as a fallback. The Canyon also passes live graphics quality and effects settings into its scenery. Stormbreak Coast has quality-scaled instanced shoreline pebbles and grass, while Village Life's drinking-water station, shade shelter, and irrigation projects have more detailed 3D models. Run `node tools/test-world-labels.mjs` for label projection, state, responsive-layout, and cleanup checks.
+
+These changes are under review; the branch needs automated checks and visual gameplay verification before merge into `main`.
+
 The game uses locally hosted **Nunito Sans** to evoke charity: water's Proxima Nova/Avenir typography. One shared family spans headings, body copy, controls, chapter menus, footer links, map labels, and 3D nameplates, with weight and spacing providing hierarchy. The variable font loads without a font service, keeps text visible while loading, and includes a readable fallback stack. Source, build details, and the open font license are in [assets/fonts/README.md](assets/fonts/README.md).
 
 ## Thirst Trail 3.3 — Clickable supplies and visible DOM reactions
