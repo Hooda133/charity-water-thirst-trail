@@ -1,0 +1,90 @@
+name: Import curated CC0 graphics
+
+on:
+  workflow_dispatch:
+    inputs:
+      poly_pizza:
+        description: Include Poly Pizza API models (requires POLY_PIZZA_API_KEY secret)
+        type: boolean
+        default: false
+  schedule:
+    - cron: '17 10 * * 1' # Weekly Monday, 10:17 UTC
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: curated-cc0-import
+  cancel-in-progress: false
+
+jobs:
+  import-assets:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: true
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Prepare persistent review branch without rewriting history
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin main
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          if git ls-remote --exit-code --heads origin automation/cc0-graphics >/dev/null; then
+            git fetch origin automation/cc0-graphics
+            git switch -c automation/cc0-graphics --track origin/automation/cc0-graphics
+            git merge --no-edit origin/main
+          else
+            git switch -c automation/cc0-graphics origin/main
+          fi
+      - name: Test downloader licensing and archive safety offline
+        run: python tools/test_import_cc0_assets.py
+      - name: Fetch official CC0 asset packages
+        env:
+          POLY_PIZZA_API_KEY: ${{ secrets.POLY_PIZZA_API_KEY }}
+          USE_POLY_PIZZA: ${{ inputs.poly_pizza || 'false' }}
+        run: |
+          set -euo pipefail
+          if [[ "$USE_POLY_PIZZA" == 'true' ]]; then
+            python tools/import_cc0_assets.py --include-poly-pizza
+          else
+            python tools/import_cc0_assets.py
+          fi
+      - name: Commit and push the assets on review branch
+        id: commit
+        shell: bash
+        run: |
+          set -euo pipefail
+          git add -- assets/upgraded_graphics
+          if ! git diff --cached --quiet; then
+            git commit -m "Auto-integrated upgraded graphics"
+          else
+            echo 'No asset changes; nothing to commit.'
+          fi
+          git push origin HEAD:refs/heads/automation/cc0-graphics
+      - name: Create draft pull request if one does not exist
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ "$(git rev-list --count origin/main..HEAD)" == '0' ]]; then
+            echo 'No outstanding asset changes to review.'
+            exit 0
+          fi
+          if gh pr view automation/cc0-graphics --json url >/dev/null 2>&1; then
+            gh pr view automation/cc0-graphics --json url --jq .url
+          else
+            gh pr create --draft \
+              --base main --head automation/cc0-graphics \
+              --title 'Import curated CC0 graphics for Thirst Trail' \
+              --body 'Automated imports from verified CC0 sources. License and checksum provenance is in assets/upgraded_graphics/manifest.json. Files are not wired into gameplay yet; please review size, visual fit, and licenses before merging.' \
+            || echo 'Branch was pushed, but PR creation requires Actions permission in repository settings.'
+          fi
