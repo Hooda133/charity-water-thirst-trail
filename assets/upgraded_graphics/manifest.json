@@ -1,0 +1,415 @@
+{
+  "schema_version": 1,
+  "assets": {
+    "ambientcg/Ground111/Ground111.png": {
+      "source": "https://ambientcg.com/a/Ground111",
+      "provider": "ambientcg",
+      "license": "CC0-1.0",
+      "creator": "",
+      "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "download_url": "",
+      "sha256": "08152b95f2346c9f05079c18241be47a76d09f64b98baf3cab61bbba52f1e265",
+      "bytes": 472461
+    },
+    "ambientcg/Ground111/Ground111_1K-JPG_AmbientOcclusion.jpg": {
+      "source": "https://ambientcg.com/a/Ground111",
+      "provider": "ambientcg",
+      "license": "CC0-1.0",
+      "creator": "",
+      "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "download_url": "",
+      "sha256": "cacdd8fb09c591c19d8bf75f1ca95f704809724a8e59f4a339dba86ce387e777",
+      "bytes": 738567
+    },
+    "ambientcg/Ground111/Ground111_1K-JPG_Color.jpg": {
+      "source": "https://ambientcg.com/a/Ground111",
+      "provider": "ambientcg",
+      "license": "CC0-1.0",
+      "creator": "",
+      "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "download_url": "",
+      "sha256": "faef55429157457dd168266204c5901d4b4fc366c217646dd59c25dd68470447",
+      "bytes": 1872901
+    },
+    "ambientcg/Ground111/Ground111_1K-JPG_Displacement.jpg": {
+      "source": "https://ambientcg.com/a/Ground111",
+      "provider": "ambientcg",
+      "license": "CC0-1.0",
+      "creator": "",
+      "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "download_url": "",
+      "sha256": "e0bb172aaba2b1a4d4bab1cf35d4cf2e44f4ebf76005baa9dcedef9bbd0f4e4d",
+      "bytes": 489663
+    },
+    "ambientcg/Ground111/Ground111_1K-JPG_NormalDX.jpg": {
+      "source": "https://ambientcg.com/a/Ground111",
+      "provider": "ambientcg",
+      "license": "CC0-1.0",
+      "creator": "",
+      "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "download_url": "",
+      "sha256": "4a840ef84204e75307d271a5c99ddf84dac4165f8368b98d556c3e3018c7855f",
+      "bytes": 2026843
+    },
+    "ambientcg/Ground111/Ground111_1K-JPG_NormalGL.jpg": {
+      "source": "https://ambientcg.com/a/Ground111",
+      "provider": "ambientcg",
+      "license": "CC0-1.0",
+      "creator": "",
+      "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "download_url": "",
+      "sha256": "778141b731c66372aab548c3f3b0f7a525ac780340f78f166f7aff4ed3445350",
+      "bytes": 2027069
+    },
+    "ambientcg/Ground111/Ground111_1K-JPG_Roughness.jpg": {
+      "source": "https://ambientcg.com/a/Ground111",
+      "provider": "ambientcg",
+      "license": "CC0-1.0",
+      "creator": "",
+      "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "download_url": "",
+      "sha256": "c1d95847a0eb8c761a2848e1c5089dac8569d21c8d2a886140316085c3b7f0d7",
+      "bytes": 800542
+    },
+    "ambientcg/Wood096/Wood096.png": {
+      "source": "https://ambientcg.com/a/Wood096",
+      "provider": "ambientcg",
+      "license": "CC0-1.0",
+      "creator": "",
+      "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "download_url": "",
+      "sha256": "67bf7b142ba191f5caa9279d6d8f2ce600a7280d6199b5f0f1384c8197af2a14",
+      "bytes": 227580
+    },
+    "ambientcg/Wood096/Wood096_1K-JPG_Color.jpg": {
+      "source": "https://ambientcg.com/a/Wood096",
+      "provider": "ambientcg",
+      "license": "CC0-1.0",
+      "creator": "",
+      "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "download_url": "",
+      "sha256": "fa6b603dda286865a82a93a483c341a975a7d3062dd0f291b57800f7ac4d1b66",
+      "bytes": 914353
+    },
+    "ambientcg/Wood096/Wood096_1K-JPG_Displacement.jpg": {
+      "source": "https://ambientcg.com/a/Wood096",
+      "provider": "ambientcg",
+      "license": "CC0-1.0",
+      "creator": "",
+      "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "download_url": "",
+      "sha256": "5b0256ba67ae24f7023a46ff1ed0cab331b6378cf017227ae90de4f7cdf0b20c",
+      "bytes": 537330
+    },
+    "ambientcg/Wood096/Wood096_1K-JPG_NormalDX.jpg": {
+      "source": "https://ambientcg.com/a/Wood096",
+      "provider": "ambientcg",
+      "license": "CC0-1.0",
+      "creator": "",
+      "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "download_url": "",
+      "sha256": "01ba482e08b2eb0bdf5b546048f8ad84e1136cf278b1d8a99d052f1572f4ddc3",
+      "bytes": 863598
+    },
+    "ambientcg/Wood096/Wood096_1K-JPG_NormalGL.jpg": {
+      "source": "https://ambientcg.com/a/Wood096",
+      "provider": "ambientcg",
+      "license": "CC0-1.0",
+      "creator": "",
+      "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "download_url": "",
+      "sha256": "30e56cd5c8e7ec19545a0fe8b339f7311534071a3a9076d034d210ca8dad46f3",
+      "bytes": 864486
+    },
+    "ambientcg/Wood096/Wood096_1K-JPG_Roughness.jpg": {
+      "source": "https://ambientcg.com/a/Wood096",
+      "provider": "ambientcg",
+      "license": "CC0-1.0",
+      "creator": "",
+      "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "download_url": "",
+      "sha256": "faed70389894632f5a9a62c0942cd3f8e677d6e2a1bf36d91e7ae5952631fa6e",
+      "bytes": 629325
+    },
+    "kenney/city-kit-suburban/building-type-a.glb": {
+      "source": "https://kenney.nl/assets/city-kit-suburban",
+      "provider": "kenney",
+      "license": "CC0-1.0",
+      "creator": "Kenney",
+      "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "download_url": "https://raw.githubusercontent.com/Hidencod/tge-assets/e26d410c77163293bcf3c07614e024552a308c69/packs/city-kit-suburban/building-type-a.glb",
+      "sha256": "7432efbbd3cfbc5f517a470d0475b735d5ba917fbade70eebc393b63a2add65b",
+      "bytes": 110408
+    },
+    "kenney/city-kit-suburban/building-type-c.glb": {
+      "source": "https://kenney.nl/assets/city-kit-suburban",
+      "provider": "kenney",
+      "license": "CC0-1.0",
+      "creator": "Kenney",
+      "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "download_url": "https://raw.githubusercontent.com/Hidencod/tge-assets/e26d410c77163293bcf3c07614e024552a308c69/packs/city-kit-suburban/building-type-c.glb",
+      "sha256": "2265b104f11e624a62b357913e30177fa1560b97cf0bfde3939615e67e081054",
+      "bytes": 111408
+    },
+    "kenney/city-kit-suburban/planter.glb": {
+      "source": "https://kenney.nl/assets/city-kit-suburban",
+      "provider": "kenney",
+      "license": "CC0-1.0",
+      "creator": "Kenney",
+      "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "download_url": "https://raw.githubusercontent.com/Hidencod/tge-assets/e26d410c77163293bcf3c07614e024552a308c69/packs/city-kit-suburban/planter.glb",
+      "sha256": "d6f20beb82f391b23e0bde43cbe000ef2645ac13d708ec8c3ce6a535540febb2",
+      "bytes": 32180
+    },
+    "kenney/city-kit-suburban/tree-small.glb": {
+      "source": "https://kenney.nl/assets/city-kit-suburban",
+      "provider": "kenney",
+      "license": "CC0-1.0",
+      "creator": "Kenney",
+      "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "download_url": "https://raw.githubusercontent.com/Hidencod/tge-assets/e26d410c77163293bcf3c07614e024552a308c69/packs/city-kit-suburban/tree-small.glb",
+      "sha256": "1506de6af4f5a14feaae017166c0e782d5c04b8fa984a0e58d2ff8430b30f282",
+      "bytes": 17624
+    },
+    "kenney/mini-characters/character-female-a.glb": {
+      "source": "https://kenney.nl/assets/mini-characters",
+      "provider": "kenney",
+      "license": "CC0-1.0",
+      "creator": "Kenney",
+      "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "download_url": "https://raw.githubusercontent.com/Hidencod/tge-assets/e26d410c77163293bcf3c07614e024552a308c69/packs/mini-characters/character-female-a.glb",
+      "sha256": "7a7f1015ebbb22d515babf6ce36fc41f5b0ce91c4886d5d963764585f709faa6",
+      "bytes": 279936
+    },
+    "kenney/mini-characters/character-male-a.glb": {
+      "source": "https://kenney.nl/assets/mini-characters",
+      "provider": "kenney",
+      "license": "CC0-1.0",
+      "creator": "Kenney",
+      "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "download_url": "https://raw.githubusercontent.com/Hidencod/tge-assets/e26d410c77163293bcf3c07614e024552a308c69/packs/mini-characters/character-male-a.glb",
+      "sha256": "b9e4a5e2c7761f08c759ca9e013a2f57b986ac4e46961569f634d80084c3e5d7",
+      "bytes": 253400
+    },
+    "kenney/nature-kit/bridge-wood.glb": {
+      "source": "https://kenney.nl/assets/nature-kit",
+      "provider": "kenney",
+      "license": "CC0-1.0",
+      "creator": "Kenney",
+      "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "download_url": "https://raw.githubusercontent.com/Hidencod/tge-assets/e26d410c77163293bcf3c07614e024552a308c69/packs/nature-kit/bridge-wood.glb",
+      "sha256": "3da4c208b0f72b7f2ba42db521b62ec4b0278050c75256a6982c40d21aab5701",
+      "bytes": 15692
+    },
+    "kenney/nature-kit/cactus-short.glb": {
+      "source": "https://kenney.nl/assets/nature-kit",
+      "provider": "kenney",
+      "license": "CC0-1.0",
+      "creator": "Kenney",
+      "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "download_url": "https://raw.githubusercontent.com/Hidencod/tge-assets/e26d410c77163293bcf3c07614e024552a308c69/packs/nature-kit/cactus-short.glb",
+      "sha256": "81ac9fc4c66eacceaf4aebcb6df3468ea450a2f5081151bb11400282efbc51bd",
+      "bytes": 8844
+    },
+    "kenney/nature-kit/cactus-tall.glb": {
+      "source": "https://kenney.nl/assets/nature-kit",
+      "provider": "kenney",
+      "license": "CC0-1.0",
+      "creator": "Kenney",
+      "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "download_url": "https://raw.githubusercontent.com/Hidencod/tge-assets/e26d410c77163293bcf3c07614e024552a308c69/packs/nature-kit/cactus-tall.glb",
+      "sha256": "d43a1aca5952e1f8a104d64a0edfec09c39f15102ca6bdc531460dd5a2c53d25",
+      "bytes": 9668
+    },
+    "kenney/nature-kit/fence-gate.glb": {
+      "source": "https://kenney.nl/assets/nature-kit",
+      "provider": "kenney",
+      "license": "CC0-1.0",
+      "creator": "Kenney",
+      "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "download_url": "https://raw.githubusercontent.com/Hidencod/tge-assets/e26d410c77163293bcf3c07614e024552a308c69/packs/nature-kit/fence-gate.glb",
+      "sha256": "34d10d5620179b8a211a01eea837caa828c0782422f0b408e1a5838788888436",
+      "bytes": 27652
+    },
+    "kenney/nature-kit/fence-simple.glb": {
+      "source": "https://kenney.nl/assets/nature-kit",
+      "provider": "kenney",
+      "license": "CC0-1.0",
+      "creator": "Kenney",
+      "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "download_url": "https://raw.githubusercontent.com/Hidencod/tge-assets/e26d410c77163293bcf3c07614e024552a308c69/packs/nature-kit/fence-simple.glb",
+      "sha256": "ecaf6c29532aa9fd305a8ef71df769d60748bd797f2eb1c63bdefc4edb8062a7",
+      "bytes": 5712
+    },
+    "kenney/nature-kit/flower-purplea.glb": {
+      "source": "https://kenney.nl/assets/nature-kit",
+      "provider": "kenney",
+      "license": "CC0-1.0",
+      "creator": "Kenney",
+      "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "download_url": "https://raw.githubusercontent.com/Hidencod/tge-assets/e26d410c77163293bcf3c07614e024552a308c69/packs/nature-kit/flower-purplea.glb",
+      "sha256": "f6fc34c96a03420a74fe36d4c2d0ec88f15204fcad99cd1416c3c4ecb22e48c4",
+      "bytes": 7112
+    },
+    "kenney/nature-kit/flower-yellowa.glb": {
+      "source": "https://kenney.nl/assets/nature-kit",
+      "provider": "kenney",
+      "license": "CC0-1.0",
+      "creator": "Kenney",
+      "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "download_url": "https://raw.githubusercontent.com/Hidencod/tge-assets/e26d410c77163293bcf3c07614e024552a308c69/packs/nature-kit/flower-yellowa.glb",
+      "sha256": "8a3b08cd2ca411c21f9c581d5bda651d78b13c50cba45ad8fa0389398ead6d1d",
+      "bytes": 7120
+    },
+    "kenney/nature-kit/grass.glb": {
+      "source": "https://kenney.nl/assets/nature-kit",
+      "provider": "kenney",
+      "license": "CC0-1.0",
+      "creator": "Kenney",
+      "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "download_url": "https://raw.githubusercontent.com/Hidencod/tge-assets/e26d410c77163293bcf3c07614e024552a308c69/packs/nature-kit/grass.glb",
+      "sha256": "260e41d3e5f2472492ed7b475c5b92a30b13ce2bad408535b5ff50574d4575e7",
+      "bytes": 11496
+    },
+    "kenney/nature-kit/rock-largea.glb": {
+      "source": "https://kenney.nl/assets/nature-kit",
+      "provider": "kenney",
+      "license": "CC0-1.0",
+      "creator": "Kenney",
+      "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "download_url": "https://raw.githubusercontent.com/Hidencod/tge-assets/e26d410c77163293bcf3c07614e024552a308c69/packs/nature-kit/rock-largea.glb",
+      "sha256": "6dd15390fd96501dcd1454765a17ba61dbbd8d47705dfe5149c8dd92b353ce25",
+      "bytes": 7552
+    },
+    "kenney/nature-kit/rock-smalla.glb": {
+      "source": "https://kenney.nl/assets/nature-kit",
+      "provider": "kenney",
+      "license": "CC0-1.0",
+      "creator": "Kenney",
+      "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "download_url": "https://raw.githubusercontent.com/Hidencod/tge-assets/e26d410c77163293bcf3c07614e024552a308c69/packs/nature-kit/rock-smalla.glb",
+      "sha256": "df9fff9d711e61370e8df0caa2514c89b8f8a8dc6c6fafaf4eb2ec79c5ae07c1",
+      "bytes": 3044
+    },
+    "kenney/nature-kit/tree-default.glb": {
+      "source": "https://kenney.nl/assets/nature-kit",
+      "provider": "kenney",
+      "license": "CC0-1.0",
+      "creator": "Kenney",
+      "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "download_url": "https://raw.githubusercontent.com/Hidencod/tge-assets/e26d410c77163293bcf3c07614e024552a308c69/packs/nature-kit/tree-default.glb",
+      "sha256": "562d29638c902de3c7bee465d3a53bb77117efbc392ae04ed894faf6b5dc691d",
+      "bytes": 9428
+    },
+    "kenney/nature-kit/tree-oak.glb": {
+      "source": "https://kenney.nl/assets/nature-kit",
+      "provider": "kenney",
+      "license": "CC0-1.0",
+      "creator": "Kenney",
+      "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "download_url": "https://raw.githubusercontent.com/Hidencod/tge-assets/e26d410c77163293bcf3c07614e024552a308c69/packs/nature-kit/tree-oak.glb",
+      "sha256": "d7fd8773674928c50c11b66d12c636d49bdcc15a8b1c7fbb98e6f63a3439a3f3",
+      "bytes": 14644
+    },
+    "kenney/nature-kit/tree-palmdetailedshort.glb": {
+      "source": "https://kenney.nl/assets/nature-kit",
+      "provider": "kenney",
+      "license": "CC0-1.0",
+      "creator": "Kenney",
+      "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "download_url": "https://raw.githubusercontent.com/Hidencod/tge-assets/e26d410c77163293bcf3c07614e024552a308c69/packs/nature-kit/tree-palmdetailedshort.glb",
+      "sha256": "bc1013aaacca3bdd116ad1cded4f9499f008fe3056e760f3238be05aa21ff9f2",
+      "bytes": 28212
+    },
+    "kenney/nature-kit/tree-palmdetailedtall.glb": {
+      "source": "https://kenney.nl/assets/nature-kit",
+      "provider": "kenney",
+      "license": "CC0-1.0",
+      "creator": "Kenney",
+      "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "download_url": "https://raw.githubusercontent.com/Hidencod/tge-assets/e26d410c77163293bcf3c07614e024552a308c69/packs/nature-kit/tree-palmdetailedtall.glb",
+      "sha256": "2cbea0f9621cde884c63a7b4ad787bda1d051fa27ef3c66b9f2b65328dc53683",
+      "bytes": 28204
+    },
+    "kenney/pirate-kit/barrel.glb": {
+      "source": "https://kenney.nl/assets/pirate-kit",
+      "provider": "kenney",
+      "license": "CC0-1.0",
+      "creator": "Kenney",
+      "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "download_url": "https://raw.githubusercontent.com/Hidencod/tge-assets/e26d410c77163293bcf3c07614e024552a308c69/packs/pirate-kit/barrel.glb",
+      "sha256": "db5f8ddf8f292d590e1feee972289a9f7564f69c2a2727e9bfef0ffe4035140d",
+      "bytes": 24176
+    },
+    "kenney/pirate-kit/boat-row-small.glb": {
+      "source": "https://kenney.nl/assets/pirate-kit",
+      "provider": "kenney",
+      "license": "CC0-1.0",
+      "creator": "Kenney",
+      "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "download_url": "https://raw.githubusercontent.com/Hidencod/tge-assets/e26d410c77163293bcf3c07614e024552a308c69/packs/pirate-kit/boat-row-small.glb",
+      "sha256": "c7f1521885d7a4a54092349de394770af77d1bfeba7456de23dcf4126091eafd",
+      "bytes": 27672
+    },
+    "kenney/pirate-kit/palm-detailed-straight.glb": {
+      "source": "https://kenney.nl/assets/pirate-kit",
+      "provider": "kenney",
+      "license": "CC0-1.0",
+      "creator": "Kenney",
+      "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "download_url": "https://raw.githubusercontent.com/Hidencod/tge-assets/e26d410c77163293bcf3c07614e024552a308c69/packs/pirate-kit/palm-detailed-straight.glb",
+      "sha256": "a2aec044cdd7bbdee914e1c3761425e5d8bd109c1fa624041199403be6ec925a",
+      "bytes": 62008
+    },
+    "kenney/pirate-kit/structure-platform-dock-small.glb": {
+      "source": "https://kenney.nl/assets/pirate-kit",
+      "provider": "kenney",
+      "license": "CC0-1.0",
+      "creator": "Kenney",
+      "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "download_url": "https://raw.githubusercontent.com/Hidencod/tge-assets/e26d410c77163293bcf3c07614e024552a308c69/packs/pirate-kit/structure-platform-dock-small.glb",
+      "sha256": "650df3f500ac640d07396884cd86bdec3e20f836f197050de69c71c07f0412a8",
+      "bytes": 42252
+    },
+    "quaternius/buildings/b_small.glb": {
+      "source": "https://quaternius.com/packs/downtowncitymegakit.html",
+      "provider": "quaternius",
+      "license": "CC0-1.0",
+      "creator": "Quaternius",
+      "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "download_url": "https://raw.githubusercontent.com/anshaneja5/skyline-run/0c41526d8d4130c37c15e219c2c3737fa8cb4ad8/public/assets/models/b_small.glb",
+      "sha256": "3e8e432d69253d4f459094850508ef55379b188f43a6884c92774aac0d5d97b4",
+      "bytes": 1202148
+    },
+    "quaternius/nature/bush.glb": {
+      "source": "https://quaternius.com/packs/stylizednaturemegakit.html",
+      "provider": "quaternius",
+      "license": "CC0-1.0",
+      "creator": "Quaternius",
+      "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "download_url": "https://raw.githubusercontent.com/anshaneja5/skyline-run/0c41526d8d4130c37c15e219c2c3737fa8cb4ad8/public/assets/models/bush.glb",
+      "sha256": "b1e3074d40719adcd50087b628743affbba824fe088e5658bbd19a08212d6b48",
+      "bytes": 108520
+    },
+    "quaternius/nature/tree1.glb": {
+      "source": "https://quaternius.com/packs/stylizednaturemegakit.html",
+      "provider": "quaternius",
+      "license": "CC0-1.0",
+      "creator": "Quaternius",
+      "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "download_url": "https://raw.githubusercontent.com/anshaneja5/skyline-run/0c41526d8d4130c37c15e219c2c3737fa8cb4ad8/public/assets/models/tree1.glb",
+      "sha256": "6d9116dcc683ab1816e0b96845fa67e055220b26218e875c9e083e296eed4f14",
+      "bytes": 516044
+    },
+    "quaternius/nature/tree3.glb": {
+      "source": "https://quaternius.com/packs/stylizednaturemegakit.html",
+      "provider": "quaternius",
+      "license": "CC0-1.0",
+      "creator": "Quaternius",
+      "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "download_url": "https://raw.githubusercontent.com/anshaneja5/skyline-run/0c41526d8d4130c37c15e219c2c3737fa8cb4ad8/public/assets/models/tree3.glb",
+      "sha256": "2e935e32bd6c4ed883f74c346fb2d3480d6e3780747923265a9db7c008a2e89f",
+      "bytes": 332440
+    }
+  }
+}
