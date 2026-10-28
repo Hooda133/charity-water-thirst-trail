@@ -25,8 +25,8 @@
     const map=document.createElement("canvas");
     map.width=500;map.height=305;
     map.tabIndex=0;
-    map.setAttribute("role","img");
-    map.setAttribute("aria-label","Canyon map showing your position and six numbered destinations. Click a marker to navigate, or use destination buttons below.");
+    map.setAttribute("role","button");
+    map.setAttribute("aria-label","Canyon navigation map. Click a numbered marker to navigate or press Enter or Space to follow the next objective. Destination buttons are provided below.");
     const status=document.createElement("p");
     status.className="canyon-map-status";
     status.setAttribute("aria-live","off");
@@ -45,7 +45,10 @@
     `;
     document.head.append(style);
     const ctx=map.getContext("2d");
-    if(!ctx)return;
+    if(!ctx){
+      status.textContent="Map drawing unavailable. Use the destination buttons below to navigate.";
+      return;
+    }
     const scaleX=map.width/1000,scaleY=map.height/610;
     function route(index){
       const buttons=destinations.querySelectorAll("button");
@@ -79,9 +82,18 @@
       }
     });
     const X=x=>x*scaleX,Y=y=>y*scaleY;
-    function draw(){
+    // Drawing hundreds of canvas primitives every animation frame wastes GPU/
+    // battery time while only the player dot changes. Cap at 10 FPS, and skip
+    // the entire scene when the chapter or browser tab is hidden.
+    let lastPaint=-Infinity;
+    function draw(timestamp){
+      requestAnimationFrame(draw);
+      if(document.hidden || document.getElementById("canyonScreen")?.hidden)return;
+      const now=Number.isFinite(timestamp)?timestamp:performance.now();
+      if(now-lastPaint<100)return;
+      lastPaint=now;
       const data=window.TrailCanyon.snapshot();
-      if(!document.getElementById("canyonScreen")?.hidden){
+      {
         const w=map.width,h=map.height;
         const ground=ctx.createLinearGradient(0,0,w,h);
         ground.addColorStop(0,"#e3a974");ground.addColorStop(.55,"#bd7958");ground.addColorStop(1,"#874f49");
@@ -117,7 +129,6 @@
         ctx.beginPath();ctx.arc(X(data.x),Y(data.y),13,0,Math.PI*2);ctx.strokeStyle="#ffffff99";ctx.lineWidth=1.5;ctx.stroke();
         status.dataset.position=Math.round(data.x)+","+Math.round(data.y);
       }
-      requestAnimationFrame(draw);
     }
     requestAnimationFrame(draw);
   };
