@@ -1,6 +1,7 @@
 "use strict";
 /* Thirst Trail 2.1 — interactive canyon field map. No external libraries. */
 (() => {
+  const FONT_FAMILY = window.TrailTypography?.family || "sans-serif";
   const init = () => {
     const sidebar = document.querySelector(".canyon-sidebar");
     const destinations = document.getElementById("canyonDestinations");
@@ -109,7 +110,7 @@
           ctx.fillStyle=done?"#398e77":i===5?"#8addc0":"#f8d583";ctx.fill();
           ctx.lineWidth=2;ctx.strokeStyle="#283d41";ctx.stroke();
           ctx.fillStyle="#17343b";ctx.textAlign="center";ctx.textBaseline="middle";
-          ctx.font="bold 12px sans-serif";ctx.fillText(done?"✓":stop.symbol,x,y);
+          ctx.font=`bold 12px ${FONT_FAMILY}`;ctx.fillText(done?"✓":stop.symbol,x,y);
         });
         ctx.beginPath();ctx.arc(X(data.x),Y(data.y),7,0,Math.PI*2);
         ctx.fillStyle="#ffffff";ctx.fill();ctx.lineWidth=3;ctx.strokeStyle="#197c9a";ctx.stroke();

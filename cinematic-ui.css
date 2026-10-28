@@ -283,7 +283,7 @@ kbd{border-color:#d4e3c156;background:#173e3fd4;border-radius:4px;color:#f1edcf}
   .start-bottom{gap:13px;font-size:7px;letter-spacing:.7px}.topbar-center{display:none}
 }
 @media(max-width:680px){
-  .app-shell{padding-inline:12px}.topbar{height:75px;gap:12px}.wordmark{font-size:20px;gap:9px}.wordmark small{font-size:7px;letter-spacing:2.8px}
+  .app-shell{padding-inline:12px}.topbar{height:75px;gap:12px}.wordmark{font-size:clamp(16px,5.1vw,20px);gap:9px}.wordmark small{font-size:7px;letter-spacing:2.8px}
   .water-mark{width:37px;height:39px;border-radius:12px;font-size:28px}.top-actions{gap:6px}.icon-button{width:44px;min-height:44px;height:44px;font-size:18px}
   .start-screen{grid-template-columns:minmax(0,1fr);grid-template-areas:"eyebrow" "title" "description" "hero" "mode" "buttons" "donation" "chapters" "score" "bottom";gap:15px;padding-top:26px}
   .start-copy>.eyebrow{font-size:8px;letter-spacing:1.6px;padding-top:0}

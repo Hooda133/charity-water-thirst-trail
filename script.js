@@ -1,6 +1,7 @@
 "use strict";
 /* Thirst Trail: The Last Well — dependency-free adventure, built with HTML, CSS and JavaScript. */
 (() => {
+  const FONT_FAMILY = window.TrailTypography?.family || "sans-serif";
   const $ = id => document.getElementById(id);
   const canvas = $("gameCanvas");
   const ctx = canvas.getContext("2d");
@@ -262,7 +263,7 @@
       c.strokeStyle="#163b47bf";c.lineWidth=5;c.stroke();
       c.strokeStyle="#fff0a0";c.lineWidth=2.5;c.setLineDash([7,5]);c.stroke();c.setLineDash([]);
     }
-    const pinFont="800 12px system-ui";
+    const pinFont=`800 12px ${FONT_FAMILY}`;
     c.textBaseline="middle";c.font=pinFont;
     for(const [key,sp] of Object.entries(spots)){
       const x=mapX(sp.x),y=mapY(sp.y),isTarget=key===dest;
@@ -289,7 +290,7 @@
     const pulse=(Math.sin(timestamp*.004)+1)*.5;
     c.beginPath();c.arc(px,py,4.4+pulse*1.5,0,Math.PI*2);
     c.fillStyle="#fff9e7";c.fill();c.lineWidth=2.5;c.strokeStyle="#0c4752";c.stroke();
-    c.fillStyle="#e7f9ed";c.font="900 12px system-ui";c.fillText("N",14,16);
+    c.fillStyle="#e7f9ed";c.font=`900 12px ${FONT_FAMILY}`;c.fillText("N",14,16);
     c.fillStyle="#567c76";c.fillRect(11,25,2,13);
     const goal=spots[dest];
     $("mapGoalLabel").textContent=state.screen==="village"?"Village life · Follow a neighbour’s request":state.screen==="ended"&&state.done.has("pump")?"Village restored · Water is flowing!":
@@ -1147,11 +1148,11 @@
     ctx.save();ctx.translate(sp.x,sp.y);
     ellipse(0,8,radius+8,16,complete?"#4b8e73aa":"#153a4185");
     ctx.beginPath();ctx.arc(0,0,radius,0,Math.PI*2);ctx.fillStyle=complete?"#65e5a477":"#ffe27955";ctx.fill();ctx.lineWidth=3;ctx.strokeStyle=complete?"#a7f5ba":sp.color;ctx.stroke();
-    ctx.textAlign="center";ctx.font="29px system-ui";ctx.fillText(sp.icon,0,12);
+    ctx.textAlign="center";ctx.font=`29px ${FONT_FAMILY}`;ctx.fillText(sp.icon,0,12);
     const tw=Math.max(104,ctx.measureText(sp.name).width+42);
     roundRect(-tw/2,48,tw,27,10,"#10343ae9");
-    ctx.fillStyle="#fff8e6";ctx.font="700 14px system-ui";ctx.fillText(sp.name,0,66);
-    if(complete){ctx.fillStyle="#a4f5ba";ctx.font="800 16px system-ui";ctx.fillText("✓",31,-27);}
+    ctx.fillStyle="#fff8e6";ctx.font=`700 14px ${FONT_FAMILY}`;ctx.fillText(sp.name,0,66);
+    if(complete){ctx.fillStyle="#a4f5ba";ctx.font=`800 16px ${FONT_FAMILY}`;ctx.fillText("✓",31,-27);}
     ctx.restore();
   }
   function drawPlayer(time){
@@ -1191,7 +1192,7 @@
       if(state.supplies.has(cache.id))continue;
       ctx.fillStyle="#2c9bb1";ctx.strokeStyle="#fff9d5";ctx.lineWidth=4;
       ctx.beginPath();ctx.arc(cache.x,cache.y,18+Math.sin(time*2)*2,0,Math.PI*2);ctx.fill();ctx.stroke();
-      ctx.fillStyle="#ffffff";ctx.font="24px sans-serif";ctx.textAlign="center";
+      ctx.fillStyle="#ffffff";ctx.font=`24px ${FONT_FAMILY}`;ctx.textAlign="center";
       ctx.fillText("✦",cache.x,cache.y+8);
     }
     if(state.goal){
@@ -1444,6 +1445,8 @@
       THREE = await import("https://esm.sh/three@0.170.0");
     }
   
+    // Canvas textures are drawn once, so load their face before painting names.
+    await window.TrailTypography?.ready;
     const WORLD_W = 1800, WORLD_H = 1100, SCALE = 40;
     const wx = x => (x - 900) / SCALE;
     const wz = y => (y - 550) / SCALE;
@@ -2813,7 +2816,7 @@
       const c=cn.getContext("2d");
       c.fillStyle="#0e323d";c.beginPath();c.roundRect(10,8,492,109,28);c.fill();
       c.strokeStyle="rgba(255,229,148,.8)";c.lineWidth=4;c.stroke();
-      c.fillStyle="#fff5d6";c.font="bold 40px system-ui";c.textAlign="center";
+      c.fillStyle="#fff5d6";c.font=`bold 40px ${FONT_FAMILY}`;c.textAlign="center";
       c.fillText(title,256,80,450);
       const texture=new THREE.CanvasTexture(cn);texture.colorSpace=THREE.SRGBColorSpace;
       return texture;
