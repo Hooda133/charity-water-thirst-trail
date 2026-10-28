@@ -40,7 +40,9 @@ assert.match(scenic,/gltfLoader\.loadAsync\(remote\(key\)\)/,"pinned remote fall
 assert.match(scenic,/model\.traverse\(/);
 assert.match(scenic,/obj\.userData\.cameraOccluder=false/);
 assert.match(scenic,/quality>=row\.min/);
-assert.match(scenic,/if\(disposed\) return/);
+assert.match(scenic,/if\(disposed\|\|!scene\) return/,"disposed mounts ignore late source models");
+assert.match(scenic,/if\(disposed\)\{releaseResources\(\[scene\]\);return null;\}/,
+  "late GLB responses dispose their original decoded resources");
 const index=read("index.html");
 assert.ok(index.indexOf('src="scenic-assets.js"')>=0);
 for(const name of ["village-life.js","script.js","canyon.js","coast.js"]){
