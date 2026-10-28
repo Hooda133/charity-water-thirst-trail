@@ -1231,7 +1231,12 @@
     if(!exploring()||state.modalOpen||!$("graphicsPanel").hidden)return;
     if(e.target?.closest?.('input,select,textarea,[contenteditable="true"]'))return;
     if((e.key===" "||e.key==="Enter")&&e.target?.closest?.('button,a'))return;
-    const k=e.key.toLowerCase();if(["arrowup","arrowdown","arrowleft","arrowright"," "].includes(k))e.preventDefault();
+    const k=e.key.toLowerCase();
+    const canvasFocused=e.target===canvas||e.target?.id==="world3dCanvas";
+    // When the page, HUD or an activity button has focus, preserve native
+    // arrow-key and Space scrolling. Canvas focus retains game controls.
+    if((["arrowup","arrowdown","arrowleft","arrowright"," "].includes(k))&&!canvasFocused)return;
+    if(["arrowup","arrowdown","arrowleft","arrowright"," "].includes(k))e.preventDefault();
     if(["arrowup","arrowdown","arrowleft","arrowright","w","a","s","d","shift"].includes(k))state.keys.add(k);
     if((k==="e"||k===" ")&&!e.repeat)interact();
     if(k==="p")pause();
@@ -3203,6 +3208,10 @@
     let lastCameraFrame=0;
     view.addEventListener("wheel",event=>{
       if(!view.isConnected || view.parentElement===hero)return;
+      // Native wheel scrolling must move the webpage. Only an intentional
+      // Alt+wheel gesture manipulates the camera (Ctrl+wheel stays available
+      // for browser text/page zoom).
+      if(!event.altKey || event.ctrlKey || event.metaKey)return;
       event.preventDefault();
       beginFreeCamera();
       cameraDistanceTarget=Math.max(.62,Math.min(1.65,cameraDistanceTarget+event.deltaY*.0009));
