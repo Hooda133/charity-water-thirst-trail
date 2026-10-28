@@ -52,8 +52,15 @@ jobs:
           assert any(k.startswith('kenney/') for k in assets), 'No Kenney assets fetched'
           assert any(k.startswith('ambientcg/') for k in assets), 'No ambientCG materials fetched'
           assert all((root/k).is_file() for k in assets), 'Manifest refers to missing assets'
+          assert any(k.startswith('quaternius/') for k in assets), 'No Quaternius CC0 assets fetched'
           print(f'Validated {len(assets)} imported assets from real public downloads')
           PY
+      - name: Upload imported asset preview for PR review
+        uses: actions/upload-artifact@v4
+        with:
+          name: cc0-graphics-preview
+          path: assets/upgraded_graphics/
+          retention-days: 7
 
   import-assets:
     if: github.event_name != 'pull_request'
