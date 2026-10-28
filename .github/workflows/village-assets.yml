@@ -155,3 +155,26 @@ jobs:
             work/difficulty-qa/
             work/dom-outcome-qa/
           if-no-files-found: ignore
+
+  scenic-webgl:
+    # Run independently of the 2D puzzle suite so 3D asset failures are obvious.
+    runs-on: ubuntu-24.04
+    timeout-minutes: 9
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install browser testing driver
+        run: python -m pip install playwright==1.58.0
+      - name: Confirm licensed GLB models actually load in every 3D world
+        run: python tools/test-scenic-browser.py --browser "$(command -v google-chrome)"
+      - name: Save screenshots of the four upgraded scenes
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cc0-scenic-world-screenshots
+          path: work/scenic-qa/
+          if-no-files-found: ignore
