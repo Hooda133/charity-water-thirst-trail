@@ -93,8 +93,7 @@
       if(now-lastPaint<100)return;
       lastPaint=now;
       const data=window.TrailCanyon.snapshot();
-      {
-        const w=map.width,h=map.height;
+      const w=map.width,h=map.height;
         const ground=ctx.createLinearGradient(0,0,w,h);
         ground.addColorStop(0,"#e3a974");ground.addColorStop(.55,"#bd7958");ground.addColorStop(1,"#874f49");
         ctx.fillStyle=ground;ctx.fillRect(0,0,w,h);
@@ -128,7 +127,6 @@
         ctx.fillStyle="#ffffff";ctx.fill();ctx.lineWidth=3;ctx.strokeStyle="#197c9a";ctx.stroke();
         ctx.beginPath();ctx.arc(X(data.x),Y(data.y),13,0,Math.PI*2);ctx.strokeStyle="#ffffff99";ctx.lineWidth=1.5;ctx.stroke();
         status.dataset.position=Math.round(data.x)+","+Math.round(data.y);
-      }
     }
     requestAnimationFrame(draw);
   };
