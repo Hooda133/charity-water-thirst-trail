@@ -1257,7 +1257,7 @@
     if(!state.active)return;
     state.paused=true;save();
     modal("REST IN THE SHADE","Expedition paused",
-      "Your checkpoint is saved automatically. WASD / arrows to walk · E to interact · click a destination to travel · drag to look around · wheel to zoom · C to recenter. Resume when you are ready.",
+      "Your checkpoint is saved automatically. WASD / arrows to walk · E to interact · click a destination to travel · drag to look around · Alt + wheel to zoom · ordinary wheel scrolls the page · C to recenter. Resume when you are ready.",
       [{text:"▶ Resume canyon",primary:true,action:()=>{closeModal();state.paused=false;}},
        {text:"◈ Chapter selection",action:goHome}]);
   }
