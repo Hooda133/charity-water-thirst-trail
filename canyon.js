@@ -1055,6 +1055,7 @@
       dom.addEventListener("contextmenu",event=>event.preventDefault());
       dom.addEventListener("wheel",event=>{
         if(!state.active||state.modal||state.paused)return;
+        if(!event.altKey || event.ctrlKey || event.metaKey)return;
         event.preventDefault();zoom=clamp(zoom+(event.deltaY>0?.09:-.09),.72,1.85);
       },{passive:false});
       const cameraTarget=new THREE.Vector3();
@@ -1291,6 +1292,8 @@
     if(["INPUT","SELECT","TEXTAREA"].includes(event.target?.tagName))return;
     if(["BUTTON","A"].includes(event.target?.tagName)&&[" ","Enter"].includes(event.key))return;
     const key=event.key.toLowerCase();
+    const canvasFocused=event.target===canvas||event.target===world?.dom;
+    if(["arrowup","arrowdown","arrowleft","arrowright"," "].includes(key)&&!canvasFocused)return;
     if(["arrowup","arrowdown","arrowleft","arrowright"," "].includes(key))event.preventDefault();
     if(["w","a","s","d","arrowup","arrowdown","arrowleft","arrowright","shift"].includes(key))state.keys.add(key);
     if((key==="e"||key===" ")&&!event.repeat)interact();
