@@ -9,6 +9,7 @@ on:
       - 'assets/illustrations/**'
       - 'assets/fonts/**'
       - 'typography.js'
+      - 'audio-system.js'
       - 'world-labels.js'
       - 'cinematic-*'
       - 'surface-detail.js'
@@ -44,6 +45,7 @@ on:
       - 'assets/illustrations/**'
       - 'assets/fonts/**'
       - 'typography.js'
+      - 'audio-system.js'
       - 'world-labels.js'
       - 'cinematic-*'
       - 'surface-detail.js'
@@ -90,6 +92,8 @@ jobs:
         run: node tools/test-pipes.mjs
       - name: Test Valley unlock and Forgotten Canyon quest progression
         run: node tools/test-chapters.mjs
+      - name: Verify audio palette, persistent volume, mute, and no repeating sounds
+        run: node tools/test-audio-system.mjs
       - name: Verify save recovery, migration and storage-denied play
         run: node tools/test-progression.mjs
       - name: Verify Canyon checkpoint, puzzle and navigation regressions
