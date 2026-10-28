@@ -337,3 +337,105 @@ kbd{border-color:#d4e3c156;background:#173e3fd4;border-radius:4px;color:#f1edcf}
   .chapter-select-card:not(:disabled):hover,.button-primary:hover,.start-buttons .button-primary:hover{transform:none}
   .hero-caption,.hero-top-label,.chapter-pill,.canyon-overlay-hud span,.coast-hud span{backdrop-filter:none}
 }
+
+/* Shared expedition interface: readable over sunlit stone, foliage and water. */
+.game-screen,.canyon-screen,#coastScreen{color:#eef2df}
+.hud>div,.sidebar,.canyon-sidebar,.coast-sidebar{
+  border-color:#b0c6b33d;background:linear-gradient(145deg,#17383ff7,#102c36fa);
+  box-shadow:0 12px 30px #00131c36,inset 0 1px #efffe30a;
+}
+.hud>div,.hud-mission,.hud-resource{min-width:0}
+.hud-mission .overline,.hud-stat span,.resource-label{font-size:10px;letter-spacing:1px;color:#bbd0c3}
+.hud-mission small{font-size:12px;color:#c2d5c8;line-height:1.65}
+.hud-buttons .button,.button-compact{font-size:12px;line-height:1.35}
+.bar-fill{box-shadow:none}
+.world-frame,.canyon-stage,.coast-stage{isolation:isolate;box-shadow:0 16px 40px #00131e45,inset 0 1px #ecffe312}
+.frame-label,.canyon-stage-heading,.coast-stage-label{position:relative;z-index:3;font-size:10px;line-height:1.5;letter-spacing:.85px}
+.frame-tools{flex-wrap:wrap;max-width:100%}.frame-tools>span{font-size:10px;line-height:1.5}
+.frame-tools .camera-reset,.frame-tools .scenic-button,.coast-stage-label button{font-size:11px;min-height:44px;line-height:1.35}
+.chapter-pill,.canyon-overlay-hud span,.coast-hud span{
+  background:#102e37f5;border-color:#b9cfb74d;color:#fff1ce;font-size:11px;line-height:1.35;
+  letter-spacing:.25px;box-shadow:0 2px 8px #00131b35;backdrop-filter:none;
+}
+.canvas-top-left,.canyon-overlay-hud,.coast-hud{z-index:2;max-width:calc(100% - 20px)}
+.canvas-bottom{font-size:10px;letter-spacing:.5px;line-height:1.5}
+.nearby-prompt,.canyon-prompt,.coast-prompt{font-size:13px;line-height:1.5;background:#13343df5;color:#fff1cf;z-index:3}
+.nearby-prompt button,.canyon-prompt button,.coast-prompt button{font-size:12px;min-height:44px;line-height:1.4}
+.side-intro,.canyon-sidebar p,.coast-sidebar p{font-size:13px;line-height:1.7;color:#bed1c4}
+.quest-card strong,.canyon-quest strong,.coast-quest strong{font-size:13px;line-height:1.45;color:#f1f2dd}
+.quest-card small,.canyon-quest small,.coast-quest small{font-size:11px;line-height:1.55;color:#b4cbbd}
+.quest-card.done,.canyon-quest.done,.coast-quest.done{opacity:1;border-color:#86b89859}
+.quest-card:hover,.destination-btn:hover,.inventory-item:hover{transform:none}
+.destination-btn .dest-name,.canyon-destination,.coast-destinations button{font-size:12px;line-height:1.5}
+.destination-btn .dest-name{min-width:0;overflow-wrap:anywhere}
+.navigator-toggle,.inventory-item{font-size:11px;line-height:1.4}
+.toast,.canyon-toast,.coast-toast{font-size:12px;line-height:1.6;color:#fff0c6;background:#183d3ef7}
+.canyon-header p,.coast-header p{font-size:13px;line-height:1.65;color:#c5d6c8}
+.canyon-header .button,.coast-header button{font-size:12px;line-height:1.4}
+.mode-badge,.coast-header-actions span{font-size:10px;line-height:1.4}
+
+/* These HTML nameplates are projected over the canvas, never depth-tested. */
+.world-mission-labels{position:absolute;inset:0;z-index:1;overflow:hidden;pointer-events:none;contain:layout paint}
+.world-mission-label{
+  position:absolute;left:0;top:0;transform:translate(-50%,-100%);max-width:calc(100% - 20px);
+  padding:6px 9px;border:1px solid #d0dbc08c;border-radius:7px;background:#102e38f2;
+  color:#fff4d6;font:700 12px/1.3 var(--font-ui);letter-spacing:.05px;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;pointer-events:none;
+  box-shadow:0 2px 7px #00151c44;text-shadow:none;
+  transition:opacity .14s ease,border-color .14s ease,background .14s ease;
+}
+.world-mission-label.is-active{border-color:#f2d58f;background:#263f3bf5;color:#fff1c4}
+.world-mission-label.is-complete{border-color:#93bea583;background:#173b35ed;color:#cce7d1}
+
+.modal-backdrop,.canyon-modal-backdrop,.coast-modal-backdrop{z-index:800}
+.modal-card,.canyon-modal,.coast-modal{scrollbar-gutter:stable;overflow-x:hidden}
+.modal-tag,.canyon-modal-tag,.coast-modal-tag{font-size:10px;line-height:1.5;letter-spacing:1.3px}
+.modal-card p,.canyon-modal p,.coast-modal>p{font-size:14px;line-height:1.75;color:#d0dfd1}
+.choice,.canyon-modal-options button,.coast-modal-options button{
+  font-size:13px;line-height:1.55;min-height:48px;overflow-wrap:anywhere;
+}
+.pipe-status,.pipe-hint,.canyon-pressure-hint,.canyon-release-puzzle .canyon-release-guide,
+.canyon-release-puzzle .canyon-release-hint,.canyon-release-puzzle .canyon-release-status,
+.coast-puzzle-status{font-size:12px;line-height:1.65}
+.pipe-endpoints,.pipe-legend,.pipe-terminal-badge{font-size:10px;line-height:1.45;letter-spacing:.4px}
+.canyon-valve strong,.coast-weight-row strong,.coast-weight-row output{font-size:12px;line-height:1.5}
+.canyon-release-target span,.canyon-release-chamber>strong:first-child{font-size:11px;letter-spacing:.65px;line-height:1.4}
+.canyon-release-target small{font-size:12px;line-height:1.5}
+.canyon-release-mark{font-size:10px;line-height:1.4}
+.canyon-release-controls button{font-size:12px;line-height:1.45}
+.canyon-release-controls [data-release-action="reset"]{min-height:44px;font-size:11px}
+.coast-weight-row button{height:44px;min-width:44px}
+.valley-celebration span,.canyon-celebration span,.coast-celebration span{font-size:10px;letter-spacing:1px}
+.valley-celebration small,.canyon-celebration small,.coast-celebration small{font-size:12px;line-height:1.6}
+.valley-celebration button,.canyon-celebration button,.coast-celebration button{font-size:12px;line-height:1.4}
+.village-life-eyebrow{font-size:10px;line-height:1.5;letter-spacing:1px}
+.village-life-card-top>strong{font-size:13px;line-height:1.45}
+.village-life-card p,.village-life-note,.village-life-status{font-size:12px;line-height:1.7;color:#c5d8c9}
+.village-life-button{font-size:12px;line-height:1.45}
+.village-life-save{font-size:11px;line-height:1.5;color:#abc7b7}
+.footer-note{font-weight:400}
+
+@media(max-width:680px){
+  .hud-mission .overline,.hud-stat span,.resource-label{font-size:10px;letter-spacing:.7px}
+  .hud-buttons .button{font-size:11px;line-height:1.4}
+  .frame-label,.canyon-stage-heading,.coast-stage-label{font-size:10px;letter-spacing:.5px}
+  .frame-tools>span{display:none}
+  .frame-tools .camera-reset,.frame-tools .scenic-button,.coast-stage-label button{font-size:10px;padding:8px 9px}
+  .chapter-pill,.canyon-overlay-hud span,.coast-hud span{font-size:10px;padding:7px 8px}
+  .world-mission-label{font-size:11px;padding:5px 7px;max-width:calc(100% - 16px)}
+  .sidebar,.canyon-sidebar,.coast-sidebar{padding:18px 15px}
+  .modal-card p,.canyon-modal p,.coast-modal>p{font-size:14px;line-height:1.7}
+  .choice,.canyon-modal-options button,.coast-modal-options button{font-size:13px;padding:12px;min-height:48px}
+  .canyon-valve{grid-template-columns:minmax(0,1fr) 44px;gap:8px}
+  .canyon-valve strong{grid-column:1/-1}
+  .canyon-valve button{min-width:0;width:100%}
+  .canyon-release-target{flex-wrap:wrap}
+  .canyon-release-target span{flex-basis:100%;text-align:center}
+  .coast-weight-row{grid-template-columns:60px 44px minmax(0,1fr) 44px;gap:5px}
+  .coast-service-lights span{font-size:10px;line-height:1.5}
+  .village-life-tabs .village-life-button{font-size:11px;padding:9px 4px}
+  .village-life-tool-row>.village-life-button{font-size:11px;padding:9px 4px}
+  .game-screen.is-village .village-life-tabs{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .village-life-card-top{flex-wrap:wrap}
+}
+@media(prefers-reduced-motion:reduce){.world-mission-label{transition:none}}

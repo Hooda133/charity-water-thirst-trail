@@ -4,7 +4,7 @@
 .supply-dom-title{min-width:0}.supply-dom-title .overline{font-size:8px;letter-spacing:1.3px}
 .supply-dom-title h3{margin:6px 0 0;font-size:21px;line-height:1.2;letter-spacing:-.5px;color:#f5e9bf}
 .supply-dom-counter{flex-shrink:0;padding:8px 10px;border:1px solid #c9d7aa48;border-radius:9px;background:#34584c;color:#f0d58e;font-size:12px;font-weight:800;font-variant-numeric:tabular-nums;white-space:nowrap}
-.supply-dom-description,.supply-dom-status{font-size:11px;line-height:1.7;color:#adccc0}
+.supply-dom-description,.supply-dom-status{font-size:12px;line-height:1.7;color:#c0d6c8}
 .supply-dom-description{margin:12px 0}.supply-dom-status{margin:12px 0 0;min-height:3.4em}
 .supply-dom-board{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
 .supply-dom-panel[hidden],.supply-dom-board[hidden],.supply-dom-collected[hidden]{display:none}
@@ -16,15 +16,15 @@
 .supply-dom-drop{display:block;flex:0 0 26px;width:26px;height:34px;filter:drop-shadow(0 3px 4px #062c3b50)}
 .supply-dom-drop svg{display:block;width:100%;height:100%}
 .supply-dom-button-copy{display:grid;gap:4px;min-width:0}
-.supply-dom-button-copy strong{font:700 11px/1.35 var(--font-ui);color:#edf0d9;overflow-wrap:anywhere}
-.supply-dom-button-copy small{font:500 9px/1.4 var(--font-ui);color:#a7c7bd}
+.supply-dom-button-copy strong{font:700 12px/1.4 var(--font-ui);color:#f1f2dd;overflow-wrap:anywhere}
+.supply-dom-button-copy small{font:500 11px/1.5 var(--font-ui);color:#bcd1c4}
 .supply-dom-button.is-nearby small{color:#f1d693}
 .supply-dom-collected{display:flex;flex-wrap:wrap;gap:6px;list-style:none;margin:12px 0 0;padding:0}
-.supply-dom-badge{padding:6px 8px;border:1px solid #9ad0a34d;border-radius:7px;background:#325a46;color:#cbe8bb;font-size:10px;line-height:1.4;animation:supply-dom-pop .25s ease-out both}
+.supply-dom-badge{padding:6px 8px;border:1px solid #9ad0a34d;border-radius:7px;background:#325a46;color:#d7ebc9;font-size:11px;line-height:1.45;animation:supply-dom-pop .25s ease-out both}
 .supply-dom-complete{margin:12px 0 0;padding:10px 11px;border:1px solid #d6d09565;border-radius:9px;background:#365b45;color:#f0e3af;font-size:11px;font-weight:700;line-height:1.65;animation:supply-dom-pop .3s ease-out both}
 .pipe-action-feedback{margin:9px 0;padding:8px 10px;border-left:2px solid #e8cc87;border-radius:0 6px 6px 0;background:#ddcf8810;color:#f2d995;font-size:11px;line-height:1.6;min-height:1.6em}
 .pipe-tile.was-rotated{animation:supply-pipe-feedback .28s ease-out}
 @keyframes supply-dom-pop{from{opacity:.4;transform:translateY(5px) scale(.96)}to{opacity:1;transform:none}}
-@keyframes supply-pipe-feedback{0%{transform:scale(.95);box-shadow:0 0 0 3px #ffe2a4aa,0 0 22px #e9ce7b66}100%{transform:scale(1)}}
+@keyframes supply-pipe-feedback{0%{transform:scale(.97);box-shadow:0 0 0 2px #ffe2a480}100%{transform:scale(1)}}
 @media(max-width:680px){.supply-dom-panel{padding:13px}.supply-dom-button{min-height:72px}.supply-dom-title h3{font-size:20px}}
 @media(prefers-reduced-motion:reduce){.supply-dom-button{transition:none}.supply-dom-badge,.supply-dom-complete,.pipe-tile.was-rotated{animation:none}.pipe-tile.was-rotated{outline:2px solid #f4d58d;outline-offset:2px}.supply-dom-button:hover:not(:disabled){transform:none}}
