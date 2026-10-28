@@ -18,7 +18,7 @@ class QuietServer(http.server.SimpleHTTPRequestHandler):
 
 FAKE_AUDIO = r"""
 (() => {
-  window.__sfxLog = {contexts:0,starts:[],stops:[],volumes:[]};
+  window.__sfxLog = {contexts:0,starts:[],stops:[],volumes:[],pitches:[],filters:0};
   class Param {
     constructor(){this.value=0;}
     setValueAtTime(v){this.value=v;}
@@ -31,16 +31,22 @@ FAKE_AUDIO = r"""
     connect(out){return out;}
     disconnect(){}
   }
+  class FakeFilter {
+    constructor(){this.type="lowpass";this.Q={value:0};this.frequency=new Param();window.__sfxLog.filters++;}
+    connect(out){return out;}
+    disconnect(){}
+  }
   class FakeOscillator {
     constructor(){this.frequency=new Param();this.type="sine";}
     connect(out){return out;}
     disconnect(){}
-    start(t){window.__sfxLog.starts.push(t);}
+    start(t){window.__sfxLog.starts.push(t);window.__sfxLog.pitches.push(this.frequency.value);}
     stop(t){window.__sfxLog.stops.push(t);}
   }
   class FakeAudioContext {
     constructor(){this.state="running";this.currentTime=12;this.destination={};window.__sfxLog.contexts++;}
     createGain(){return new FakeGain();}
+    createBiquadFilter(){return new FakeFilter();}
     createOscillator(){return new FakeOscillator();}
     resume(){return Promise.resolve();}
     close(){return Promise.resolve();}
@@ -79,15 +85,22 @@ def main():
                 assert page.locator("#graphicsPanel").is_visible()
                 assert page.locator("#soundEnabledToggle").is_checked()
                 assert page.locator("#sfxVolumeValue").inner_text()=="55%"
+                assert page.locator("#sfxStyle").input_value()=="soft","New and previous players should get soft by default"
                 page.locator("#sfxPreview").click()
                 first=page.evaluate("()=>({...__sfxLog,volume:TrailAudioEngine.volume})")
                 assert first["contexts"]==1 and len(first["starts"])>=2, first
                 assert len(first["starts"])==len(first["stops"]), "Each oscillator must stop"
+                assert max(first["pitches"])<600,"New soft sounds should be mellow, not piercing"
+                assert first["filters"]>=2,"Warm sound effects should be low-pass filtered"
                 assert all(end>start and end-start<1 for start,end in zip(first["starts"],first["stops"]))
                 page.locator("#sfxVolume").evaluate("el=>{el.value='30';el.dispatchEvent(new Event('input',{bubbles:true}));}")
                 assert page.locator("#sfxVolumeValue").inner_text()=="30%"
                 assert page.evaluate("localStorage.getItem('thirstTrailSfxVolume')")=="0.3"
                 assert page.evaluate("TrailAudioEngine.volume")==.3
+                page.locator("#sfxStyle").select_option("minimal")
+                assert page.evaluate("TrailAudioEngine.style")=="minimal"
+                assert page.evaluate("localStorage.getItem('thirstTrailSfxStyle')")=="minimal"
+                assert page.evaluate("TrailAudioEngine.status().ambientLoops") is False
                 page.locator("#soundEnabledToggle").uncheck()
                 assert page.locator("#soundButton").get_attribute("aria-pressed")=="false"
                 assert page.locator("#sfxPreview").is_disabled()
@@ -100,6 +113,8 @@ def main():
                 page.locator("#graphicsButton").click()
                 assert not page.locator("#soundEnabledToggle").is_checked(), "Mute preserved after reload"
                 assert page.locator("#sfxVolumeValue").inner_text()=="30%", "Volume preserved after reload"
+                assert page.locator("#sfxStyle").input_value()=="minimal","Sound character preserved after reload"
+                assert page.evaluate("TrailAudioEngine.style")=="minimal"
                 assert page.evaluate("__sfxLog.contexts")==0, "Reload must never autoplay"
                 page.locator("#soundButton").click()
                 assert page.locator("#soundEnabledToggle").is_checked()
@@ -116,9 +131,14 @@ def main():
                 assert page.evaluate("__sfxLog.starts.length")>0
                 assert page.evaluate("TrailAudioEngine.status().ambientLoops") is False
                 assert page.evaluate("TrailAudioEngine.status().backgroundMusic") is False
+                page.locator("#sfxStyle").select_option("classic")
+                assert page.evaluate("TrailAudioEngine.style")=="classic"
+                assert page.evaluate("localStorage.getItem('thirstTrailSfxStyle')")=="classic"
+                page.locator("#sfxStyle").select_option("soft")
+                assert page.evaluate("TrailAudioEngine.style")=="soft"
                 page.screenshot(path=str(OUTPUT / "sound-panel.png"))
                 assert not errors, errors
-                print("PASS browser: sound on/off sync, volume slider, preview, no autoplay, reload persistence, zero-volume mute and finite notes",flush=True)
+                print("PASS browser: soft pitches and filters, minimal/classic selector, saved style, mute, volume, preview, no autoplay and finite notes",flush=True)
                 context.close()
             finally:
                 browser.close()

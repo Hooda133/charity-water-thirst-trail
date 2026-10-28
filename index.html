@@ -278,8 +278,9 @@
     <div class="settings-divider"><span class="overline">SOUND &amp; FEEDBACK</span></div>
     <label class="graphics-check"><input id="soundEnabledToggle" type="checkbox" checked><span>Enable action sound effects</span></label>
     <label class="graphics-field" for="sfxVolume"><span>Sound effects volume <output id="sfxVolumeValue" for="sfxVolume">55%</output></span><input id="sfxVolume" type="range" min="0" max="100" step="5" value="55" aria-describedby="soundDescription"></label>
+    <label class="graphics-field"><span>Sound character</span><select id="sfxStyle" aria-describedby="soundDescription"><option value="soft">Soft &amp; natural (recommended)</option><option value="minimal">Quiet taps (minimal)</option><option value="classic">Classic electronic tones</option></select></label>
     <div class="sound-settings-row"><button id="sfxPreview" class="sound-preview" type="button">♫ Test sound</button><span id="soundStatus" role="status" aria-live="polite">Sound effects on</span></div>
-    <p id="soundDescription" class="graphics-note">Short, original sounds only for collecting, repairing, mistakes and winning. No background music or looping audio. Mute and volume are saved on this device.</p>
+    <p id="soundDescription" class="graphics-note">Soft, lower-pitched sound effects are the default. Choose quiet taps for minimal feedback, or classic tones if you prefer the earlier sound. No background music or looping audio. Sound character, mute and volume are saved on this device.</p>
     <div class="settings-divider"><span class="overline">GRAPHICS &amp; CAMERA</span></div>
     <label class="graphics-field"><span>Quality preset</span><select id="qualityPreset"><option value="low">Low</option><option value="medium">Medium</option><option value="high">High</option><option value="ultra">Ultra</option></select></label>
     <label class="graphics-field"><span>Resolution scale <output id="resolutionValue">100%</output></span><input id="resolutionScale" type="range" min="0.65" max="1.5" step="0.05" value="1"></label>
