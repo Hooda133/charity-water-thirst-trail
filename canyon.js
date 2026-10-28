@@ -888,6 +888,9 @@
         console.warn("Canyon advanced scenery unavailable; using safe original terrain.",error);
       }
       if(canyonArt)for(const mesh of skylineFallback)mesh.visible=false;
+      const canyonScenery=window.TrailScenicAssets?.mount?.(THREE,{
+        parent:scene,chapter:"canyon",wx:wX,wz:wZ,getGraphics:()=>graphics
+      });
       surfaces?.apply(timber,"wood",[1,1],0xc1a080,.28);
       for(const m of rock)surfaces?.apply(m,"rock",[1,1],null,.28);
       const restoredWater=buildRestoredWater(THREE,scene);
@@ -1078,7 +1081,7 @@
       }
       dom.addEventListener("click",select);
       if(!state.active&&!(state.finished&&!$("canyonScreen").hidden)){
-        explorerDisposed=true;canyonArt?.dispose();restoredWater.dispose();
+        explorerDisposed=true;canyonScenery?.dispose();canyonArt?.dispose();restoredWater.dispose();
         cinematic?.dispose();
         renderer.dispose();dom.remove();canvas.style.display="";
         return;
@@ -1177,6 +1180,7 @@
           broken.visible=!state.done.has("span");
           water.color.set(state.done.has("cistern")?0x55c4cb:0x50b1b9);
           restoredWater.update();
+          canyonScenery?.update({preset:graphics.preset});
           // Keep valve/repair visuals current even when ambient motion is off.
           if(graphics.effects!==false)canyonArt?.update(time);
           else canyonArt?.update(0);
@@ -1192,6 +1196,7 @@
           cinematic?.dispose();
           explorerDisposed=true;
           canyonArt?.dispose();
+          canyonScenery?.dispose();
           restoredWater.dispose();
           dom.remove();renderer.dispose();canvas.style.display="";
         }

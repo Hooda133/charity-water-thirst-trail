@@ -313,8 +313,16 @@
     const jug=new THREE.Group();root.add(jug);
     mesh(new THREE.BoxGeometry(.36,.48,.23),yellow,0,.24,0,jug);const jugWater=mesh(new THREE.BoxGeometry(.25,.34,.025),blue,0,.23,.13,jug);
     const jugHandle=mesh(new THREE.TorusGeometry(.11,.025,5,12,Math.PI),yellow,0,.54,0,jug);
+    const communityScenery=window.TrailScenicAssets?.mount?.(THREE,{
+      parent:root,chapter:"village",wx,wz,
+      getGraphics:()=>{
+        try{return JSON.parse(localStorage.getItem("thirstTrailGraphics")||"null")||{preset:"high"};}
+        catch{return {preset:"high"};}
+      }
+    });
     return {update(time,visible=active){
       root.visible=!!visible;if(!visible)return;
+      communityScenery?.update();
       const reduced=!!window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
       for(const [id,group] of Object.entries(projectGroups))group.visible=data.upgrades.includes(id);
       gardens.visible=data.delivered.garden>0||data.upgrades.includes("irrigation");
@@ -323,7 +331,7 @@
       for(const person of people){person.arm.rotation.z=data.delivered[person.id]>0?2.2+(reduced?0:Math.sin(time*3)*.12):.1;}
       const player=callbacks.getPlayer?.();jug.visible=active&&!!player&&Number.isFinite(player.x)&&Number.isFinite(player.y);
       if(jug.visible){jug.position.set(wx(player.x)+.42,.1,wz(player.y));jugWater.scale.y=Math.max(.02,data.jug/8);jugWater.position.y=.06+.17*(data.jug/8);}
-    },dispose(){for(const geometry of new Set(geometries))geometry.dispose();for(const material of materials)material.dispose();scene.remove(root);}};
+    },dispose(){communityScenery?.dispose();for(const geometry of new Set(geometries))geometry.dispose();for(const material of materials)material.dispose();scene.remove(root);}};
   }
   window.addEventListener("trail:mode",()=>{
     message="Difficulty set to "+(window.TrailMode?.profile?.().label||difficulty())+". Deliver "+request()+" litres per neighbour; your jug, completed work and repair steps are kept.";

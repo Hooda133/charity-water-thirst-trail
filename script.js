@@ -2621,6 +2621,9 @@
     pumpFlow.visible=false;
     const villageRestoration=window.TrailValleyRestoration?.build(THREE,{scene,wx,wz});
     const villageLifeArt=window.TrailVillageLife?.build3D?.(THREE,{scene,wx,wz});
+    const valleyScenery=window.TrailScenicAssets?.mount?.(THREE,{
+      parent:scene,chapter:"valley",wx,wz,getGraphics:()=>({preset:graphicsPreset})
+    });
     // The hillside waterworks is an explorable landmark, not a flat icon:
     // terraced stone, blue reservoirs, a small wooden waterwheel and distant orchard.
     const terrace=new THREE.Group();
@@ -3267,6 +3270,7 @@
     let lastParent=null,lastWidth=0,lastHeight=0,firstFrame=true;
     function render(state,time){
       const playing=state.screen!=="start";
+      valleyScenery?.update({preset:graphicsPreset});
       const parent=playing?host:hero;
       if(!parent || !parent.isConnected)return;
       if(parent!==lastParent){
@@ -3663,6 +3667,7 @@
         cinematic?.dispose();
         villageRestoration?.dispose();
         villageLifeArt?.dispose();
+        valleyScenery?.dispose();
         villageAssetDisposed=true;
         characterVisibility?.dispose();
         characterAssetDisposed=true;

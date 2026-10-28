@@ -357,6 +357,9 @@
       applyGraphics(graphics);
       const art=window.TrailCoastVisuals?.build(THREE,{scene,getState:()=>state,wx,wz,surfaces:cinematic?.surfaces,getGraphics:()=>graphics});
       if(!art){const ground=new THREE.Mesh(new THREE.PlaneGeometry(45,29),new THREE.MeshStandardMaterial({color:0xd8c896}));ground.rotation.x=-Math.PI/2;ground.position.y=-.05;scene.add(ground);}
+      const coastScenery=window.TrailScenicAssets?.mount?.(THREE,{
+        parent:scene,chapter:"coast",wx,wz,getGraphics:()=>graphics
+      });
       const player=window.ThirstExplorer?.create(THREE)||new THREE.Group();
       if(!player.children.length){const body=new THREE.Mesh(new THREE.CylinderGeometry(.2,.24,.65,8),new THREE.MeshStandardMaterial({color:0x2d9892}));body.position.y=.6;player.add(body);}
       scene.add(player);
@@ -398,11 +401,12 @@
           for(const child of mark.group.children)if(child.isSprite)child.visible=!missionLabels&&(mark.key===next||nearest()===mark.key);
         }
         missionLabels?.update({visible:!state.finished,completed:state.done,activeKey:next||null});
+        coastScenery?.update({preset:graphics.preset});
         art?.update(time,{reduced:reduced(),effects:graphics.effects!==false});
         if(state.finished)characterVisibility?.clear?.();else characterVisibility?.update(camera,dt);
         cinematic?.update(time,{reduced:reduced(),effects:graphics.effects!==false});
         if(cinematic)cinematic.render();else renderer.render(scene,camera);
-      },dispose(){missionLabels?.dispose();characterVisibility?.dispose();art?.dispose();cinematic?.dispose();renderer.dispose();dom.remove();canvas.style.display="";}};
+      },dispose(){coastScenery?.dispose();missionLabels?.dispose();characterVisibility?.dispose();art?.dispose();cinematic?.dispose();renderer.dispose();dom.remove();canvas.style.display="";}};
     }catch(error){console.warn("Coast 3D unavailable; using the playable harbor map.",error);canvas.style.display="";}finally{creating=false;}
   }
   function selectPoint(point){
