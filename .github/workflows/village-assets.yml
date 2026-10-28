@@ -9,6 +9,7 @@ on:
       - 'assets/illustrations/**'
       - 'assets/fonts/**'
       - 'typography.js'
+      - 'world-labels.js'
       - 'cinematic-*'
       - 'surface-detail.js'
       - 'supply-interactions.*'
@@ -43,6 +44,7 @@ on:
       - 'assets/illustrations/**'
       - 'assets/fonts/**'
       - 'typography.js'
+      - 'world-labels.js'
       - 'cinematic-*'
       - 'surface-detail.js'
       - 'supply-interactions.*'
@@ -96,6 +98,8 @@ jobs:
         run: node tools/test-valley-movement.mjs
       - name: Validate Forgotten Canyon 3D art and character integration
         run: node tools/test-canyon-visuals.mjs
+      - name: Validate screen-space mission labels in all three chapters
+        run: node tools/test-world-labels.mjs
 
       - name: Test shared explorer grounding, victory and camera obstruction fading
         run: node tools/test-explorer-motion.mjs

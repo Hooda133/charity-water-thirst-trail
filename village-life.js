@@ -249,6 +249,7 @@
     const materials=[],geometries=[];
     const mat=(color,props={})=>{const material=new THREE.MeshStandardMaterial({color,roughness:.85,...props});materials.push(material);return material;};
     const wood=mat(0x95704c),yellow=mat(0xe8cb76),stone=mat(0xbec5a0),green=mat(0x65ac70),blue=mat(0x55d0d3,{transparent:true,opacity:.78}),skin=mat(0x996443),shirt=mat(0x65a6a0),pink=mat(0xe7af9b);
+    const metal=mat(0x819a94,{metalness:.48,roughness:.42}),shadeCloth=mat(0xf4e4b7,{side:THREE.DoubleSide}),gardenSoil=mat(0x6d6047);
     const mesh=(geometry,material,x,y,z,parent=root)=>{geometries.push(geometry);const object=new THREE.Mesh(geometry,material);object.position.set(x,y,z);object.receiveShadow=true;parent.add(object);return object;};
     const projectGroups={};
     for(const project of projects){const group=new THREE.Group();group.position.set(wx(project.x),0,wz(project.y));root.add(group);projectGroups[project.id]=group;}
@@ -256,12 +257,40 @@
     mesh(new THREE.BoxGeometry(.9,1.1,.7),yellow,0,.65,0,station);mesh(new THREE.BoxGeometry(.65,.6,.04),blue,0,.65,.37,station);
     mesh(new THREE.CylinderGeometry(.07,.07,.4,8),stone,.32,.85,.5,station).rotation.x=Math.PI/2;
     mesh(new THREE.BoxGeometry(1.3,.12,1.05),wood,0,1.4,0,station);
+    // Distinct basin, splash guard and brass tap for the drinking-water station.
+    mesh(new THREE.CylinderGeometry(.58,.62,.14,18),stone,0,.14,.55,station);
+    const stationBasin=mesh(new THREE.CircleGeometry(.48,20),blue,0,.225,.56,station);
+    stationBasin.rotation.x=-Math.PI/2;
+    mesh(new THREE.CylinderGeometry(.045,.045,.38,10),metal,.32,.85,.52,station).rotation.x=Math.PI/2;
+    mesh(new THREE.CylinderGeometry(.085,.085,.06,12),yellow,.32,1.02,.55,station);
+    mesh(new THREE.TorusGeometry(.20,.035,6,18),metal,0,.95,.375,station);
+    mesh(new THREE.SphereGeometry(.075,9,7),blue,.32,.64,.72,station);
     const shade=projectGroups.shade;
     for(const x of [-.7,.7])for(const z of [-.5,.5])mesh(new THREE.CylinderGeometry(.055,.055,1.6,6),wood,x,.8,z,shade);
     mesh(new THREE.ConeGeometry(1.1,.45,4),yellow,0,1.8,0,shade).rotation.y=Math.PI/4;
     mesh(new THREE.BoxGeometry(1.15,.12,.3),wood,0,.42,.25,shade);
+    // Fabric, seating and planters help the gathering place read as a community hub.
+    for(const side of [-1,1]){
+      const panel=mesh(new THREE.BoxGeometry(.78,.045,1.28),shadeCloth,side*.40,1.67,0,shade);
+      panel.rotation.z=side*.18;
+      mesh(new THREE.BoxGeometry(1.08,.12,.26),wood,side*.50,.40,-.37,shade);
+      for(const x of [-.45,.45])mesh(new THREE.BoxGeometry(.09,.36,.12),stone,side*.50+x,.20,-.37,shade);
+      mesh(new THREE.CylinderGeometry(.19,.23,.22,9),stone,side*1.06,.14,.2,shade);
+      for(let petal=0;petal<3;petal++){
+        const leaf=mesh(new THREE.ConeGeometry(.10,.36,5),green,side*1.06+(petal-1)*.10,.40,.2,shade);
+        leaf.rotation.z=(petal-1)*.22;
+      }
+    }
     const irrigation=projectGroups.irrigation;
     mesh(new THREE.BoxGeometry(.12,.12,1.7),blue,-1,.12,.25,irrigation);mesh(new THREE.BoxGeometry(2,.12,.12),blue,0,.12,1.1,irrigation);
+    // Bordered channels and a working-style handwheel mark the irrigation upgrade.
+    for(const side of [-1,1]){
+      mesh(new THREE.BoxGeometry(.08,.23,1.8),stone,-1+side*.12,.13,.25,irrigation);
+      mesh(new THREE.BoxGeometry(2.15,.20,.075),stone,0,.13,1.1+side*.12,irrigation);
+    }
+    mesh(new THREE.CylinderGeometry(.24,.28,.16,12),gardenSoil,-.98,.12,-.55,irrigation);
+    const handle=mesh(new THREE.TorusGeometry(.19,.035,7,18),metal,-.98,.45,-.55,irrigation);
+    handle.rotation.x=Math.PI/2;
     const gardens=new THREE.Group();gardens.position.set(wx(610),0,wz(480));root.add(gardens);
     for(let row=0;row<3;row++)for(let col=0;col<4;col++){
       mesh(new THREE.BoxGeometry(.31,.08,.24),wood,(col-1.5)*.42,.08,row*.38,gardens);
