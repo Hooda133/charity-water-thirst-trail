@@ -31,6 +31,8 @@ function element(){
  getBoundingClientRect(){return {left:40,top:20}},clientLeft:0,clientTop:0};
 }
 const host=element(),canvas=element(),w={TrailTypography:{ready:Promise.resolve()}};
+let canvasLeft=40,canvasTop=20;
+canvas.getBoundingClientRect=()=>({left:canvasLeft,top:canvasTop});
 canvas.isConnected=true;canvas.clientWidth=800;canvas.clientHeight=500;canvas.parentElement=host;
 runInNewContext(src,{window:w,document:{createElement:element},Promise,Set,console});
 const anchors=[-8,0,8].map(x=>({updateWorldMatrix(){},localToWorld(p){p.x+=x;return p}}));
@@ -41,6 +43,11 @@ const overlay=w.TrailWorldLabels.create({Vector3},{
 overlay.update({completed:new Set(["goal0"]),activeKey:"goal1"});
 assert.equal(overlay.status().visible,3,"projected markers should appear");
 assert.equal(host.children.length,1,"overlay should attach beside canvas");
+// An expanding sidebar can shift the canvas without changing its dimensions.
+// Projected labels must follow its new offset on the very next update.
+canvasLeft=73;canvasTop=51;overlay.update();
+assert.equal(host.children[0].style.left,"33px","follow horizontal canvas layout shifts");
+assert.equal(host.children[0].style.top,"31px","follow vertical canvas layout shifts");
 const [first,second]=host.children[0].children;
 assert.ok(first.classList.contains("is-complete"));
 assert.ok(second.classList.contains("is-active"));
