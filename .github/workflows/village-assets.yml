@@ -10,6 +10,7 @@ on:
       - 'assets/fonts/**'
       - 'typography.js'
       - 'audio-system.js'
+      - 'dialog-keyboard.js'
       - 'world-labels.js'
       - 'cinematic-*'
       - 'surface-detail.js'
@@ -46,6 +47,7 @@ on:
       - 'assets/fonts/**'
       - 'typography.js'
       - 'audio-system.js'
+      - 'dialog-keyboard.js'
       - 'world-labels.js'
       - 'cinematic-*'
       - 'surface-detail.js'
@@ -203,6 +205,8 @@ jobs:
         run: python -m pip install playwright==1.58.0
       - name: Verify volume, mute, preview and saved settings in Chromium
         run: python tools/test-audio-browser.py
+      - name: Verify chapter dialog keyboard boundaries and settings priority
+        run: python tools/test-dialog-keyboard-browser.py
       - name: Capture audio settings screenshots
         if: always()
         uses: actions/upload-artifact@v4

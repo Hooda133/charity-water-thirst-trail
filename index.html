@@ -19,6 +19,7 @@
   </script>
   <script src="typography.js" defer></script>
   <script src="audio-system.js" defer></script>
+  <script src="dialog-keyboard.js" defer></script>
   <script src="world-labels.js" defer></script>
   <script src="progression.js" defer></script>
   <script src="expedition-mode.js" defer></script>
@@ -270,7 +271,7 @@
       <p id="modalTip" class="modal-tip" hidden></p>
     </section>
   </div>
-  <aside id="graphicsPanel" class="graphics-panel" hidden aria-labelledby="graphicsTitle">
+  <aside id="graphicsPanel" class="graphics-panel" hidden role="dialog" aria-modal="true" aria-labelledby="graphicsTitle" tabindex="-1">
     <div class="graphics-panel-header"><div><span class="overline">MAKE IT YOUR ADVENTURE</span><h2 id="graphicsTitle">Game settings<span class="yellow">.</span></h2></div><button id="graphicsClose" class="modal-x" type="button" aria-label="Close game settings">×</button></div>
     <label class="graphics-field"><span>Difficulty</span><select id="difficultySelect" aria-describedby="difficultyDescription"><option value="easy">Easy</option><option value="normal">Normal</option><option value="hard">Hard</option></select></label>
     <p id="difficultyDescription" class="graphics-note difficulty-description" role="status" aria-live="polite">Relaxed energy use, gentler mistake penalties, early hints and 4 L village deliveries.</p>

@@ -41,6 +41,7 @@ def main():
                 for scene in ("valley", "village", "canyon", "coast"):
                     ctx = browser.new_context(viewport={"width": 1360, "height": 880},
                                               reduced_motion="reduce")
+                    graphics_qa.local_three(ctx)
                     if scene in ("canyon", "coast"):
                         isolate_valley(ctx, ROOT)
                     ctx.add_init_script(seed("high"))
