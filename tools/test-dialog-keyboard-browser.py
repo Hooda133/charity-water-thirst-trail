@@ -1,8 +1,11 @@
 #!/usr/bin/env python3
 """Real keyboard regression for chapter dialogs and nested settings. No gameplay hooks."""
 import functools
+import argparse
 import http.server
 import json
+import os
+import shutil
 from pathlib import Path
 import threading
 from playwright.sync_api import sync_playwright
@@ -30,11 +33,14 @@ def check_cycle(page, selector):
 
 
 def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--browser", default=os.environ.get("CHROMIUM_PATH"))
+    args = parser.parse_args()
     server = http.server.ThreadingHTTPServer(("127.0.0.1", 0), functools.partial(QuietServer, directory=str(ROOT)))
     threading.Thread(target=server.serve_forever, daemon=True).start()
     try:
         with sync_playwright() as p:
-            browser = p.chromium.launch(executable_path="/usr/bin/chromium", args=["--no-sandbox", "--disable-dev-shm-usage", "--disable-gpu"])
+            browser = p.chromium.launch(executable_path=args.browser or shutil.which("google-chrome") or shutil.which("chromium"), args=["--no-sandbox", "--disable-dev-shm-usage", "--disable-gpu"])
             context = browser.new_context(reduced_motion="reduce")
             context.route("https://cdn.jsdelivr.net/**", lambda route: route.abort())
             context.route("https://esm.sh/**", lambda route: route.abort())
