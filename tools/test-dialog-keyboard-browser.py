@@ -47,6 +47,7 @@ def main():
             page.on("response", lambda response: missing.append(response.url) if response.status == 404 else None)
             page.goto(f"http://127.0.0.1:{server.server_port}")
             page.wait_for_function("!!window.ThirstTrail && !!window.TrailCoast")
+            assert page.locator('.hero-scene[aria-hidden="true"][inert]').count() == 1
             page.locator("#instructionsButton").click()
             check_cycle(page, "#dialog")
             page.locator("#modalClose").click()
