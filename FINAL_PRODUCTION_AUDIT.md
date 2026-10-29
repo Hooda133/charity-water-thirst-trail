@@ -46,4 +46,13 @@ No story, mission, scoring, difficulty, collision, character geometry, yellow ba
 
 ## Git delivery
 
+### October 29 debugging follow-up
+
+The earlier audit was merged through PR #28 (`302f574`). Follow-up work starts from that main commit on `codex/debug-webgl-and-supply`.
+
+- Repaired the older `test-supply-dom.py` suite to use the actual `TrailMode` preference/API, current supply DOM selectors, immediate nearby collection, the existing 12-energy recovery on every difficulty, the capped-recovery toast and final-item status focus. It now passes desktop/mobile interaction, stale-click and modal guards, stable nodes, reload, restart, all difficulty recovery values, energy caps and final-item focus with no page errors. No production game behavior was changed to satisfy the test. Added it to browser CI.
+- A test-only instrumented WebGL run loaded the original explorer and village models, reported 26 loaded PBR maps with zero failures, rendered the active Valley, and moved the explorer from x=310 to x=353 using keyboard input. A second run with software compositing also moved the explorer and captured the scene. This establishes startup/rendering/movement in those diagnostic runs, not full chapter completion in WebGL.
+- Profiling found multi-second animation-frame gaps on SwiftShader, while sampled JavaScript render calls were typically tens of milliseconds after initial compilation. Visibility queries also consumed measurable CPU time. The source of all remaining graphics timing overhead is not conclusively isolated, so no speculative renderer or gameplay rewrite was made. The complete WebGL walkthrough and representative hardware performance remain unverified.
+- The initial stale-supply failure described above is resolved by this follow-up. Historical failed runs remain recorded; they are not counted as passes.
+
 Implementation commits: `3037df3` (audio lifecycle), `9fbfb87` (dialog keyboard/QA), `83820ce` (decorative preview), `a4859e0` (portable browser selection). Report and final verification are saved in a subsequent commit. Changes are delivered on the feature branch for review; this audit does not authorize or perform a merge into `main`.

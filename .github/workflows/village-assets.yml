@@ -151,6 +151,8 @@ jobs:
         run: python tools/test-dom-interactions-browser.py --browser "$(command -v google-chrome)"
       - name: Verify mobile DOM interactions and keyboard focus
         run: python tools/test-dom-interactions-browser.py --mobile --browser "$(command -v google-chrome)"
+      - name: Verify supply recovery caps, all difficulties and final-item focus
+        run: python tools/test-supply-dom.py --browser "$(command -v google-chrome)"
       - name: Compile cinematic shaders and verify actual WebGL output
         run: python tools/test-graphics-browser.py --smoke --label ci-smoke --browser "$(command -v google-chrome)"
       - name: Preserve browser screenshots
