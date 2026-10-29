@@ -58,7 +58,7 @@ def main():
                             "saves": {"valley": saved} if saved else {}, "lastLevel": "valley", "revision": 1}
                 seed = {"thirstTrailProgressV2": json.dumps(progress),
                         "thirstTrailProgressV2Backup": json.dumps(progress),
-                        "thirstTrailDifficulty": mode, "thirstTrailTutorial": "true", "thirstTrailSound": "false"}
+                        "thirstTrailMode": {"easy":"explorer", "normal":"normal", "hard":"challenge"}[mode], "thirstTrailTutorial": "true", "thirstTrailSound": "false"}
                 context.add_init_script("""(() => {
                     if (localStorage.getItem('__supplyDomSeeded')) return;
                     const seed = %s;
@@ -68,7 +68,8 @@ def main():
                 page = context.new_page()
                 page.on("pageerror", lambda error: errors.append(str(error)))
                 page.goto(url)
-                page.wait_for_function("!!window.ThirstTrail && !!window.TrailDifficulty")
+                page.wait_for_function("!!window.ThirstTrail && !!window.TrailMode")
+                check(snapshot(page)["difficulty"] == mode, "Fixture must select the shared difficulty")
                 return context, page
 
             def begin(page, resume=False):
@@ -79,24 +80,24 @@ def main():
                 return page.evaluate("ThirstTrail.snapshot()")
 
             def assert_drop_count(page, remaining, collected):
-                check(page.locator("#supplyDropList [data-supply]").count() == remaining,
+                check(page.locator(".supply-dom-board [data-supply-id]").count() == remaining,
                       f"Expected {remaining} remaining drops")
-                check(page.locator("#collectedSupplyList [data-collected-supply]").count() == collected,
+                check(page.locator(".supply-dom-collected [data-collected-supply]").count() == collected,
                       f"Expected {collected} collected badges")
 
             def wait_collected(page, key):
-                page.locator(f'#collectedSupplyList [data-collected-supply="{key}"]').wait_for()
-                check(page.locator(f'#supplyDropList [data-supply="{key}"]').count() == 0,
+                page.locator(f'.supply-dom-collected [data-collected-supply="{key}"]').wait_for()
+                check(page.locator(f'.supply-dom-board [data-supply-id="{key}"]').count() == 0,
                       "Collected drop must leave the DOM")
 
             for mobile in (False, True):
                 label = "mobile" if mobile else "desktop"
                 context, page = open_game(mobile=mobile)
                 if mobile:
-                    page.locator("#difficultyOptions").screenshot(path=str(ARTIFACTS / "supply-dom-mobile-difficulty.png"))
+                    page.locator(".play-style-options").screenshot(path=str(ARTIFACTS / "supply-dom-mobile-difficulty.png"))
                 begin(page)
                 assert_drop_count(page, 4, 0)
-                drop = page.locator('[data-supply="village"]')
+                drop = page.locator('[data-supply-id="village"]')
                 stale_drop = drop.element_handle()
                 before = snapshot(page)
                 if mobile:
@@ -111,20 +112,19 @@ def main():
                 wait_collected(page, "village")
                 after = snapshot(page)
                 check(after["score"] == before["score"] + 25, "Real click/Enter must award one supply reward")
-                check((after["x"], after["y"]) != (before["x"], before["y"]), "Drop activation must walk the explorer")
+                check(abs(after["x"] - before["x"]) < 1 and abs(after["y"] - before["y"]) < 1, "Nearby manual collection must not teleport the explorer")
                 assert_drop_count(page, 3, 1)
                 check("1 / 4" in page.locator("#supplyCount").inner_text(), "HUD supply count must update")
-                check(bool(page.locator("#supplyDropStatus").inner_text().strip()), "Collection must announce its result")
-                check(page.evaluate("document.activeElement.matches('#supplyDropList [data-supply]')"),
+                check(bool(page.locator(".supply-dom-status").inner_text().strip()), "Collection must announce its result")
+                check(page.evaluate("document.activeElement.matches('.supply-dom-board [data-supply-id]')"),
                       "Removing a focused drop must move focus to a remaining drop")
                 # A detached DOM reference can still receive a synthetic click.
                 # The real listener must reject it without paying twice.
                 stale_drop.evaluate("element => { element.click(); element.click(); }")
                 check(snapshot(page)["score"] == after["score"], "Detached repeated clicks cannot award twice")
                 assert_drop_count(page, 3, 1)
-                # Let the walking route finish before checking modal guards.
-                page.wait_for_function("() => { const s=ThirstTrail.snapshot(); return Math.hypot(s.x-405,s.y-690)<3; }", timeout=10000)
-                remaining = page.locator('[data-supply="camptrail"]').element_handle()
+                # Nearby collection starts no route; verify modal guards in place.
+                remaining = page.locator('[data-supply-id="camptrail"]').element_handle()
                 badge = page.locator('[data-collected-supply="village"]').element_handle()
                 page.locator("#pauseButton").click()
                 paused = snapshot(page)
@@ -141,13 +141,13 @@ def main():
                       "A blocked modal click must not start a delayed route")
                 # Collect a second cache through its real route. Both existing
                 # collected badges and unrelated available controls must survive.
-                other_drop = page.locator('[data-supply="hillside"]').element_handle()
-                page.locator('[data-supply="camptrail"]').click()
+                other_drop = page.locator('[data-supply-id="hillside"]').element_handle()
+                page.locator('[data-supply-id="camptrail"]').click()
                 wait_collected(page, "camptrail")
                 assert_drop_count(page, 2, 2)
                 check(badge.evaluate("element => element.isConnected"), "A later pickup must preserve an existing badge")
                 check(other_drop.evaluate("element => element.isConnected"), "A later pickup must preserve unrelated drop nodes")
-                page.locator(".supply-collection").screenshot(path=str(ARTIFACTS / f"supply-dom-{label}-remaining.png"))
+                page.locator("#supplyInteraction").screenshot(path=str(ARTIFACTS / f"supply-dom-{label}-remaining.png"))
                 if mobile:
                     check(page.evaluate("document.documentElement.scrollWidth") <= 390,
                           "Supply panel must not cause mobile horizontal overflow")
@@ -165,8 +165,8 @@ def main():
                 print(f"PASS {label}: actual DOM click/Enter routes, removes drops, adds badges, guards stale/modal clicks, preserves focus/nodes, reloads and restarts", flush=True)
 
             # Fixtures are loaded before the game starts, never written into a
-            # live state. They isolate caps and each mode's recovery arithmetic.
-            for mode, recovery in (("easy", 18), ("normal", 12), ("hard", 9)):
+            # live state. Sealed caches restore 12 energy on every difficulty.
+            for mode, recovery in (("easy", 12), ("normal", 12), ("hard", 12)):
                 saved = {"difficulty": mode, "x": 405, "y": 690, "energy": 40,
                          "score": 80, "elapsed": 12, "done": ["elder"], "inventory": ["fieldNotes"], "supplies": []}
                 context, page = open_game(saved=saved, mode=mode)
@@ -181,26 +181,26 @@ def main():
             wait_collected(page, "village")
             check(snapshot(page)["difficulty"] == "normal", "Legacy checkpoint still defaults to Normal")
             check(snapshot(page)["energy"] == 100, "A near-full pickup must cap at exactly 100 energy")
-            check("+10 energy" in page.locator("#supplyDropStatus").inner_text(), "Announcement must report actual capped recovery")
+            check("+10 energy" in page.locator("#toast").inner_text(), "Announcement must report actual capped recovery")
             context.close()
 
-            # The last focused button falls back to the section heading. Use a
+            # The last focused button falls back to the live status. Use a
             # genuine walk from outside pickup range to keep activation testable.
             saved = {"difficulty": "normal", "x": 180, "y": 690, "energy": 90, "score": 75,
                      "supplies": ["camptrail", "easttrail", "hillside"]}
             context, page = open_game(saved=saved)
             begin(page, resume=True)
             assert_drop_count(page, 1, 3)
-            final_drop = page.locator('[data-supply="village"]')
+            final_drop = page.locator('[data-supply-id="village"]')
             final_drop.focus()
             page.keyboard.press("Enter")
             if final_drop.count():
                 final_drop.focus()
             wait_collected(page, "village")
             assert_drop_count(page, 0, 4)
-            check(page.evaluate("document.activeElement.id") == "supplyDropTitle", "Last drop must hand focus to its heading")
+            check(page.evaluate("document.activeElement.matches('.supply-dom-status')"), "Last drop must hand focus to its status")
             check(snapshot(page)["energy"] <= 100, "Recovery must respect the 100 energy cap")
-            page.locator("#collectedSupplyList").screenshot(path=str(ARTIFACTS / "supply-dom-all-collected.png"))
+            page.locator(".supply-dom-collected").screenshot(path=str(ARTIFACTS / "supply-dom-all-collected.png"))
             context.close()
             check(not errors, "Uncaught browser errors: " + repr(errors))
             browser.close()
