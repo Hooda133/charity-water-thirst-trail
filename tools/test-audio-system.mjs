@@ -12,7 +12,7 @@ new Function(source);
 const required=["tap","interact","collect","reward","confirm","mistake","warning",
   "repair","water","deliver","build","victory","failure","preview"];
 let clock=1000;
-const makeHarness=(initial={})=>{
+const makeHarness=(initial={}, options={})=>{
   const memory=new Map(Object.entries(initial));
   const voices=[],targets=[],filters=[];
   let contextCount=0;
@@ -38,7 +38,7 @@ const makeHarness=(initial={})=>{
     onended=null;
     connect(destination){assert.ok(destination);return destination;}
     disconnect(){}
-    start(time){this.started=time;}
+    start(time){if(options.failStart)throw Error("Audio device unavailable");this.started=time;}
     stop(time){assert.ok(time>this.started,"every note must end");assert.ok(time-this.started<1,"no looping or extended audio");this.stopped=time;voices.push(this);}
   }
   class FakeAudioContext {
@@ -134,6 +134,20 @@ assert.equal(restoredStyle.audio.style,"soft","sound character persists through 
 assert.equal(restoredStyle.contextCount,0,"saved sound character does not trigger autoplay");
 const invalidStyle=makeHarness({thirstTrailSfxStyle:"alien",thirstTrailSound:"true"});
 assert.equal(invalidStyle.audio.style,"soft","malformed stored sound characters safely fall back to soft");
+
+// Failed starts must not exhaust the voice budget for the rest of the session.
+const device={failStart:true},failed=makeHarness({},device);
+for(let i=0;i<12;i++){clock+=150;failed.audio.play("collect");}
+assert.equal(failed.audio.status().activeVoices,0,"failed audio starts release their voice slots");
+device.failStart=false;clock+=150;failed.audio.play("collect");
+assert.equal(failed.voices.length,2,"sound recovers when the audio device recovers");
+const pending=[...failed.voices];
+failed.audio.dispose();
+assert.equal(failed.audio.status().activeVoices,0,"dispose releases pending voices immediately");
+clock+=150;failed.audio.play("collect");
+assert.equal(failed.audio.status().activeVoices,2);
+pending.forEach(voice=>voice.onended?.());
+assert.equal(failed.audio.status().activeVoices,2,"late old-context events cannot decrement new voices");
 
 const unsupported={localStorage:{getItem:()=>null,setItem(){}}};
 runInNewContext(source,{window:unsupported,performance:{now:()=>0},Date,console});
