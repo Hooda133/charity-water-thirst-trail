@@ -32,6 +32,7 @@
   let context = null;
   let master = null;
   let activeVoices = 0;
+  const voiceCleanups = new Set();
   const lastCue = new Map();
 
   // Each note: frequency Hz, start offset seconds, duration seconds,
@@ -131,6 +132,16 @@
     const begin = start + offset;
     const end = begin + duration;
     let oscillator, envelope, filter;
+    let counted = false, cleaned = false;
+    const cleanup = () => {
+      if(cleaned) return;
+      cleaned = true;
+      if(counted) activeVoices = Math.max(0, activeVoices - 1);
+      voiceCleanups.delete(cleanup);
+      for(const node of [oscillator, filter, envelope]) {
+        try { node?.disconnect(); } catch {}
+      }
+    };
     try {
       oscillator = audio.createOscillator();
       envelope = audio.createGain();
@@ -154,18 +165,14 @@
       } else oscillator.connect(envelope);
       envelope.connect(master);
       activeVoices++;
-      let cleaned = false;
-      const cleanup = () => {
-        if(cleaned) return;
-        cleaned = true;
-        activeVoices = Math.max(0, activeVoices - 1);
-        try { oscillator.disconnect(); filter?.disconnect(); envelope.disconnect(); } catch {}
-      };
+      counted = true;
+      voiceCleanups.add(cleanup);
       oscillator.onended = cleanup;
       oscillator.start(begin);
       oscillator.stop(end + .005);
     } catch {
-      try { oscillator?.disconnect(); filter?.disconnect(); envelope?.disconnect(); } catch {}
+      try { oscillator?.stop(); } catch {}
+      cleanup();
     }
   }
   function play(name) {
@@ -224,6 +231,7 @@
   }
   function dispose() {
     lastCue.clear();
+    for(const cleanup of voiceCleanups) cleanup();
     if(context) {
       try { const closing=context.close(); closing?.catch?.(() => {}); } catch {}
       context=null;master=null;
